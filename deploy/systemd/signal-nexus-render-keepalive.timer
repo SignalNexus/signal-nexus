@@ -1,0 +1,12 @@
+[Unit]
+Description=Every 5 minutes ping Render /health
+
+[Timer]
+OnBootSec=1min
+OnUnitActiveSec=5min
+AccuracySec=30s
+Persistent=true
+Unit=signal-nexus-render-keepalive.service
+
+[Install]
+WantedBy=timers.target

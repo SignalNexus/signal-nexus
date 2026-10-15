@@ -1,0 +1,9 @@
+fastapi
+python-multipart
+uvicorn
+httpx
+cryptography
+pytest
+pyyaml
+ccxt
+psycopg[binary]

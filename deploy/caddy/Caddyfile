@@ -1,0 +1,10 @@
+# Analytics API の HTTPS。サイト名は site.env の CADDY_SITE_ADDRESS。
+# 外へ開くのは 443 だけにする。80 と 5432 は開けない。
+{$CADDY_SITE_ADDRESS} {
+	tls {
+		issuer acme {
+			disable_http_challenge
+		}
+	}
+	reverse_proxy 127.0.0.1:8080
+}
