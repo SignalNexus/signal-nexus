@@ -13,6 +13,19 @@ Signal Nexus is a self-hosted TradingView webhook execution framework.
 
 Signal Nexus does not custody user funds.
 
+## Quick Start
+
+1. [Install dependencies](#1-install)
+2. [Set `WEBHOOK_SECRET`](#1-install)
+3. [Start the webhook process](#2-webhook-process)
+4. [Call `/health`](#2-webhook-process)
+5. [Send the sample webhook](#2-webhook-process)
+
+Expected results:
+
+- `GET /health` returns `{"status":"ok"}`
+- `POST /webhook` returns `{"status":"dry_run"}`
+
 ## Architecture
 
 ```text
@@ -23,29 +36,13 @@ Webhook API
     |
     v
 Execution engine
+    |                 \
+    |                  +----> Venue
     |
-    v
-Venue
-    |
-    v
-Analytics API
+    +---------------------> Analytics API
 ```
 
-TradingView calls the Webhook API. The execution engine plans the order, or sends it when you set `EXECUTION_MODE=live`. The Analytics API is a separate process.
-
-## Quick Start
-
-1. Install dependencies. See [1. Install](#1-install).
-2. Set `WEBHOOK_SECRET`. See [1. Install](#1-install).
-3. Start the webhook process. See [2. Webhook process](#2-webhook-process).
-4. Call `/health`. See [2. Webhook process](#2-webhook-process).
-5. Send the sample webhook. See [2. Webhook process](#2-webhook-process).
-
-Expected result:
-
-```json
-{"status":"dry_run"}
-```
+TradingView calls the Webhook API. The execution engine plans the order, or sends it to the venue when you set `EXECUTION_MODE=live`. The Analytics API is a separate process.
 
 Signal Nexus receives a TradingView webhook. With `EXECUTION_MODE` unset, the process plans the order and does not send it. That mode is `dry_run`.
 
@@ -165,3 +162,11 @@ Use at your own risk.
 The authors are not responsible for trading losses, exchange failures, or configuration mistakes.
 
 Users are responsible for securing their infrastructure, API keys, and venue accounts.
+
+## Current Status
+
+- TradingView webhook supported
+- Dry-run mode supported
+- Render deployment supported
+- Analytics API available
+- Live execution requires your own configuration

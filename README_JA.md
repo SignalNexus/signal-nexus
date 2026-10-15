@@ -13,6 +13,19 @@ Signal Nexus は、自分で動かす TradingView Webhook の実行フレーム�
 
 Signal Nexus は利用者の資金を預かりません。
 
+## クイックスタート
+
+1. [依存を入れる](#1-インストール)
+2. [`WEBHOOK_SECRET` を設定する](#1-インストール)
+3. [Webhook のプロセスを起動する](#2-webhook-のプロセス)
+4. [`/health` を呼ぶ](#2-webhook-のプロセス)
+5. [サンプルの Webhook を送る](#2-webhook-のプロセス)
+
+期待する結果:
+
+- `GET /health` は `{"status":"ok"}`
+- `POST /webhook` は `{"status":"dry_run"}`
+
 ## 構成
 
 ```text
@@ -23,29 +36,13 @@ Webhook API
     |
     v
 Execution engine
+    |                 \
+    |                  +----> Venue
     |
-    v
-Venue
-    |
-    v
-Analytics API
+    +---------------------> Analytics API
 ```
 
-TradingView が Webhook API を呼びます。実行エンジンは注文を予定します。`EXECUTION_MODE=live` のときだけ送ります。Analytics API は別のプロセスです。
-
-## クイックスタート
-
-1. 依存を入れる。[1. インストール](#1-インストール) を見る。
-2. `WEBHOOK_SECRET` を設定する。[1. インストール](#1-インストール) を見る。
-3. Webhook のプロセスを起動する。[2. Webhook のプロセス](#2-webhook-のプロセス) を見る。
-4. `/health` を呼ぶ。[2. Webhook のプロセス](#2-webhook-のプロセス) を見る。
-5. サンプルの Webhook を送る。[2. Webhook のプロセス](#2-webhook-のプロセス) を見る。
-
-期待する結果:
-
-```json
-{"status":"dry_run"}
-```
+TradingView が Webhook API を呼びます。実行エンジンは注文を予定します。`EXECUTION_MODE=live` のときだけ会場へ送ります。Analytics API は別のプロセスです。
 
 Signal Nexus は TradingView の Webhook を受けます。`EXECUTION_MODE` を未設定にすると、プロセスは注文を予定し、送りません。このモードは `dry_run` です。
 
@@ -167,3 +164,11 @@ Signal Nexus はソフトウェアです。
 作者は、売買の損失、取引所の障害、設定の誤りについて責任を負いません。
 
 インフラ、API キー、会場の口座を守る責任は利用者にあります。
+
+## 現在の状態
+
+- TradingView の Webhook に対応している
+- dry-run に対応している
+- Render への配置に対応している
+- Analytics API を使える
+- live の実行には、利用者自身の設定が必要である
