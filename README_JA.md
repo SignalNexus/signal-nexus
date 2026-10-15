@@ -28,6 +28,45 @@ Analytics の記録
 見返し、運用を直す
 ```
 
+## できること
+
+- TradingView の Webhook を受ける
+- アラートを戦略に割り当てる
+- 発注の計画を作る
+- 見返しと運用の修正に使う Analytics の記録
+- Discord への監査通知
+- 自分の環境へのデプロイ
+
+## 対応する取引所
+
+いま使えるもの:
+
+- MEXC 現物
+- MEXC 先物
+- Arcus
+
+予定:
+
+- Hyperliquid
+- Paradex
+- GRVT
+
+予定の取引所は、まだ発注先ではありません。
+
+## 環境変数
+
+名前は、このリポジトリのものです。値の作り方は書きません。
+
+| 変数 | 要否 | 役割 |
+| --- | --- | --- |
+| `WEBHOOK_SECRET` | 必須 | Webhook のリクエストを確認する |
+| `DISCORD_WEBHOOK_URL` | 推奨 | 監査の通知を Discord へ届ける |
+| `EXECUTION_MODE` | 任意 | 未設定は `dry_run`。`live` で注文を出す |
+
+## 通知
+
+監査の通知は、`DISCORD_WEBHOOK_URL` から Discord へ届けられます。Discord は届け先です。監査の記録そのものは Postgres に残ります。
+
 ## 前提
 
 このファイルは、次がすでに揃っている前提で書かれています。インストール方法は書きません。
@@ -121,6 +160,8 @@ curl.exe -i -X POST https://<your-host>/webhook `
 
 health が示すのは、そのプロセスが応答したことだけです。Postgres、取引所、Discord、Importer は、この確認の対象外です。TradingView から実際にアラートを送ることも、対象外です。
 
-## ドキュメント
+## 詳しく知る
 
-Python 3.12 や Git のインストール、GitHub アカウント、Render アカウント、Render Web Service、Linux の VM、SSH 鍵の作り方は、Signal Nexus Buildbook にあります。VM を Oracle Cloud で作る場合の画面操作も、そこです。このファイルでは繰り返しません。
+ポータル、Analytics で見られるもの、残る監査、公開と非公開の境界、製品の名前は [docs/product/PRODUCT_SPECIFICATION.md](docs/product/PRODUCT_SPECIFICATION.md) にあります。本文は英語です。
+
+Python、Git、GitHub、Render、Linux の VM、SSH の入れ方は Signal Nexus Buildbook にあります。このファイルでは繰り返しません。

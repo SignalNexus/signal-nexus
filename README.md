@@ -28,6 +28,45 @@ Analytics record
 Review and improve
 ```
 
+## Capabilities
+
+- TradingView webhook intake
+- Strategy mapping
+- Execution planning
+- Analytics records you can review and improve from
+- Discord audit notifications
+- Self-hosted deployment
+
+## Supported Venues
+
+Current:
+
+- MEXC Spot
+- MEXC Futures
+- Arcus
+
+Planned:
+
+- Hyperliquid
+- Paradex
+- GRVT
+
+A planned venue is not an order path yet.
+
+## Environment Variables
+
+These names belong to this repository. This file does not say how to create the values.
+
+| Variable | Required | Purpose |
+| --- | --- | --- |
+| `WEBHOOK_SECRET` | Required | Authenticate webhook requests |
+| `DISCORD_WEBHOOK_URL` | Recommended | Deliver audit notifications to Discord |
+| `EXECUTION_MODE` | Optional | Unset means `dry_run`. `live` sends orders |
+
+## Notifications
+
+Audit notifications can be delivered to Discord through `DISCORD_WEBHOOK_URL`. Discord is a delivery destination. The audit record itself stays in Postgres.
+
 ## Prerequisites
 
 This file assumes the following already exist. It does not install them.
@@ -121,6 +160,8 @@ Use the same secret as `WEBHOOK_SECRET`. A different secret returns HTTP 401 and
 
 Each health check shows only that its process answered. Postgres, a venue, Discord, and the importer are outside these checks. An alert sent from TradingView is not one of them.
 
-## Documentation
+## Learn More
 
-How to install Python 3.12, Git, and how to create a GitHub account, a Render account, a Render Web Service, a Linux VM, and an SSH key are in the Signal Nexus Buildbook. Oracle Cloud console steps, if you use Oracle for the VM, are there too. This file does not repeat them.
+For the portal, what analytics shows, which audits are kept, the public and private boundary, and the product names, see [docs/product/PRODUCT_SPECIFICATION.md](docs/product/PRODUCT_SPECIFICATION.md).
+
+Installing Python, Git, GitHub, Render, a Linux VM, or SSH is in the Signal Nexus Buildbook. This file does not repeat those steps.
