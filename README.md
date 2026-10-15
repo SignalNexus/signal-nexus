@@ -2,31 +2,30 @@
 
 ## What is Signal Nexus?
 
-Signal Nexus exists so a TradingView alert can become an order plan you keep, without handing your funds or exchange API keys to a third party.
+Signal Nexus helps traders operate a self-hosted TradingView automation workflow, without handing funds or exchange API keys to a third party.
 
-After deployment, that path runs on infrastructure you operate. The webhook answers the alert. Analytics keeps what the alert became, so you can run and review it instead of losing it in the alert log.
+A TradingView alert is mapped to a strategy and turned into an execution plan. Analytics keeps a record of that operation, so you can review it over time and improve how the signal is run. You choose the next change.
 
-Your funds stay at the venue. Your keys stay on your infrastructure. With `EXECUTION_MODE` unset, the plan is kept and the order is not sent. That mode is `dry_run`. It is not investment advice.
+Your funds stay at your exchange. Your keys stay on your infrastructure. With `EXECUTION_MODE` unset, the record is kept and the order is not sent. That mode is `dry_run`. It is not investment advice.
 
 ## Architecture
 
-A TradingView alert is the entrance. Signal Nexus receives it, resolves `strategy_id` from `config/strategies.yml`, checks the alert, and builds an execution plan. Analytics is not a second webhook. It stores that plan, so each alert stays a record you can operate and review. In `dry_run`, the order is not sent.
+A TradingView alert enters Signal Nexus. It is mapped to a strategy in `config/strategies.yml`, checked, and turned into an execution plan. Analytics keeps that record so the operation can be reviewed and improved later. It is not only a log of the webhook. In `dry_run`, the order is not sent.
 
 ```text
 TradingView alert
         |
         v
-Webhook
+Signal Nexus
         |
-        +-- resolve strategy_id
-        +-- check the alert
-        +-- execution plan
-        |
-        v
-Analytics API
+        +-- strategy mapping
+        +-- execution planning
         |
         v
-What the alert became
+Analytics record
+        |
+        v
+Review and improve
 ```
 
 ## Prerequisites
