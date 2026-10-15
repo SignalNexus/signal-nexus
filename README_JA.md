@@ -2,15 +2,15 @@
 
 ## Signal Nexus とは
 
-Signal Nexus は、TradingView のアラートを、資金も API キーも第三者に渡さずに自動化するソフトウェアです。
+Signal Nexus があるのは、TradingView のアラートを、資金も API キーも第三者に渡さずに、自分で残せる注文の計画にするためです。
 
-デプロイが終わると、手元には、アラートを戦略に結び、注文の計画を作り、Analytics に記録する仕組みが残ります。動かすのは自分です。
+デプロイが終わると、その流れは自分の環境で動きます。Webhook はアラートに応答します。Analytics は、そのアラートが何になったかを残します。通知が流れたあとでも、その記録で運用と確認ができます。
 
 資金は、使っている取引所の口座に残ります。API キーも、自分の環境から出しません。`EXECUTION_MODE` を設定しないあいだは、計画だけを残し、注文は出しません。この状態が `dry_run` です。投資助言ではありません。
 
 ## 構成
 
-入口は TradingView のアラートです。Signal Nexus が受け取り、`config/strategies.yml` の `strategy_id` と突き合わせ、内容を確認し、注文の計画を作ります。その計画は Analytics API に残ります。運用と検証は、この記録を見て行います。`dry_run` では、注文は出しません。
+入口は TradingView のアラートです。Signal Nexus が受け取り、`config/strategies.yml` の `strategy_id` と突き合わせ、内容を確認し、注文の計画を作ります。Analytics は、Webhook のもう一つの入口ではありません。計画を残し、各アラートを、あとから運用し確認できる記録にします。`dry_run` では、注文は出しません。
 
 ```text
 TradingView のアラート
@@ -26,7 +26,7 @@ Webhook
 Analytics API
         |
         v
-運用と検証に使う記録
+アラートが何になったかの記録
 ```
 
 ## 前提
