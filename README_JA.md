@@ -2,7 +2,7 @@
 
 ## Signal Nexus とは
 
-Signal Nexus は、TradingView のアラートを、自分の環境で運用するためのソフトウェアです。資金も、取引所の API キーも、第三者には渡しません。
+Signal Nexus は、TradingView のアラートを、自分の環境で運用するためのソフトウェアです。資金も、取引所の API キーも、第三者には渡しません。同じサービスに、運用を見返すポータルがあります。
 
 アラートは戦略に割り当てられ、発注の計画になります。Analytics には、その運用の記録が残ります。あとから見返し、シグナルの動かし方を自分で直せます。次に何を変えるかは、自分で決めます。
 
@@ -67,6 +67,8 @@ Analytics の記録
 
 監査の通知は、`DISCORD_WEBHOOK_URL` から Discord へ届けられます。Discord は届け先です。監査の記録そのものは Postgres に残ります。
 
+Discord への通知は、確認の対象外です。確認するのは、Webhook のプロセスと Analytics API のプロセスが応答することだけです。
+
 ## 前提
 
 このファイルは、次がすでに揃っている前提で書かれています。インストール方法は書きません。
@@ -92,6 +94,8 @@ $env:WEBHOOK_SECRET = "replace-me"
 ```
 
 `EXECUTION_MODE` は設定しないでください。`WEBHOOK_SECRET` は、自分で決めた値にします。例の `replace-me` は、そのまま使わないでください。
+
+任意です。監査の通知を Discord へ届けるときは、`DISCORD_WEBHOOK_URL` を設定します。URL の作り方は書きません。確認では使いません。
 
 `config/strategies.yml` を次の内容に置き換えます。
 
@@ -158,10 +162,10 @@ curl.exe -i -X POST https://<your-host>/webhook `
 
 `secret` は、設定した `WEBHOOK_SECRET` と同じ値にしてください。違う値は HTTP 401 で、本文は `{"detail":"unauthorized"}` です。本文に `size` または `size_quote` があると、HTTP 422 です。
 
-health が示すのは、そのプロセスが応答したことだけです。Postgres、取引所、Discord、Importer は、この確認の対象外です。TradingView から実際にアラートを送ることも、対象外です。
+health が示すのは、そのプロセスが応答したことだけです。Discord への通知は、確認の対象外です。Postgres、取引所、Importer も対象外です。TradingView から実際にアラートを送ることも、対象外です。
 
 ## 詳しく知る
 
-ポータル、Analytics で見られるもの、残る監査、公開と非公開の境界、製品の名前は [docs/product/PRODUCT_SPECIFICATION.md](docs/product/PRODUCT_SPECIFICATION.md) にあります。本文は英語です。
+ポータル、Analytics で見られるもの、残る監査、公開と非公開の境界、製品の名前は [docs/product/PRODUCT_SPECIFICATION_JA.md](docs/product/PRODUCT_SPECIFICATION_JA.md) にあります。英語版が正本です。
 
 Python、Git、GitHub、Render、Linux の VM、SSH の入れ方は Signal Nexus Buildbook にあります。このファイルでは繰り返しません。

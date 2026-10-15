@@ -4,13 +4,14 @@ This document says what Signal Nexus provides. It does not say how to install to
 
 ## What is Signal Nexus?
 
-Signal Nexus is a self-hosted workflow for operating TradingView alerts.
+Signal Nexus is the product you run on your own infrastructure to operate TradingView alerts. After an alert arrives, you get four things.
 
-A TradingView alert is mapped to a strategy and turned into an execution plan. Analytics keeps a record of that operation. You review the record over time and decide how to run the signal next.
+- Trading. The portal shows positions, fills, open orders, and balances at the venues you connected. The screen reads the account. It does not send an order.
+- Analytics. The alert is kept as a record of the strategy it used, the plan that was made, and, when you send orders, what the venue did.
+- Audit. Postgres keeps what happened to that alert. Discord can deliver a copy. A missed delivery does not remove the record.
+- Review. You read Trading, Analytics, and the audit, check what the signal did, and decide the next change in how it is run.
 
-The webhook answers the alert. Analytics is the record you use for review and for the next change you make. It is not only a log of the request.
-
-With `EXECUTION_MODE` unset, the record is kept and the order is not sent. That mode is `dry_run`. Setting `EXECUTION_MODE` to `live` sends orders. This document is not investment advice.
+With `EXECUTION_MODE` unset, the order is not sent. That mode is `dry_run`. `live` sends orders. The records are kept in either case. This document is not investment advice.
 
 ## Product Philosophy
 
@@ -34,32 +35,71 @@ Planned venues are not an order path yet:
 
 ## Portal
 
-The portal is the screen on the same service as the webhook. It reads the operation. It does not place an order for you from the screen.
+The portal is the screen on the same service as the webhook. It has four areas: Dashboard, Trading, Analytics, and Operations. It reads the operation. Nothing on the screen places an order.
 
-- Trading. Positions, trades, open orders, and balances.
-- Analytics. Strategies and tickers for the run.
-- Performance. The dashboard reads how the run is going. It is a view of your own operation.
-- Backtest Comparison. The live run sits next to figures you chose to store. This document does not include those figures.
+### Trading
+
+- Positions. Open positions on the connected venues.
+- Trades. Fills already booked.
+- Orders. Orders still open at the venue.
+- Balances. Balances read from the venue.
+
+### Analytics
+
+- Strategy records. Strategies lists each strategy that has activity in the run.
+- Symbol activity. Tickers lists the same run by symbol.
+- Operational history. The time-ordered trail of each alert is the Audit Log, under Operations. The Analytics views summarize the run. They do not replace that trail.
+
+### Performance
+
+Performance is the Dashboard.
+
+- Summary metrics. Where the run stands today, the risk in open positions, and whether alerts are arriving.
+- Historical views. The same run by day, week, month, and year.
+
+The Dashboard reads your own operation. This document does not publish results.
+
+### Backtest Comparison
+
+Backtest Comparison is a view under Analytics.
+
+- Stored reference data. Figures you stored for a strategy. This document does not include them.
+- Live vs stored comparison. The live run for that strategy is shown beside the stored figures. The screen does not judge the strategy.
 
 ## Analytics
 
-Analytics keeps the operation record: which strategy the alert used, whether a plan was made, and, when you send orders, what happened to the order.
+Analytics keeps the operation so you can review it, check it, and change how the signal is run.
 
-You use that record to review the run over time and to decide the next change in how the signal is operated. The next change is yours.
+Review. You look back at which strategy an alert used, whether a plan was made, and, when orders are sent, what happened to the order.
+
+Validate. You check the trail for that alert: received, rejected, left unsent, planned, succeeded, failed, or discarded as a duplicate. The check is yours. It is not a statement about how the signal performed.
+
+Improve. You decide the next change in how the signal is run. Signal Nexus keeps the record. It does not choose the change.
+
+The record is not only a copy of the webhook request.
 
 ## Discord Notifications
 
-When `DISCORD_WEBHOOK_URL` is set, audit notifications can be delivered to Discord.
+When `DISCORD_WEBHOOK_URL` is set, Discord receives a copy of these audit events. Discord is a delivery destination. A missed delivery does not remove the audit. These notices are outside the checks in the README.
 
-Discord can receive notice that a signal arrived, that it was rejected, that an order was not sent, that an order was planned, that an order succeeded or failed, and that a duplicate was discarded.
-
-Discord is a delivery destination. A missed delivery does not remove the audit record.
+- Signal received. The alert arrived and was mapped to a strategy.
+- Rejected. The alert failed validation.
+- Not sent. The order was left unsent.
+- Sell resend skipped. A repeated sell was not sent again.
+- Planned. An order was planned. In `dry_run`, this is as far as the order goes.
+- Succeeded. The venue accepted the order.
+- Failed. The order did not go through.
+- Duplicate discarded. The same alert was dropped.
 
 ## Audit Log
 
-The audit record is stored in Postgres. The portal shows it as the Audit Log.
+The audit record is stored in Postgres. The portal shows it as the Audit Log, under Operations.
 
-The record covers receipt, rejection, a skipped order, a planned order, success, failure, and a discarded duplicate. That is the record you review. Discord receives a copy when configured.
+Postgres keeps receipt, rejection, an order left unsent, a skipped sell resend, a planned order, success, failure, and a discarded duplicate.
+
+The screen uses six labels: received, rejected, skipped, success, failed, and dropped. A planned order is stored, and Discord can deliver it. Planned is not one of those six labels.
+
+That stored trail is what you review. Discord receives a copy when `DISCORD_WEBHOOK_URL` is set.
 
 ## Public vs Private
 

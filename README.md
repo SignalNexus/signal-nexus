@@ -2,7 +2,7 @@
 
 ## What is Signal Nexus?
 
-Signal Nexus helps traders operate a self-hosted TradingView automation workflow, without handing funds or exchange API keys to a third party.
+Signal Nexus helps traders operate a self-hosted TradingView automation workflow, without handing funds or exchange API keys to a third party. The same service includes a portal for reviewing the operation.
 
 A TradingView alert is mapped to a strategy and turned into an execution plan. Analytics keeps a record of that operation, so you can review it over time and improve how the signal is run. You choose the next change.
 
@@ -67,6 +67,8 @@ These names belong to this repository. This file does not say how to create the 
 
 Audit notifications can be delivered to Discord through `DISCORD_WEBHOOK_URL`. Discord is a delivery destination. The audit record itself stays in Postgres.
 
+Discord notifications are outside Validation. Validation only checks the webhook process and the Analytics API process.
+
 ## Prerequisites
 
 This file assumes the following already exist. It does not install them.
@@ -92,6 +94,8 @@ $env:WEBHOOK_SECRET = "replace-me"
 ```
 
 Leave `EXECUTION_MODE` unset. Choose your own `WEBHOOK_SECRET`. Do not reuse the placeholder.
+
+Optional: set `DISCORD_WEBHOOK_URL` to deliver audit notifications to Discord. This file does not say how to create that URL. Validation does not require it.
 
 Replace `config/strategies.yml` with:
 
@@ -158,10 +162,10 @@ curl.exe -i -X POST https://<your-host>/webhook `
 
 Use the same secret as `WEBHOOK_SECRET`. A different secret returns HTTP 401 and `{"detail":"unauthorized"}`. A body that contains `size` or `size_quote` returns HTTP 422.
 
-Each health check shows only that its process answered. Postgres, a venue, Discord, and the importer are outside these checks. An alert sent from TradingView is not one of them.
+Each health check shows only that its process answered. Discord notifications are outside Validation. Postgres, a venue, and the importer are outside these checks. An alert sent from TradingView is not one of them.
 
 ## Learn More
 
-For the portal, what analytics shows, which audits are kept, the public and private boundary, and the product names, see [docs/product/PRODUCT_SPECIFICATION.md](docs/product/PRODUCT_SPECIFICATION.md).
+For the portal, what analytics shows, which audits are kept, the public and private boundary, and the product names, see [docs/product/PRODUCT_SPECIFICATION.md](docs/product/PRODUCT_SPECIFICATION.md). The Japanese edition is [docs/product/PRODUCT_SPECIFICATION_JA.md](docs/product/PRODUCT_SPECIFICATION_JA.md).
 
 Installing Python, Git, GitHub, Render, a Linux VM, or SSH is in the Signal Nexus Buildbook. This file does not repeat those steps.
