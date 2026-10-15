@@ -2,9 +2,32 @@
 
 ## What is Signal Nexus?
 
-Signal Nexus helps traders automate TradingView signals without handing custody of funds or exchange API keys to a third party. It is a self-hosted webhook execution framework, and you run it yourself.
+Signal Nexus helps traders automate TradingView signals without handing custody of funds or exchange API keys to a third party.
 
-Your funds stay at the venue. Your keys stay on your infrastructure. With `EXECUTION_MODE` unset, it plans the order and does not send it. That mode is `dry_run`. It is not investment advice.
+After deployment, you have a self-hosted path from a TradingView alert to a strategy, an execution plan, and an analytics record. You run it yourself.
+
+Your funds stay at the venue. Your keys stay on your infrastructure. With `EXECUTION_MODE` unset, the plan is kept and the order is not sent. That mode is `dry_run`. It is not investment advice.
+
+## Architecture
+
+A TradingView alert is the entrance. Signal Nexus receives it, resolves `strategy_id` from `config/strategies.yml`, checks the alert, and builds an execution plan. Your Analytics API keeps that plan, and you use the record to run and review the signal. In `dry_run`, the order is not sent.
+
+```text
+TradingView alert
+        |
+        v
+Webhook
+        |
+        +-- resolve strategy_id
+        +-- check the alert
+        +-- execution plan
+        |
+        v
+Analytics API
+        |
+        v
+The record you use to run and review
+```
 
 ## Prerequisites
 

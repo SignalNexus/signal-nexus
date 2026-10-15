@@ -2,26 +2,49 @@
 
 ## Signal Nexus とは
 
-Signal Nexus は、第三者へ資金や API キーの管理を委ねることなく、TradingView シグナルを自動化するための基盤です。自分で動かす Webhook の実行フレームワークです。
+Signal Nexus は、TradingView のアラートを、資金も API キーも第三者に渡さずに自動化するソフトウェアです。
 
-資金は会場に残ります。鍵は自分のインフラに残ります。`EXECUTION_MODE` を未設定にすると、注文を予定し、送りません。このモードは `dry_run` です。投資助言ではありません。
+デプロイが終わると、手元には、アラートを戦略に結び、注文の計画を作り、Analytics に記録する仕組みが残ります。動かすのは自分です。
+
+資金は、使っている取引所の口座に残ります。API キーも、自分の環境から出しません。`EXECUTION_MODE` を設定しないあいだは、計画だけを残し、注文は出しません。この状態が `dry_run` です。投資助言ではありません。
+
+## 構成
+
+入口は TradingView のアラートです。Signal Nexus が受け取り、`config/strategies.yml` の `strategy_id` と突き合わせ、内容を確認し、注文の計画を作ります。その計画は Analytics API に残ります。運用と検証は、この記録を見て行います。`dry_run` では、注文は出しません。
+
+```text
+TradingView のアラート
+        |
+        v
+Webhook
+        |
+        +-- strategy_id を解決
+        +-- アラートを確認
+        +-- 注文の計画
+        |
+        v
+Analytics API
+        |
+        v
+運用と検証に使う記録
+```
 
 ## 前提
 
-このファイルは、次がすでにあるものとして書きます。導入手順は書きません。
+このファイルは、次がすでに揃っている前提で書かれています。インストール方法は書きません。
 
 - Windows 11 Home
 - Python 3.12（`py -3.12`）
 - Git
 - GitHub アカウント
 - Render アカウント
-- シェルで入れる Linux VM
+- ログインできる Linux の VM
 
-下のコマンドは Windows 11 Home で実行します。Analytics API は Linux VM で動きます。
+下のコマンドは Windows 11 Home で実行します。Analytics API は Linux の VM で動きます。
 
 ## クイックスタート
 
-自分のコピーとして clone したこのリポジトリから始めます。編集するのは `config/` だけです。
+自分用に clone したこのリポジトリから始めます。書き換えてよいのは `config/` だけです。
 
 ```powershell
 py -3.12 -m venv .venv
@@ -30,7 +53,7 @@ python -m pip install -r requirements.txt
 $env:WEBHOOK_SECRET = "replace-me"
 ```
 
-`EXECUTION_MODE` は設定しません。`WEBHOOK_SECRET` は自分の値にします。プレースホルダは使わないでください。
+`EXECUTION_MODE` は設定しないでください。`WEBHOOK_SECRET` は、自分で決めた値にします。例の `replace-me` は、そのまま使わないでください。
 
 `config/strategies.yml` を次の内容に置き換えます。
 
@@ -42,15 +65,15 @@ btc_long_example:
   venue: mexc_spot
 ```
 
-`size_quote` は注文額で、単位は USDT です。Webhook の body に金額は載せません。
+`size_quote` は、USDT 建ての注文額です。Webhook の本文に金額は入れません。
 
-同じ PowerShell で起動します。
+同じ PowerShell で、次を起動します。
 
 ```powershell
 python -m uvicorn app.main:app --host 127.0.0.1 --port 8000
 ```
 
-Linux VM では、同じコードの clone から実行します。
+Linux の VM では、同じコードを clone してから実行します。
 
 ```bash
 python3 -m venv .venv
@@ -59,35 +82,35 @@ python -m pip install -r requirements.txt
 python -m app.analytics.api
 ```
 
-Analytics API はポート 8080 で待ちます。このプロセスは Postgres を開きません。
+Analytics API はポート 8080 で待ち受けます。この確認では Postgres は使いません。
 
 ## Render への配置
 
-自分の Render Web Service では、次を使います。
+自分の Render Web Service には、次を設定します。
 
 - Build command: `pip install -r requirements.txt`
 - Start command: `uvicorn app.main:app --host 0.0.0.0 --port $PORT`
-- 環境変数: `WEBHOOK_SECRET` に自分の値を置く。`EXECUTION_MODE` は設定しない。
+- 環境変数: `WEBHOOK_SECRET` に、自分で決めた値を入れる。`EXECUTION_MODE` は入れない。
 
-デプロイする `config/strategies.yml` には、クイックスタートで保存した `btc_long_example` が必要です。ホスト名はそのサービスのものであり、このファイルには書きません。
+デプロイする `config/strategies.yml` には、クイックスタートで保存した `btc_long_example` を含めてください。URL のホスト名は、そのサービスに表示されたものを使います。このファイルには書きません。
 
 ## 確認
 
-このファイルの終わりは、次の三つです。
+このファイルの完了は、次の三つです。
 
-1. Render の `GET /health` が `{"status":"ok"}` を返す。
+1. Render の `GET /health` が `{"status":"ok"}` になる。
 
 ```powershell
 curl.exe -i https://<your-host>/health
 ```
 
-2. Analytics API の `GET /health` が `{"status":"ok"}` を返す。VM 上で実行します。
+2. Analytics API の `GET /health` が `{"status":"ok"}` になる。VM の中で実行します。
 
 ```bash
 curl -i http://127.0.0.1:8080/health
 ```
 
-3. `POST /webhook` が `{"status":"dry_run"}` を返す。
+3. `POST /webhook` が `{"status":"dry_run"}` になる。
 
 ```powershell
 curl.exe -i -X POST https://<your-host>/webhook `
@@ -95,10 +118,10 @@ curl.exe -i -X POST https://<your-host>/webhook `
   -d "{\"secret\":\"replace-me\",\"strategy_id\":\"btc_long_example\",\"symbol\":\"BTC/USDT\",\"action\":\"BUY\",\"bar_time\":\"2026-10-15T00:00:00Z\",\"client_order_id\":\"btc_long_example_20261015000000_buy\"}"
 ```
 
-`secret` は `WEBHOOK_SECRET` と同じ値にします。違う `secret` は HTTP 401 と `{"detail":"unauthorized"}` です。`size` または `size_quote` を含む body は HTTP 422 です。
+`secret` は、設定した `WEBHOOK_SECRET` と同じ値にしてください。違う値は HTTP 401 で、本文は `{"detail":"unauthorized"}` です。本文に `size` または `size_quote` があると、HTTP 422 です。
 
-各 health が見るのは、そのプロセスが応答することだけです。Postgres、会場、Discord、Importer は、この確認に含めません。TradingView からアラートを送ったことも、この確認に含めません。
+health が示すのは、そのプロセスが応答したことだけです。Postgres、取引所、Discord、Importer は、この確認の対象外です。TradingView から実際にアラートを送ることも、対象外です。
 
 ## ドキュメント
 
-Python 3.12 と Git の導入、GitHub アカウント、Render アカウント、Render Web Service、Linux VM、SSH 鍵の作り方は、Signal Nexus Buildbook にあります。VM に Oracle Cloud を使うときのコンソール手順も、そこにあります。このファイルはそれを繰り返しません。
+Python 3.12 や Git のインストール、GitHub アカウント、Render アカウント、Render Web Service、Linux の VM、SSH 鍵の作り方は、Signal Nexus Buildbook にあります。VM を Oracle Cloud で作る場合の画面操作も、そこです。このファイルでは繰り返しません。
