@@ -2,9 +2,9 @@
 
 ## Signal Nexus とは
 
-Signal Nexus は、自分で動かす TradingView Webhook の実行フレームワークです。`EXECUTION_MODE` を未設定にすると、注文を予定し、送りません。このモードは `dry_run` です。
+Signal Nexus は、第三者へ資金や API キーの管理を委ねることなく、TradingView シグナルを自動化するための基盤です。自分で動かす Webhook の実行フレームワークです。
 
-資金は会場に残します。鍵は自分のインフラに置きます。Signal Nexus は資金を預かりません。投資助言ではありません。
+資金は会場に残ります。鍵は自分のインフラに残ります。`EXECUTION_MODE` を未設定にすると、注文を予定し、送りません。このモードは `dry_run` です。投資助言ではありません。
 
 ## 前提
 
