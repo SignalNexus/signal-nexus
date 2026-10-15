@@ -1,5 +1,52 @@
 # Signal Nexus
 
+## What is Signal Nexus?
+
+Signal Nexus is a self-hosted TradingView webhook execution framework.
+
+- Self-hosted
+- Dry-run by default
+- TradingView integration
+- Analytics API
+- Venue keys remain under the operator's control
+- Funds remain at the venue
+
+Signal Nexus does not custody user funds.
+
+## Architecture
+
+```text
+TradingView
+    |
+    v
+Webhook API
+    |
+    v
+Execution engine
+    |
+    v
+Venue
+    |
+    v
+Analytics API
+```
+
+TradingView calls the Webhook API. The execution engine plans the order, or sends it when you set `EXECUTION_MODE=live`. The Analytics API is a separate process.
+
+## Quick Start
+
+1. Install dependencies. See [1. Install](#1-install).
+2. Set `WEBHOOK_SECRET`. See [1. Install](#1-install).
+3. Start the webhook process. See [2. Webhook process](#2-webhook-process).
+4. Call `/health`. See [2. Webhook process](#2-webhook-process).
+5. Send the sample webhook. See [2. Webhook process](#2-webhook-process).
+
+Expected result:
+
+```json
+{"status":"dry_run"}
+```
+
 Signal Nexus receives a TradingView webhook. With `EXECUTION_MODE` unset, the process plans the order and does not send it. That mode is `dry_run`.
 
 Your funds stay at the venue. Your keys stay on your infrastructure. This procedure does not operate your account.
@@ -106,3 +153,15 @@ curl -i http://127.0.0.1:8080/health
 ```
 
 Expect HTTP 200 and `{"status":"ok"}`. This check does not open Postgres.
+
+## Disclaimer
+
+Signal Nexus is software.
+
+It is not investment advice.
+
+Use at your own risk.
+
+The authors are not responsible for trading losses, exchange failures, or configuration mistakes.
+
+Users are responsible for securing their infrastructure, API keys, and venue accounts.

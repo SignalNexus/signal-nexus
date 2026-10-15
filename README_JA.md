@@ -1,5 +1,52 @@
 # Signal Nexus
 
+## Signal Nexus とは
+
+Signal Nexus は、自分で動かす TradingView Webhook の実行フレームワークです。
+
+- 自分で動かす
+- 初期状態は dry-run
+- TradingView と連携する
+- Analytics API がある
+- 会場の鍵は運用者の管理下に残る
+- 資金は会場に残る
+
+Signal Nexus は利用者の資金を預かりません。
+
+## 構成
+
+```text
+TradingView
+    |
+    v
+Webhook API
+    |
+    v
+Execution engine
+    |
+    v
+Venue
+    |
+    v
+Analytics API
+```
+
+TradingView が Webhook API を呼びます。実行エンジンは注文を予定します。`EXECUTION_MODE=live` のときだけ送ります。Analytics API は別のプロセスです。
+
+## クイックスタート
+
+1. 依存を入れる。[1. インストール](#1-インストール) を見る。
+2. `WEBHOOK_SECRET` を設定する。[1. インストール](#1-インストール) を見る。
+3. Webhook のプロセスを起動する。[2. Webhook のプロセス](#2-webhook-のプロセス) を見る。
+4. `/health` を呼ぶ。[2. Webhook のプロセス](#2-webhook-のプロセス) を見る。
+5. サンプルの Webhook を送る。[2. Webhook のプロセス](#2-webhook-のプロセス) を見る。
+
+期待する結果:
+
+```json
+{"status":"dry_run"}
+```
+
 Signal Nexus は TradingView の Webhook を受けます。`EXECUTION_MODE` を未設定にすると、プロセスは注文を予定し、送りません。このモードは `dry_run` です。
 
 資金は会場の口座に残します。鍵は自分のインフラに置きます。この手順は、あなたの口座を運用しません。
@@ -108,3 +155,15 @@ curl -i http://127.0.0.1:8080/health
 ```
 
 期待するのは HTTP 200 と `{"status":"ok"}` です。この確認は Postgres を開きません。
+
+## 免責
+
+Signal Nexus はソフトウェアです。
+
+投資助言ではありません。
+
+利用は自己責任です。
+
+作者は、売買の損失、取引所の障害、設定の誤りについて責任を負いません。
+
+インフラ、API キー、会場の口座を守る責任は利用者にあります。
