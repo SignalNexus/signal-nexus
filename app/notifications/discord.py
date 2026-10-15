@@ -11,16 +11,22 @@ from app.notifications.analytics import append_audit, enqueue_audit
 
 logger = logging.getLogger(__name__)
 
-# Discord が数秒で空く制限だけ、その場で 1 回送り直す。それより長い待ちは連打しない。
+# Discord が数秒で空く制限だけ、その場で 1 回送り直す。
+# 1 分を超える 429 は連打で待ちが伸びるので、以降の POST は止める。
+# 2026-10-15 に待ちが数万秒まで伸びた。Webhook への POST は止めてある。再開は True に戻す。
+_DISCORD_POSTS_ENABLED = False
 _RETRY_LIMIT_SECONDS = 5.0
+_PAUSE_AFTER_SECONDS = 60.0
 _send_lock = threading.Lock()
 _blocked_until = 0.0
+_paused = False
 
 
 def reset_discord_limit() -> None:
-    global _blocked_until
+    global _blocked_until, _paused
     with _send_lock:
         _blocked_until = 0.0
+        _paused = False
 
 
 class AuditMessage(str):
@@ -97,36 +103,56 @@ def discord_copy(message: str) -> tuple[str, str]:
     if not url:
         logger.warning("discord copy was not sent: not configured")
         return "not_configured", ""
+    if not _DISCORD_POSTS_ENABLED:
+        logger.warning("discord copy is paused")
+        return "failed", "paused"
     with _send_lock:
         return _discord_copy_locked(url, message)
 
 
 def _discord_copy_locked(url: str, message: str) -> tuple[str, str]:
-    global _blocked_until
+    global _blocked_until, _paused
+    if _paused:
+        return "failed", "429 paused"
     now = time.monotonic()
     if now < _blocked_until:
-        detail = _failure_text(429, "", _blocked_until - now)
+        detail = _failure_text(429, "", min(_PAUSE_AFTER_SECONDS, _blocked_until - now))
         logger.warning("discord copy failed: %s", detail)
         return "failed", detail
     status, detail, retry_after = _post_once(url, message)
     if status == "sent":
         return "sent", ""
-    if retry_after is None or retry_after > _RETRY_LIMIT_SECONDS:
-        if retry_after is not None:
-            _blocked_until = time.monotonic() + retry_after
-        logger.warning("discord copy failed: %s", detail)
+    if retry_after is not None and retry_after <= _RETRY_LIMIT_SECONDS:
+        time.sleep(retry_after)
+        status, detail, retry_after = _post_once(url, message)
+        if status == "sent":
+            return "sent", ""
+    stopped, detail = _stop_for_long_limit(retry_after, detail)
+    if stopped:
         return "failed", detail
-    time.sleep(retry_after)
-    status, detail, retry_after = _post_once(url, message)
-    if status != "sent" and retry_after is not None:
-        _blocked_until = time.monotonic() + retry_after
+    if retry_after is not None:
+        _blocked_until = time.monotonic() + min(retry_after, _PAUSE_AFTER_SECONDS)
     if status != "sent":
         logger.warning("discord copy failed: %s", detail)
     return status, detail
 
 
+def _stop_for_long_limit(retry_after: float | None, detail: str) -> tuple[bool, str]:
+    global _paused
+    if not detail.startswith("429"):
+        return False, detail
+    if retry_after is not None and retry_after <= _PAUSE_AFTER_SECONDS:
+        return False, detail
+    _paused = True
+    logger.warning("discord copy paused")
+    if retry_after is not None:
+        return True, "429 paused"
+    return True, detail
+
+
 def _post_once(url: str, message: str) -> tuple[str, str, float | None]:
     try:
+        # Webhook への POST。_DISCORD_POSTS_ENABLED が False のあいだは呼ばない。
         response = httpx.post(url, json={"content": message}, timeout=5.0)
     except Exception as exc:
         detail = type(exc).__name__[:80]
