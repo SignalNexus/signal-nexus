@@ -2,73 +2,26 @@
 
 ## What is Signal Nexus?
 
-Signal Nexus is a self-hosted TradingView webhook execution framework.
+Signal Nexus is a self-hosted TradingView webhook execution framework. With `EXECUTION_MODE` unset, it plans the order and does not send it. That mode is `dry_run`.
 
-- Self-hosted
-- Dry-run by default
-- TradingView integration
-- Analytics API
-- Venue keys remain under the operator's control
-- Funds remain at the venue
+Your funds stay at the venue. Your keys stay on your infrastructure. Signal Nexus does not custody funds. It is not investment advice.
 
-Signal Nexus does not custody user funds.
+## Prerequisites
+
+This file assumes the following already exist. It does not install them.
+
+- Windows 11 Home
+- Python 3.12 (`py -3.12`)
+- Git
+- GitHub account
+- Render account
+- A Linux VM with a shell
+
+You run the commands below on Windows 11 Home. The Analytics API runs on the Linux VM.
 
 ## Quick Start
 
-1. [Install dependencies](#1-install)
-2. [Set `WEBHOOK_SECRET`](#1-install)
-3. [Start the webhook process](#2-webhook-process)
-4. [Call `/health`](#2-webhook-process)
-5. [Send the sample webhook](#2-webhook-process)
-
-Expected results:
-
-- `GET /health` returns `{"status":"ok"}`
-- `POST /webhook` returns `{"status":"dry_run"}`
-
-## Architecture
-
-```text
-TradingView
-    |
-    v
-Webhook API
-    |
-    v
-Execution engine
-    |                 \
-    |                  +----> Venue
-    |
-    +---------------------> Analytics API
-```
-
-TradingView calls the Webhook API. The execution engine plans the order, or sends it to the venue when you set `EXECUTION_MODE=live`. The Analytics API is a separate process.
-
-Signal Nexus receives a TradingView webhook. With `EXECUTION_MODE` unset, the process plans the order and does not send it. That mode is `dry_run`.
-
-Your funds stay at the venue. Your keys stay on your infrastructure. This procedure does not operate your account.
-
-The checks below are complete when both health endpoints return `{"status":"ok"}` and `POST /webhook` returns `{"status":"dry_run"}`. Each health check shows only that its process answered. Postgres, a venue, Discord, and the importer are outside these checks.
-
-You follow this file on Windows 11 Home. The Analytics API runs on a VM you start. That VM is the process host, not a second desktop.
-
-## Files you edit
-
-Edit `config/` only.
-
-| File | Purpose |
-| --- | --- |
-| `config/venues.yml` | Venues that are enabled |
-| `config/strategies.yml` | Strategy id, symbol, and `size_quote` |
-| `config/strategy_results.yml` | Backtest figures you choose to store |
-| `config/month_target.yml` | `month_target_usdt` |
-| `config/ops_schedule.yml` | Task name, start date, and due date |
-
-`config/strategy_results.yml` is not part of the checks below.
-
-## 1. Install
-
-Install Python 3.12. In PowerShell, from a clone of this repository:
+Start from a clone of your copy of this repository. Edit `config/` only.
 
 ```powershell
 py -3.12 -m venv .venv
@@ -91,82 +44,61 @@ btc_long_example:
 
 `size_quote` is the order amount in USDT. The webhook body does not carry an amount.
 
-## 2. Webhook process
-
 In the same PowerShell window:
 
 ```powershell
 python -m uvicorn app.main:app --host 127.0.0.1 --port 8000
 ```
 
-In a second PowerShell window, from the same clone:
-
-```powershell
-curl.exe -i http://127.0.0.1:8000/health
-```
-
-Expect HTTP 200 and `{"status":"ok"}`.
-
-```powershell
-curl.exe -i -X POST http://127.0.0.1:8000/webhook `
-  -H "Content-Type: application/json" `
-  -d "{\"secret\":\"replace-me\",\"strategy_id\":\"btc_long_example\",\"symbol\":\"BTC/USDT\",\"action\":\"BUY\",\"bar_time\":\"2026-10-15T00:00:00Z\",\"client_order_id\":\"btc_long_example_20261015000000_buy\"}"
-```
-
-Use the same secret you set in `WEBHOOK_SECRET`. Expect HTTP 200 and `{"status":"dry_run"}`.
-
-A different `secret` returns HTTP 401 and `{"detail":"unauthorized"}`. A body that contains `size` or `size_quote` returns HTTP 422.
-
-Stop the process with Ctrl+C when you are finished with this local check.
-
-## 3. Your Render service
-
-Create your own Render Web Service from your copy of this repository. The hostname belongs to your service. This file does not name one.
-
-- Build command: `pip install -r requirements.txt`
-- Start command: `uvicorn app.main:app --host 0.0.0.0 --port $PORT`
-- Environment: set `WEBHOOK_SECRET` to your secret. Leave `EXECUTION_MODE` unset for this check.
-
-The deployed `config/strategies.yml` must contain `btc_long_example`, as saved in step 1.
-
-Open `https://<your-host>/health`. Expect `{"status":"ok"}`.
-
-Post the same JSON as in step 2 to `https://<your-host>/webhook`. Expect `{"status":"dry_run"}`.
-
-Point a TradingView alert at `https://<your-host>/webhook`. An alert sent from TradingView is not one of the checks above.
-
-## 4. Analytics API
-
-On the VM you start, clone this repository, create a virtual environment, and install `requirements.txt` the same way. Then:
+On the Linux VM, from a clone of the same code:
 
 ```bash
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install -r requirements.txt
 python -m app.analytics.api
 ```
 
-The process listens on port 8080. On that VM:
+The Analytics API listens on port 8080. This process does not open Postgres.
+
+## Render Deployment
+
+On your Render Web Service, use:
+
+- Build command: `pip install -r requirements.txt`
+- Start command: `uvicorn app.main:app --host 0.0.0.0 --port $PORT`
+- Environment: set `WEBHOOK_SECRET` to your secret. Leave `EXECUTION_MODE` unset.
+
+The deployed `config/strategies.yml` must contain `btc_long_example`, as saved in Quick Start. The hostname belongs to your service. This file does not name one.
+
+## Validation
+
+These three results are the end of this file.
+
+1. Render `GET /health` returns `{"status":"ok"}`.
+
+```powershell
+curl.exe -i https://<your-host>/health
+```
+
+2. Analytics API `GET /health` returns `{"status":"ok"}`. On the VM:
 
 ```bash
 curl -i http://127.0.0.1:8080/health
 ```
 
-Expect HTTP 200 and `{"status":"ok"}`. This check does not open Postgres.
+3. `POST /webhook` returns `{"status":"dry_run"}`.
 
-## Disclaimer
+```powershell
+curl.exe -i -X POST https://<your-host>/webhook `
+  -H "Content-Type: application/json" `
+  -d "{\"secret\":\"replace-me\",\"strategy_id\":\"btc_long_example\",\"symbol\":\"BTC/USDT\",\"action\":\"BUY\",\"bar_time\":\"2026-10-15T00:00:00Z\",\"client_order_id\":\"btc_long_example_20261015000000_buy\"}"
+```
 
-Signal Nexus is software.
+Use the same secret as `WEBHOOK_SECRET`. A different secret returns HTTP 401 and `{"detail":"unauthorized"}`. A body that contains `size` or `size_quote` returns HTTP 422.
 
-It is not investment advice.
+Each health check shows only that its process answered. Postgres, a venue, Discord, and the importer are outside these checks. An alert sent from TradingView is not one of them.
 
-Use at your own risk.
+## Documentation
 
-The authors are not responsible for trading losses, exchange failures, or configuration mistakes.
-
-Users are responsible for securing their infrastructure, API keys, and venue accounts.
-
-## Current Status
-
-- TradingView webhook supported
-- Dry-run mode supported
-- Render deployment supported
-- Analytics API available
-- Live execution requires your own configuration
+How to install Python 3.12, Git, and how to create a GitHub account, a Render account, a Render Web Service, a Linux VM, and an SSH key are in the Signal Nexus Buildbook. Oracle Cloud console steps, if you use Oracle for the VM, are there too. This file does not repeat them.
