@@ -1,5 +1,6 @@
 from html import escape
 from pathlib import Path
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 import yaml
 
@@ -89,13 +90,27 @@ _EN = {
 }
 
 
-def portal_language(path: Path | None = None) -> str:
+def _locale_document(path: Path | None = None) -> dict:
     source = path or (ROOT / "config" / "locale.yml")
     try:
         loaded = yaml.safe_load(source.read_text(encoding="utf-8"))
     except (OSError, yaml.YAMLError):
-        return "english"
-    if isinstance(loaded, dict) and loaded.get("language") == "japanese":
+        return {}
+    return loaded if isinstance(loaded, dict) else {}
+
+
+def portal_zone(path: Path | None = None) -> ZoneInfo:
+    value = _locale_document(path).get("timezone")
+    if isinstance(value, str) and value.strip():
+        try:
+            return ZoneInfo(value.strip())
+        except ZoneInfoNotFoundError:
+            return ZoneInfo("Asia/Tokyo")
+    return ZoneInfo("Asia/Tokyo")
+
+
+def portal_language(path: Path | None = None) -> str:
+    if _locale_document(path).get("language") == "japanese":
         return "japanese"
     return "english"
 

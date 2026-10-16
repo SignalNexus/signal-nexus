@@ -17,6 +17,7 @@ from pydantic import BaseModel, ConfigDict, field_validator
 from app.analytics.report import (
     FillView,
     attach_volumes,
+    final_fill_realized,
     mark_opens,
     month_forecast,
     period_rows,
@@ -399,7 +400,15 @@ def audits(authorization: str | None = Header(default=None)) -> dict:
 @app.get("/api/trades")
 def trades(authorization: str | None = Header(default=None)) -> dict:
     _require_secret(authorization)
-    return {"trades": [_fill_json(fill) for fill in _load_fill_views()]}
+    fills = _load_fill_views()
+    realized = final_fill_realized(fills)
+    rows = []
+    for fill in fills:
+        row = _fill_json(fill)
+        amount = realized.get(fill.trade_id)
+        row["realized"] = None if amount is None else _decimal(amount)
+        rows.append(row)
+    return {"trades": rows}
 
 
 @app.get("/api/positions")

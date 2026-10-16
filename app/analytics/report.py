@@ -1,13 +1,10 @@
 from calendar import monthrange
 from collections import defaultdict
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 from decimal import Decimal
-from zoneinfo import ZoneInfo
 
 from app.venues import is_futures, is_spot
-
-TOKYO = ZoneInfo("Asia/Tokyo")
 
 
 @dataclass(frozen=True)
@@ -37,6 +34,7 @@ class ClosedTrade:
     quote_spent: Decimal
     quote_received: Decimal
     venue: str = "mexc_spot"
+    final_trade_id: str = ""
 
     @property
     def realized(self) -> Decimal:
@@ -76,20 +74,24 @@ class _Pending:
         self.quote_spent = Decimal("0")
         self.quote_received = Decimal("0")
         self.closed_at: datetime | None = None
+        self.final_trade_id = ""
+
+    def _mark_final(self, fill: FillView) -> None:
+        self.final_trade_id = fill.trade_id
+        if self.closed_at is None or fill.filled_at > self.closed_at:
+            self.closed_at = fill.filled_at
 
     def add(self, fill: FillView, spent: Decimal) -> None:
         self.quantity += fill.quantity
         self.quote_received += fill.quote_received
         self.quote_spent += spent
-        if self.closed_at is None or fill.filled_at > self.closed_at:
-            self.closed_at = fill.filled_at
+        self._mark_final(fill)
 
     def cover(self, fill: FillView, entry: Decimal) -> None:
         self.quantity += fill.quantity
         self.quote_received += entry
         self.quote_spent += fill.quote_spent
-        if self.closed_at is None or fill.filled_at > self.closed_at:
-            self.closed_at = fill.filled_at
+        self._mark_final(fill)
 
 
 def effective_buy_quantity(fill: FillView) -> Decimal:
@@ -162,6 +164,11 @@ def reconstruct(fills: list[FillView]) -> tuple[list[ClosedTrade], list[OpenPosi
     return closed, opens
 
 
+def final_fill_realized(fills: list[FillView]) -> dict[str, Decimal]:
+    closed, _opens = reconstruct(fills)
+    return {trade.final_trade_id: trade.realized for trade in closed if trade.final_trade_id}
+
+
 def mark_opens(opens: list[OpenPosition], prices: dict) -> list[OpenPosition]:
     marked: list[OpenPosition] = []
     for position in opens:
@@ -232,9 +239,9 @@ def _closed_metrics(trades: list[ClosedTrade]) -> dict:
 
 
 def period_rows(closed: list[ClosedTrade], now: datetime) -> dict[str, list[dict]]:
-    today = now.astimezone(TOKYO).date()
+    today = now.astimezone(timezone.utc).date()
     if closed:
-        start = min(trade.closed_at.astimezone(TOKYO).date() for trade in closed).replace(day=1)
+        start = min(trade.closed_at.astimezone(timezone.utc).date() for trade in closed).replace(day=1)
     else:
         start = today.replace(day=1)
     totals: dict[str, dict[str, Decimal]] = {
@@ -244,7 +251,7 @@ def period_rows(closed: list[ClosedTrade], now: datetime) -> dict[str, list[dict
         "years": defaultdict(lambda: Decimal("0")),
     }
     for trade in closed:
-        local = trade.closed_at.astimezone(TOKYO)
+        local = trade.closed_at.astimezone(timezone.utc)
         totals["days"][local.date().isoformat()] += trade.realized
         calendar = local.date().isocalendar()
         totals["weeks"][f"{calendar.year}-W{calendar.week:02d}"] += trade.realized
@@ -268,13 +275,13 @@ def period_rows(closed: list[ClosedTrade], now: datetime) -> dict[str, list[dict
 
 
 def month_forecast(closed: list[ClosedTrade], now: datetime, target: Decimal | None) -> dict:
-    today = now.astimezone(TOKYO).date()
+    today = now.astimezone(timezone.utc).date()
     month_key = today.strftime("%Y-%m")
     actual = sum(
         (
             trade.realized
             for trade in closed
-            if trade.closed_at.astimezone(TOKYO).strftime("%Y-%m") == month_key
+            if trade.closed_at.astimezone(timezone.utc).strftime("%Y-%m") == month_key
         ),
         Decimal("0"),
     )
@@ -307,6 +314,7 @@ def _flush(closed: list[ClosedTrade], pending: _Pending | None) -> None:
             quote_spent=pending.quote_spent,
             quote_received=pending.quote_received,
             venue=pending.venue,
+            final_trade_id=pending.final_trade_id,
         )
     )
 
@@ -336,9 +344,9 @@ def fill_notional(fill: FillView) -> Decimal:
 
 
 def volume_rows(fills: list[FillView], now: datetime) -> dict[str, list[dict]]:
-    today = now.astimezone(TOKYO).date()
+    today = now.astimezone(timezone.utc).date()
     if fills:
-        start = min(fill.filled_at.astimezone(TOKYO).date() for fill in fills).replace(day=1)
+        start = min(fill.filled_at.astimezone(timezone.utc).date() for fill in fills).replace(day=1)
     else:
         start = today.replace(day=1)
     totals: dict[str, dict[str, Decimal]] = {
@@ -348,7 +356,7 @@ def volume_rows(fills: list[FillView], now: datetime) -> dict[str, list[dict]]:
         "years": defaultdict(lambda: Decimal("0")),
     }
     for fill in fills:
-        local = fill.filled_at.astimezone(TOKYO)
+        local = fill.filled_at.astimezone(timezone.utc)
         amount = fill_notional(fill)
         totals["days"][local.date().isoformat()] += amount
         calendar = local.date().isocalendar()

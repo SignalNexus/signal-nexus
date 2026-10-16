@@ -1,11 +1,9 @@
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
-from zoneinfo import ZoneInfo
 
-from app.portal_text import days_clock_label, hours_label, minutes_label, t
+from app.portal_text import days_clock_label, hours_label, minutes_label, portal_zone, t
 from app.venues import is_futures, is_spot
 
-TOKYO = ZoneInfo("Asia/Tokyo")
 AUDIT_LABELS = {
     "order_success": "SUCCESS",
     "signal_received": "RECEIVED",
@@ -305,7 +303,7 @@ def trades_view(rows: list[dict], today) -> dict:
     ordered = sorted(rows, key=lambda row: (moment(row["filled_at"]), str(row.get("trade_id") or "")), reverse=True)
     prepared = []
     for row in ordered:
-        filled = moment(row["filled_at"]).astimezone(TOKYO)
+        filled = moment(row["filled_at"]).astimezone(portal_zone())
         venue = row.get("venue") or "mexc_spot"
         bought = str(row.get("side") or "").lower() == "buy"
         if is_futures(venue):
@@ -327,6 +325,7 @@ def trades_view(rows: list[dict], today) -> dict:
                 "quote_spent": decimal(row.get("quote_spent")) or Decimal("0"),
                 "quote_received": decimal(row.get("quote_received")) or Decimal("0"),
                 "fill_price": decimal(row.get("fill_price")),
+                "realized": decimal(row.get("realized")),
                 "unclassified": (row.get("strategy_name") or "未分類") == "未分類",
             }
         )
@@ -409,7 +408,7 @@ def audits_view(rows: list[dict] | None) -> dict | None:
         reason = str(row.get("reason") or "")
         prepared.append(
             {
-                "at": moment(row["recorded_at"]).astimezone(TOKYO),
+                "at": moment(row["recorded_at"]).astimezone(portal_zone()),
                 "kind": kind,
                 "label": label,
                 "known": kind in AUDIT_LABELS,
@@ -448,7 +447,7 @@ def latest_alert(rows: list[dict] | None) -> datetime | None:
     received = [moment(row["recorded_at"]) for row in rows if row.get("kind") == "signal_received"]
     if not received:
         return None
-    return max(received).astimezone(TOKYO)
+    return max(received).astimezone(portal_zone())
 
 
 def _subtract(left: Decimal | None, right: Decimal | None, points: bool) -> Decimal | None:

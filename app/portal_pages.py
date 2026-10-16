@@ -1,7 +1,6 @@
 from datetime import datetime, timezone
 from decimal import Decimal
 from html import escape
-from zoneinfo import ZoneInfo
 
 from app.core.config import execution_mode, kill_switch_enabled
 from app.venues import is_futures, is_spot, quote_currency
@@ -25,6 +24,7 @@ from app.portal_text import (
     opened_phrase,
     orders_fetched,
     period_days,
+    portal_zone,
     price_phrase,
     rate_meta,
     received_header,
@@ -38,7 +38,8 @@ from app.portal_text import (
     volume_phrase,
 )
 
-TOKYO = ZoneInfo("Asia/Tokyo")
+# Daily, weekly, monthly, and yearly figures are grouped in UTC.
+AGGREGATION = timezone.utc
 # Venue Lifecycle は販売戦略の会場状態に合わせる。MEXC は本番、Arcus は測定と接続の途中、残りは未対応。
 VENUE_CARDS = (
     {"name": "MEXC", "status": "Supported", "lines": (("Spot", "mexc_spot"), ("Futures", "mexc_futures"))},
@@ -331,7 +332,7 @@ def message_page(text: str) -> str:
 
 
 def render_dashboard(board: dict | None) -> str:
-    now = datetime.now(TOKYO)
+    now = datetime.now(portal_zone())
     schedule = read_schedule(now.date())
     ops = []
     if schedule:
@@ -362,15 +363,21 @@ def render_trading(view: str, board: dict | None, balances, orders, fetched_at: 
         current,
     )
     now = datetime.now(timezone.utc)
+    actions = ""
     if current == "trades":
-        body = _trades(None if board is None else board.get("trades") or [])
+        rows = None if board is None else board.get("trades")
+        if rows is None:
+            body = _trades(None)
+        else:
+            body = _trades(rows) + _fold_script()
+            actions = _fold_actions()
     elif current == "orders":
         body = _orders(orders, fetched_at)
     elif current == "balances":
         body = _balances(balances, fetched_at)
     else:
         body = _positions(None if board is None else board.get("positions") or [], now)
-    return _shell("trading", "Trading", switch, body)
+    return _shell("trading", "Trading", switch, body, actions=actions)
 
 
 def render_analytics(view: str, board: dict | None, backtests: dict) -> str:
@@ -413,7 +420,7 @@ def render_operations(view: str, audits) -> str:
     if current == "audit":
         body = _audits(audits_view(None if audits is None else audits))
     else:
-        today = datetime.now(TOKYO).date()
+        today = datetime.now(portal_zone()).date()
         body = _schedule(read_schedule(today))
     return _shell("operations", "Operations", switch, body)
 
@@ -589,7 +596,7 @@ def _health(board: dict | None, now: datetime) -> str:
         aggregate = "Healthy"
         audits = board.get("audits", [])
         found = latest_alert(audits)
-        alert = "No Activity" if found is None and audits is not None else ("—" if found is None else found.astimezone(TOKYO).strftime("%Y-%m-%d %H:%M"))
+        alert = "No Activity" if found is None and audits is not None else ("—" if found is None else found.astimezone(portal_zone()).strftime("%Y-%m-%d %H:%M"))
         ingest = ingest_state(board.get("ingest_succeeded_at"), now)
     ingest_class = "down" if ingest == "Unhealthy" else "up"
     return f"""
@@ -671,7 +678,7 @@ def _positions(rows: list[dict] | None, now: datetime) -> str:
 def _trades(rows: list[dict] | None) -> str:
     if rows is None:
         return _blank_summary(("Recent Trades", t("当日約定数"), count_label("BUY", "fills"), count_label("SELL", "fills"), unclassified_count("fills")))
-    today = datetime.now(TOKYO).date()
+    today = datetime.now(portal_zone()).date()
 
     def section(_label: str, venue_id: str, line_rows: list[dict]) -> str:
         return _trade_body(trades_view(line_rows, today), venue_id)
@@ -719,21 +726,25 @@ def _trade_body(view: dict, venue_id: str) -> str:
         table.append(
             f'<tr class="{edge}"><td>{when}</td><td>{strategy}</td><td>{venue}</td><td>{escape(row["symbol"])}</td>'
             f"<td>{side}</td><td>{_num(row['quote_received'])}</td><td>{_num(row['quote_spent'])}</td>"
-            f"<td>{_qty(row['quantity'])}</td></tr>"
+            f"<td>{_qty(row['quantity'])}</td><td class=\"{_tone(row.get('realized'))}\">{_realized_cell(row.get('realized'), money)}</td></tr>"
         )
         cards_html.append(
             f'<article class="card {edge}"><p class="lead">{when}</p><p>{strategy}</p>'
             f'<p>{venue} · {escape(row["symbol"])} · {side}</p>'
-            f'<p class="meta">{trade_amounts(_num(row["quote_received"]), _num(row["quote_spent"]), _qty(row["quantity"]))}</p></article>'
+            f'<p class="meta">{trade_amounts(_num(row["quote_received"]), _num(row["quote_spent"]), _qty(row["quantity"]))}'
+            f' · {t("実現損益")} {_realized_cell(row.get("realized"), money)}</p></article>'
         )
-    return (
-        cards
-        + volume
-        + f'<div class="wide scroll"><table><tr><th>{t("約定時刻")}</th><th>{t("戦略")}</th><th>Venue</th><th>{t("銘柄")}</th><th>{t("売買")}</th>'
-        + f"<th>{received_header(escape(money))}</th><th>{spent_header(escape(money))}</th><th>{t('数量')}</th></tr>"
+    details = (
+        f'<div class="wide scroll"><table><tr><th>{t("約定時刻")}</th><th>{t("戦略")}</th><th>Venue</th><th>{t("銘柄")}</th><th>{t("売買")}</th>'
+        + f"<th>{received_header(escape(money))}</th><th>{spent_header(escape(money))}</th><th>{t('数量')}</th><th>{t('実現損益')}</th></tr>"
         + "".join(table)
         + "</table></div>"
         + f'<div class="narrow">{"".join(cards_html)}</div>'
+    )
+    return (
+        cards
+        + volume
+        + f'<div data-fold>{_fold(details)}</div>'
     )
 
 
@@ -777,7 +788,7 @@ def _order_body(view: dict | None, fetched_at: datetime | None, venue_id: str) -
         "cols-4",
         {3: unclassified[0]},
     )
-    when = "" if fetched_at is None else escape(fetched_at.astimezone(TOKYO).strftime("%Y-%m-%d %H:%M"))
+    when = "" if fetched_at is None else escape(fetched_at.astimezone(portal_zone()).strftime("%Y-%m-%d %H:%M"))
     rule = f'<p class="rule">{orders_fetched(when)}</p>' if when else ""
     if view["count"] == 0:
         return f"{cards}{rule}<p class=\"empty\">{t('未約定注文はありません')}</p>"
@@ -787,7 +798,7 @@ def _order_body(view: dict | None, fetched_at: datetime | None, venue_id: str) -
         edge = "edge-amber" if row["unclassified"] else ""
         strategy = f'<span class="amber">{escape(show_text(row["strategy_name"]))}</span>' if row["unclassified"] else escape(show_text(row["strategy_name"]))
         side = f'<span class="{"buy" if row["side"] in {"BUY", "LONG"} else ""}">{row["side"]}</span>'
-        created = "—" if row["created"] is None else escape(row["created"].astimezone(TOKYO).strftime("%Y-%m-%d %H:%M"))
+        created = "—" if row["created"] is None else escape(row["created"].astimezone(portal_zone()).strftime("%Y-%m-%d %H:%M"))
         elapsed = "—" if row["elapsed"] is None else escape(row["elapsed"])
         table.append(
             f'<tr class="{edge}"><td class="big">{_qty(row["remaining"])}</td><td><strong class="big">{elapsed}</strong><br>{created}</td>'
@@ -840,7 +851,7 @@ def _arcus_balance_body(view: dict | None, fetched_at: datetime | None) -> str:
         "cols-4",
         {0: "focus-violet"},
     )
-    when = "" if fetched_at is None else escape(fetched_at.astimezone(TOKYO).strftime("%Y-%m-%d %H:%M"))
+    when = "" if fetched_at is None else escape(fetched_at.astimezone(portal_zone()).strftime("%Y-%m-%d %H:%M"))
     rule = f'<p class="rule">{usd_fetched(when)}</p>' if when else ""
     return f"{cards}{rule}"
 
@@ -859,7 +870,7 @@ def _balance_body(view: dict | None, fetched_at: datetime | None) -> str:
         "cols-4",
         {0: "focus-violet"},
     )
-    when = "" if fetched_at is None else escape(fetched_at.astimezone(TOKYO).strftime("%Y-%m-%d %H:%M"))
+    when = "" if fetched_at is None else escape(fetched_at.astimezone(portal_zone()).strftime("%Y-%m-%d %H:%M"))
     table = []
     cards_html = []
     for row in view["coins"]:
@@ -1097,16 +1108,16 @@ def _audits(view: dict | None) -> str:
         copy = escape(row["copy"])
         kind = f'<span class="kind {tone}">{_audit_mark(row)}{escape(row["label"])}</span>'
         table.append(
-            f'<tr class="{edge}"><td>{kind}</td><td class="big {reason_class}">{reason}</td><td>{when}</td>'
-            f"<td>{strategy}</td><td>{symbol}</td><td>{copy}</td></tr>"
+            f'<tr class="{edge}"><td>{when}</td><td>{strategy}</td><td>{symbol}</td><td>{kind}</td>'
+            f'<td class="big {reason_class}">{reason}</td><td>{copy}</td></tr>'
         )
         cards_html.append(
-            f'<article class="card {edge}"><p>{kind}</p><p class="{reason_class}">{reason}</p>'
-            f"<p>{when}</p><p class=\"meta\">{strategy} · {symbol}</p><p>{copy}</p></article>"
+            f'<article class="card {edge}"><p>{when}</p><p class="meta">{strategy} · {symbol}</p>'
+            f'<p>{kind}</p><p class="{reason_class}">{reason}</p><p>{copy}</p></article>'
         )
     return (
         cards
-        + f'<div class="wide scroll"><table><tr><th>{t("イベント種別")}</th><th>{t("理由")}</th><th>{t("発生時刻")}</th><th>{t("戦略")}</th><th>{t("銘柄")}</th><th>{t("写し")}</th></tr>'
+        + f'<div class="wide scroll"><table><tr><th>{t("発生時刻")}</th><th>{t("戦略")}</th><th>{t("銘柄")}</th><th>{t("イベント種別")}</th><th>{t("理由")}</th><th>{t("写し")}</th></tr>'
         + "".join(table)
         + "</table></div>"
         + f'<div class="narrow">{"".join(cards_html)}</div>'
@@ -1202,7 +1213,7 @@ def _venue_body(board: dict, card: dict, kind: str, month: str, positions: list[
                 f'<strong class="{_tone(amount)}">{_num(amount, signed=False)} USD</strong></div>'
             )
         lines.append(
-            f'<div class="venue-line"><span>Month Volume</span><b class="vol">{_volume_text(volume, "USD")}</b></div>'
+            f'<div class="venue-line"><span>{t("今月の出来高")}</span><b class="vol">{_volume_text(volume, "USD")}</b></div>'
         )
         return f'<div class="venue-lines">{"".join(lines)}</div>'
     if kind == "risk":
@@ -1269,7 +1280,7 @@ def _month_volume(bundle, month: str) -> Decimal:
 def _volume_values(bundle, now: datetime) -> dict[str, Decimal]:
     if not isinstance(bundle, dict):
         bundle = {}
-    local = now.astimezone(TOKYO)
+    local = now.astimezone(AGGREGATION)
     week = local.isocalendar()
     return {
         "Daily": _volume_period(bundle.get("days"), local.date().isoformat()),
@@ -1420,7 +1431,7 @@ def _risk_slim(title: str, view: dict, unit: str = "USD") -> str:
 
 
 def _pnl_values(pnl: dict, now: datetime, monthly: Decimal | None = None) -> dict[str, Decimal]:
-    local = now.astimezone(TOKYO)
+    local = now.astimezone(AGGREGATION)
     week = local.isocalendar()
     if monthly is None:
         monthly = _period_value(pnl.get("months"), local.strftime("%Y-%m"))
@@ -1466,7 +1477,7 @@ def _position_body(view: dict) -> str:
             f"<div class=\"metric qty\"><span>{t('残数量')}</span><strong>{_qty(row['quantity'])} {escape(row['base'])}</strong></div>"
             "</div>"
             f"<p class=\"meta\">{escape(show_text(row['strategy_name']))} · {escape(row['symbol'])} · {escape(row.get('venue') or 'mexc_spot')} · "
-            f"{opened_phrase(escape(row['opened_at'].astimezone(TOKYO).strftime('%Y-%m-%d %H:%M')))} · "
+            f"{opened_phrase(escape(row['opened_at'].astimezone(portal_zone()).strftime('%Y-%m-%d %H:%M')))} · "
             f"{price_phrase(_price(row['price']), escape(unit))}</p></article>"
         )
     empty = "" if rows else f'<p class="empty">{t("建玉はありません")}</p>'
@@ -1522,6 +1533,10 @@ def _signed(value: Decimal | None, suffix: str = "") -> str:
     if suffix:
         text = f"{text} {suffix}"
     return escape(text)
+
+
+def _realized_cell(value, _unit: str) -> str:
+    return _signed(value)
 
 
 def _pct(value) -> str:
