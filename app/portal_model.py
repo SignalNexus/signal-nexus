@@ -2,6 +2,7 @@ from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 from zoneinfo import ZoneInfo
 
+from app.portal_text import days_clock_label, hours_label, minutes_label, t
 from app.venues import is_futures, is_spot
 
 TOKYO = ZoneInfo("Asia/Tokyo")
@@ -47,11 +48,11 @@ def hold_label(delta: timedelta) -> str:
         total = 0
     minutes = total // 60
     if minutes < 60:
-        return f"{minutes}分"
+        return minutes_label(minutes)
     hours = minutes // 60
     if hours < 24:
-        return f"{hours}時間 {minutes % 60}分"
-    return f"{hours // 24}日 {hours % 24}時間"
+        return hours_label(hours, minutes % 60)
+    return days_clock_label(hours // 24, hours % 24)
 
 
 def positions_view(rows: list[dict], now: datetime) -> dict:
@@ -433,11 +434,11 @@ def _discord_copy(row: dict) -> str:
     status = str(row.get("discord_status") or "")
     detail = str(row.get("discord_detail") or "")
     if status == "sent":
-        return "送信済み"
+        return t("送信済み")
     if status == "not_configured":
-        return "未設定"
+        return t("未設定")
     if status == "failed":
-        return detail or "失敗"
+        return detail or t("失敗")
     return "—"
 
 

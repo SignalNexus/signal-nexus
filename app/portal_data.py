@@ -4,6 +4,8 @@ from pathlib import Path
 
 import yaml
 
+from app.portal_text import remaining_label
+
 ROOT = Path(__file__).resolve().parents[1]
 ORDER_QUOTE = Decimal("10")
 
@@ -142,7 +144,7 @@ def schedule_items(document: dict, today: date) -> list[dict]:
                 "due": due.isoformat(),
                 "state": state,
                 "delta": delta,
-                "remaining": f"残り{delta}日" if delta >= 0 else f"{-delta}日超過",
+                "remaining": remaining_label(delta),
                 "index": index,
             }
         )

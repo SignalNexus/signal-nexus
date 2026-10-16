@@ -16,6 +16,27 @@ from app.portal_model import (
     tickers_view,
     trades_view,
 )
+from app.portal_text import (
+    actual_label,
+    balance_amounts,
+    coins_fetched,
+    count_label,
+    due_phrase,
+    opened_phrase,
+    orders_fetched,
+    period_days,
+    price_phrase,
+    rate_meta,
+    received_header,
+    show_text,
+    spent_header,
+    starts_phrase,
+    t,
+    trade_amounts,
+    unclassified_count,
+    usd_fetched,
+    volume_phrase,
+)
 
 TOKYO = ZoneInfo("Asia/Tokyo")
 # Venue Lifecycle は販売戦略の会場状態に合わせる。MEXC は本番、Arcus は測定と接続の途中、残りは未対応。
@@ -298,8 +319,8 @@ def login_page(error: str) -> str:
       <a class="brand" href="/portal">Signal Nexus</a>
       {notice}
       <form method="post" action="/portal/login">
-        <label>パスワード<input type="password" name="password" autocomplete="current-password" required></label>
-        <button type="submit">開く</button>
+        <label>{t("パスワード")}<input type="password" name="password" autocomplete="current-password" required></label>
+        <button type="submit">{t("開く")}</button>
       </form>
     </main>
     """
@@ -331,7 +352,7 @@ def render_dashboard(board: dict | None) -> str:
 def render_trading(view: str, board: dict | None, balances, orders, fetched_at: datetime | None) -> str:
     current = view if view in {"positions", "trades", "orders", "balances"} else "positions"
     switch = _switch(
-        "Trading の切り替え",
+        t("Trading の切り替え"),
         (
             ("positions", "Positions", "/portal/trading"),
             ("trades", "Trades", "/portal/trading?view=trades"),
@@ -355,7 +376,7 @@ def render_trading(view: str, board: dict | None, balances, orders, fetched_at: 
 def render_analytics(view: str, board: dict | None, backtests: dict) -> str:
     current = view if view in {"tickers", "backtest"} else "strategies"
     switch = _switch(
-        "Analytics の切り替え",
+        t("Analytics の切り替え"),
         (
             ("strategies", "Strategies", "/portal/analytics"),
             ("tickers", "Tickers", "/portal/analytics?view=tickers"),
@@ -382,7 +403,7 @@ def render_analytics(view: str, board: dict | None, backtests: dict) -> str:
 def render_operations(view: str, audits) -> str:
     current = "audit" if view == "audit" else "schedule"
     switch = _switch(
-        "Operations の切り替え",
+        t("Operations の切り替え"),
         (
             ("schedule", "Schedule", "/portal/operations"),
             ("audit", "Audit Log", "/portal/operations?view=audit"),
@@ -406,7 +427,7 @@ def _shell(active: str, title: str, switch: str, body: str, actions: str = "") -
         tabs.append(f'<a href="{href}"{current}>{label}</a>')
     return f"""
     <div class="shell">
-      <nav class="side" aria-label="行き先"><a class="brand" href="/portal">Signal Nexus</a>{''.join(side)}</nav>
+      <nav class="side" aria-label="{t("行き先")}"><a class="brand" href="/portal">Signal Nexus</a>{''.join(side)}</nav>
       <div class="main">
         <header>
           <div class="title"><a class="brand phone-brand" href="/portal">Signal Nexus</a><h2>{escape(title)}</h2></div>
@@ -415,7 +436,7 @@ def _shell(active: str, title: str, switch: str, body: str, actions: str = "") -
         {switch}
         {body}
       </div>
-      <nav class="tabs" aria-label="行き先">{''.join(tabs)}</nav>
+      <nav class="tabs" aria-label="{t("行き先")}">{''.join(tabs)}</nav>
     </div>
     """
 
@@ -428,7 +449,7 @@ _CHEVRON = (
 
 def _fold(body: str) -> str:
     return (
-        '<button type="button" class="fold" aria-expanded="false" aria-label="内訳を開く">'
+        f'<button type="button" class="fold" aria-expanded="false" aria-label="{t("内訳を開く")}">'
         f"{_CHEVRON}</button>"
         f'<div class="fold-body" hidden>{body}</div>'
     )
@@ -444,7 +465,7 @@ def _fold_actions() -> str:
 
 
 def _fold_script() -> str:
-    return """
+    script = """
     <script>
     (function () {
       var sections = document.querySelectorAll("[data-fold]");
@@ -478,6 +499,7 @@ def _fold_script() -> str:
     })();
     </script>
     """
+    return script.replace("内訳を閉じる", t("内訳を閉じる")).replace("内訳を開く", t("内訳を開く"))
 
 
 def _switch(label: str, items: tuple, current: str) -> str:
@@ -499,11 +521,11 @@ def _today(board: dict) -> str:
       <div class="band total">
         <h3>Total</h3>
         <div class="today-grid">
-          <div class="metric hero"><span>実績（USD）</span><strong class="{_tone(actual)}">{_num(actual, signed=False)}</strong><span>今月の出来高</span><b class="vol">{_volume_text(total_volume, "USD")}</b></div>
-          <div class="metric"><span>月目標</span><strong>{_num(forecast.get("target"))}</strong></div>
-          <div class="metric"><span>達成率</span><strong class="{_tone(Decimal(str(forecast["achievement"])) if forecast.get("achievement") not in (None, "") else None)}">{_pct(forecast.get("achievement"))}</strong></div>
-          <div class="metric"><span>残必要額</span><strong>{_num(forecast.get("remaining"))}</strong></div>
-          <div class="metric"><span>月末着地予測</span><strong>{_num(forecast.get("forecast"))}</strong></div>
+          <div class="metric hero"><span>{actual_label("USD")}</span><strong class="{_tone(actual)}">{_num(actual, signed=False)}</strong><span>{t("今月の出来高")}</span><b class="vol">{_volume_text(total_volume, "USD")}</b></div>
+          <div class="metric"><span>{t("月目標")}</span><strong>{_num(forecast.get("target"))}</strong></div>
+          <div class="metric"><span>{t("達成率")}</span><strong class="{_tone(Decimal(str(forecast["achievement"])) if forecast.get("achievement") not in (None, "") else None)}">{_pct(forecast.get("achievement"))}</strong></div>
+          <div class="metric"><span>{t("残必要額")}</span><strong>{_num(forecast.get("remaining"))}</strong></div>
+          <div class="metric"><span>{t("月末着地予測")}</span><strong>{_num(forecast.get("forecast"))}</strong></div>
         </div>
       </div>
       {_fold(_venue_grid(board, "today", month))}
@@ -519,7 +541,7 @@ def _risk(board: dict, now: datetime) -> str:
       <p class="eyebrow">Risk Summary</p>
       <div class="band total"><h3>Total</h3>{_risk_cards(positions_view(rows, moment), "USD")}</div>
       {_fold(_venue_grid(board, "risk", "", now=moment))}
-      <p class="hint"><a class="more" href="/portal/trading">Positions を開く</a></p>
+      <p class="hint"><a class="more" href="/portal/trading">{t("Positions を開く")}</a></p>
     </section>
     """
 
@@ -528,10 +550,10 @@ def _operations(rows: list[dict]) -> str:
     body = []
     for row in rows:
         if row["state"] == "Overdue":
-            state = "期限超過"
+            state = t("期限超過")
             css = "overdue"
         else:
-            state = "直近"
+            state = t("直近")
             css = "upcoming"
         body.append(
             "<tr>"
@@ -545,10 +567,10 @@ def _operations(rows: list[dict]) -> str:
       <p class="eyebrow">Operations</p>
       <div class="panel scroll">
         <table>
-          <tr><th>作業名</th><th>期限</th><th>状態</th></tr>
+          <tr><th>{t("作業名")}</th><th>{t("期限")}</th><th>{t("状態")}</th></tr>
           {''.join(body)}
         </table>
-        <a class="more" href="/portal/operations">Schedule を開く</a>
+        <a class="more" href="/portal/operations">{t("Schedule を開く")}</a>
       </div>
     </section>
     """
@@ -574,11 +596,11 @@ def _health(board: dict | None, now: datetime) -> str:
     <section class="block" aria-label="System Health">
       <p class="eyebrow">System Health</p>
       <div class="health">
-        <div><span>モード</span><strong class="{mode_class}">{escape(mode)}</strong></div>
-        <div><span>発注</span><strong class="{order_class}">{order}</strong></div>
-        <div><span>集計</span><strong class="{"down" if aggregate == "Unhealthy" else "up"}">{aggregate}</strong></div>
-        <div><span>取り込み</span><strong class="{ingest_class}">{ingest}</strong></div>
-        <div><span>直近のアラート</span><strong>{escape(alert)}</strong></div>
+        <div><span>{t("モード")}</span><strong class="{mode_class}">{escape(mode)}</strong></div>
+        <div><span>{t("発注")}</span><strong class="{order_class}">{order}</strong></div>
+        <div><span>{t("集計")}</span><strong class="{"down" if aggregate == "Unhealthy" else "up"}">{aggregate}</strong></div>
+        <div><span>{t("取り込み")}</span><strong class="{ingest_class}">{ingest}</strong></div>
+        <div><span>{t("直近のアラート")}</span><strong>{escape(alert)}</strong></div>
       </div>
     </section>
     """
@@ -609,7 +631,7 @@ def _strategy_summary(board: dict) -> str:
     view = strategies_view(rows)
     body = "".join(
         "<tr>"
-        f"<td>{escape(row['strategy_name'])}</td>"
+        f"<td>{escape(show_text(row['strategy_name']))}</td>"
         f"<td>{escape(row.get('venue') or 'mexc_spot')}</td>"
         f"<td class=\"{_tone(row['realized'])}\">{_signed(row['realized'], _unit(row.get('venue')))}</td>"
         f"<td>{_volume_text(row.get('volume') or Decimal('0'), _unit(row.get('venue')))}</td>"
@@ -622,13 +644,13 @@ def _strategy_summary(board: dict) -> str:
     return f"""
     <section class="block" aria-label="Strategy Summary">
       <p class="eyebrow">Strategy Summary</p>
-      <p class="hint">決済が1件以上存在する戦略・未分類のみを表示</p>
+      <p class="hint">{t("決済が1件以上存在する戦略・未分類のみを表示")}</p>
       <div class="panel scroll">
         <table>
-          <tr><th>戦略</th><th>Venue</th><th>実現損益</th><th>出来高</th><th>PF</th><th>回数</th><th>勝率</th></tr>
+          <tr><th>{t("戦略")}</th><th>Venue</th><th>{t("実現損益")}</th><th>{t("出来高")}</th><th>PF</th><th>{t("回数")}</th><th>{t("勝率")}</th></tr>
           {body}
         </table>
-        <a class="more" href="/portal/analytics">Strategies を開く</a>
+        <a class="more" href="/portal/analytics">{t("Strategies を開く")}</a>
       </div>
     </section>
     """
@@ -648,7 +670,7 @@ def _positions(rows: list[dict] | None, now: datetime) -> str:
 
 def _trades(rows: list[dict] | None) -> str:
     if rows is None:
-        return _blank_summary(("Recent Trades", "当日約定数", "BUY件数", "SELL件数", "未分類件数"))
+        return _blank_summary(("Recent Trades", t("当日約定数"), count_label("BUY", "fills"), count_label("SELL", "fills"), unclassified_count("fills")))
     today = datetime.now(TOKYO).date()
 
     def section(_label: str, venue_id: str, line_rows: list[dict]) -> str:
@@ -658,8 +680,8 @@ def _trades(rows: list[dict] | None) -> str:
 
 
 def _trade_cards(view: dict, futures: bool) -> str:
-    open_label = "COVER件数" if futures else "BUY件数"
-    close_label = "SHORT件数" if futures else "SELL件数"
+    open_label = count_label("COVER", "fills") if futures else count_label("BUY", "fills")
+    close_label = count_label("SHORT", "fills") if futures else count_label("SELL", "fills")
     if futures:
         opens = sum(1 for row in view["rows"] if row["action"] == "COVER")
         closes = sum(1 for row in view["rows"] if row["action"] == "SHORT")
@@ -670,10 +692,10 @@ def _trade_cards(view: dict, futures: bool) -> str:
     return _summary(
         (
             ("Recent Trades", str(view["count"]), ""),
-            ("当日約定数", str(view["today"]), ""),
+            (t("当日約定数"), str(view["today"]), ""),
             (open_label, str(opens), "up" if opens else ""),
             (close_label, str(closes), ""),
-            ("未分類件数", str(view["unclassified"]), unclassified[1]),
+            (unclassified_count("fills"), str(view["unclassified"]), unclassified[1]),
         ),
         "cols-5",
         {4: unclassified[0]},
@@ -683,13 +705,13 @@ def _trade_cards(view: dict, futures: bool) -> str:
 def _trade_body(view: dict, venue_id: str) -> str:
     cards = _trade_cards(view, is_futures(venue_id))
     amount = sum((row["quote_spent"] + row["quote_received"] for row in view["rows"]), Decimal("0"))
-    volume = f'<p><b class="vol">出来高 {_volume_text(amount, _unit(venue_id))}</b></p>'
+    volume = f'<p><b class="vol">{volume_phrase(_volume_text(amount, _unit(venue_id)))}</b></p>'
     money = _unit(venue_id)
     table = []
     cards_html = []
     for row in view["rows"]:
         edge = "edge-amber" if row["unclassified"] else ""
-        strategy = f'<span class="amber">{escape(row["strategy_name"])}</span>' if row["unclassified"] else escape(row["strategy_name"])
+        strategy = f'<span class="amber">{escape(show_text(row["strategy_name"]))}</span>' if row["unclassified"] else escape(show_text(row["strategy_name"]))
         action = row.get("action") or row["side"]
         side = f'<span class="{"buy" if action in {"BUY", "COVER"} else ""}">{escape(action)}</span>'
         when = escape(row["filled_at"].strftime("%Y-%m-%d %H:%M"))
@@ -702,13 +724,13 @@ def _trade_body(view: dict, venue_id: str) -> str:
         cards_html.append(
             f'<article class="card {edge}"><p class="lead">{when}</p><p>{strategy}</p>'
             f'<p>{venue} · {escape(row["symbol"])} · {side}</p>'
-            f'<p class="meta">戻った {_num(row["quote_received"])} · 使った {_num(row["quote_spent"])} · 数量 {_qty(row["quantity"])}</p></article>'
+            f'<p class="meta">{trade_amounts(_num(row["quote_received"]), _num(row["quote_spent"]), _qty(row["quantity"]))}</p></article>'
         )
     return (
         cards
         + volume
-        + '<div class="wide scroll"><table><tr><th>約定時刻</th><th>戦略</th><th>Venue</th><th>銘柄</th><th>売買</th>'
-        + f"<th>戻った{escape(money)}</th><th>使った{escape(money)}</th><th>数量</th></tr>"
+        + f'<div class="wide scroll"><table><tr><th>{t("約定時刻")}</th><th>{t("戦略")}</th><th>Venue</th><th>{t("銘柄")}</th><th>{t("売買")}</th>'
+        + f"<th>{received_header(escape(money))}</th><th>{spent_header(escape(money))}</th><th>{t('数量')}</th></tr>"
         + "".join(table)
         + "</table></div>"
         + f'<div class="narrow">{"".join(cards_html)}</div>'
@@ -717,7 +739,7 @@ def _trade_body(view: dict, venue_id: str) -> str:
 
 def _orders(view: dict | None, fetched_at: datetime | None) -> str:
     if view is None:
-        return _blank_summary(("未約定件数", "BUY件数", "SELL件数", "未分類件数"))
+        return _blank_summary((t("未約定件数"), count_label("BUY", "orders"), count_label("SELL", "orders"), unclassified_count("orders")))
     if "rows" in view:
         accounts = {"mexc_spot": view, "mexc_futures": None}
     else:
@@ -734,36 +756,36 @@ def _order_body(view: dict | None, fetched_at: datetime | None, venue_id: str) -
     if view is None:
         return '<p class="empty">Unable to retrieve</p>'
     if venue_id == "arcus":
-        left_name, right_name = "LONG件数", "SHORT件数"
+        left_name, right_name = count_label("LONG", "orders"), count_label("SHORT", "orders")
         left = sum(1 for row in view["rows"] if row["side"] == "LONG")
         right = sum(1 for row in view["rows"] if row["side"] == "SHORT")
     elif is_futures(venue_id):
-        left_name, right_name = "SHORT件数", "COVER件数"
+        left_name, right_name = count_label("SHORT", "orders"), count_label("COVER", "orders")
         left = sum(1 for row in view["rows"] if row["side"] == "SHORT")
         right = sum(1 for row in view["rows"] if row["side"] == "COVER")
     else:
-        left_name, right_name = "BUY件数", "SELL件数"
+        left_name, right_name = count_label("BUY", "orders"), count_label("SELL", "orders")
         left, right = view["buy"], view["sell"]
     unclassified = ("focus-amber", "amber") if view["unclassified"] else ("", "")
     cards = _summary(
         (
-            ("未約定件数", str(view["count"]), ""),
+            (t("未約定件数"), str(view["count"]), ""),
             (left_name, str(left), "up" if left else ""),
             (right_name, str(right), ""),
-            ("未分類件数", str(view["unclassified"]), unclassified[1]),
+            (unclassified_count("orders"), str(view["unclassified"]), unclassified[1]),
         ),
         "cols-4",
         {3: unclassified[0]},
     )
     when = "" if fetched_at is None else escape(fetched_at.astimezone(TOKYO).strftime("%Y-%m-%d %H:%M"))
-    rule = f'<p class="rule">{when} 取得。保存しない。作成時刻の古い順。</p>' if when else ""
+    rule = f'<p class="rule">{orders_fetched(when)}</p>' if when else ""
     if view["count"] == 0:
-        return f"{cards}{rule}<p class=\"empty\">未約定注文はありません</p>"
+        return f"{cards}{rule}<p class=\"empty\">{t('未約定注文はありません')}</p>"
     table = []
     cards_html = []
     for row in view["rows"]:
         edge = "edge-amber" if row["unclassified"] else ""
-        strategy = f'<span class="amber">{escape(row["strategy_name"])}</span>' if row["unclassified"] else escape(row["strategy_name"])
+        strategy = f'<span class="amber">{escape(show_text(row["strategy_name"]))}</span>' if row["unclassified"] else escape(show_text(row["strategy_name"]))
         side = f'<span class="{"buy" if row["side"] in {"BUY", "LONG"} else ""}">{row["side"]}</span>'
         created = "—" if row["created"] is None else escape(row["created"].astimezone(TOKYO).strftime("%Y-%m-%d %H:%M"))
         elapsed = "—" if row["elapsed"] is None else escape(row["elapsed"])
@@ -775,13 +797,13 @@ def _order_body(view: dict | None, fetched_at: datetime | None, venue_id: str) -
         cards_html.append(
             f'<article class="card {edge}"><p class="lead">{escape(row["symbol"])} · {side}</p>'
             f'<p class="sub">{_qty(row["remaining"])}</p><p>{elapsed}</p>'
-            f'<p class="meta">{strategy} · {created} · {escape(row["order_type"] or "—")} · {_price(row["price"])} · 数量 {_qty(row["amount"])}</p></article>'
+            f'<p class="meta">{strategy} · {created} · {escape(row["order_type"] or "—")} · {_price(row["price"])} · {t("数量")} {_qty(row["amount"])}</p></article>'
         )
     return (
         cards
         + rule
-        + '<div class="wide scroll"><table><tr><th>残数量</th><th>経過時間</th><th>戦略</th><th>銘柄</th><th>売買</th>'
-        + "<th>注文価格</th><th>注文種別</th><th>注文数量</th></tr>"
+        + f'<div class="wide scroll"><table><tr><th>{t("残数量")}</th><th>{t("経過時間")}</th><th>{t("戦略")}</th><th>{t("銘柄")}</th><th>{t("売買")}</th>'
+        + f"<th>{t('注文価格')}</th><th>{t('注文種別')}</th><th>{t('注文数量')}</th></tr>"
         + "".join(table)
         + "</table></div>"
         + f'<div class="narrow">{"".join(cards_html)}</div>'
@@ -790,7 +812,7 @@ def _order_body(view: dict | None, fetched_at: datetime | None, venue_id: str) -
 
 def _balances(view: dict | None, fetched_at: datetime | None) -> str:
     if view is None:
-        return _blank_summary(("USDT 合計", "使える", "注文中", "コイン数"))
+        return _blank_summary((t("USDT 合計"), t("使える"), t("注文中"), t("コイン数")))
     if "usdt" in view and "spot" not in view:
         accounts = {"mexc_spot": view, "mexc_futures": None}
     else:
@@ -810,16 +832,16 @@ def _arcus_balance_body(view: dict | None, fetched_at: datetime | None) -> str:
         return '<p class="empty">Unable to retrieve</p>'
     cards = _summary(
         (
-            ("評価額", f"{_num(view.get('equity'))} USD", ""),
-            ("使える", f"{_num(view.get('free'))} USD", ""),
-            ("証拠金", f"{_num(view.get('margin'))} USD", ""),
-            ("建玉数", str(view.get("positions") or 0), ""),
+            (t("評価額"), f"{_num(view.get('equity'))} USD", ""),
+            (t("使える"), f"{_num(view.get('free'))} USD", ""),
+            (t("証拠金"), f"{_num(view.get('margin'))} USD", ""),
+            (t("建玉数"), str(view.get("positions") or 0), ""),
         ),
         "cols-4",
         {0: "focus-violet"},
     )
     when = "" if fetched_at is None else escape(fetched_at.astimezone(TOKYO).strftime("%Y-%m-%d %H:%M"))
-    rule = f'<p class="rule">{when} 取得。保存しない。単位は USD。</p>' if when else ""
+    rule = f'<p class="rule">{usd_fetched(when)}</p>' if when else ""
     return f"{cards}{rule}"
 
 
@@ -829,10 +851,10 @@ def _balance_body(view: dict | None, fetched_at: datetime | None) -> str:
     usdt = view["usdt"]
     cards = _summary(
         (
-            ("USDT 合計", _num(usdt["total"]), ""),
-            ("使える", _num(usdt["free"]), ""),
-            ("注文中", _num(usdt["used"]), ""),
-            ("コイン数", str(view["count"]), ""),
+            (t("USDT 合計"), _num(usdt["total"]), ""),
+            (t("使える"), _num(usdt["free"]), ""),
+            (t("注文中"), _num(usdt["used"]), ""),
+            (t("コイン数"), str(view["count"]), ""),
         ),
         "cols-4",
         {0: "focus-violet"},
@@ -847,12 +869,12 @@ def _balance_body(view: dict | None, fetched_at: datetime | None) -> str:
         )
         cards_html.append(
             f'<article class="card"><p class="lead">{escape(row["code"])}</p><p class="sub">{_qty(row["total"])}</p>'
-            f'<p class="meta">使える {_qty(row["free"])} · 注文中 {_qty(row["used"])}</p></article>'
+            f'<p class="meta">{balance_amounts(_qty(row["free"]), _qty(row["used"]))}</p></article>'
         )
     return (
         cards
-        + f'<p class="rule">{when} 取得。保存しない。コインはコードの昇順。合計が 0 の通貨は出さない。</p>'
-        + '<div class="wide scroll"><table><tr><th>通貨</th><th>合計</th><th>使える</th><th>注文中</th></tr>'
+        + f'<p class="rule">{coins_fetched(when)}</p>'
+        + f'<div class="wide scroll"><table><tr><th>{t("通貨")}</th><th>{t("合計")}</th><th>{t("使える")}</th><th>{t("注文中")}</th></tr>'
         + "".join(table)
         + "</table></div>"
         + f'<div class="narrow">{"".join(cards_html)}</div>'
@@ -860,7 +882,7 @@ def _balance_body(view: dict | None, fetched_at: datetime | None) -> str:
 
 
 def _strategies(view: dict) -> str:
-    table = ['<tr><th>実現損益</th><th>出来高</th><th>PF</th><th>利益率</th><th>勝率</th><th>回数</th><th>戦略</th><th>Venue</th></tr>']
+    table = [f'<tr><th>{t("実現損益")}</th><th>{t("出来高")}</th><th>PF</th><th>{t("利益率")}</th><th>{t("勝率")}</th><th>{t("回数")}</th><th>{t("戦略")}</th><th>Venue</th></tr>']
     cards_html = []
     for venue, rows in _grouped(view["rows"]):
         table.append(f'<tr class="venue-head"><th colspan="8">{escape(venue)}</th></tr>')
@@ -872,15 +894,15 @@ def _strategies(view: dict) -> str:
                 f"<td>{_volume_text(row.get('volume') or Decimal('0'), unit)}</td>"
                 f"<td class=\"{_pf_tone(row['profit_factor'])}\">{_pf(row['profit_factor'])}</td>"
                 f"<td>{_pct(row['profit_rate'])}</td><td>{_pct(row['win_rate'])}</td><td>{row['count']}</td>"
-                f"<td>{escape(row['strategy_name'])}</td><td>{escape(row.get('venue') or 'mexc_spot')}</td></tr>"
+                f"<td>{escape(show_text(row['strategy_name']))}</td><td>{escape(row.get('venue') or 'mexc_spot')}</td></tr>"
             )
             cards_html.append(
-                f'<article class="card"><p class="lead">{escape(row["strategy_name"])}</p>'
+                f'<article class="card"><p class="lead">{escape(show_text(row["strategy_name"]))}</p>'
                 f'<p class="meta">{escape(venue)}</p>'
                 f'<p class="sub {_tone(row["realized"])}">{_signed(row["realized"], unit)}</p>'
-                f'<p class="vol">出来高 {_volume_text(row.get("volume") or Decimal("0"), unit)}</p>'
+                f'<p class="vol">{volume_phrase(_volume_text(row.get("volume") or Decimal("0"), unit))}</p>'
                 f'<p class="{_pf_tone(row["profit_factor"])}">PF {_pf(row["profit_factor"])}</p>'
-                f'<p class="meta">利益率 {_pct(row["profit_rate"])} · 勝率 {_pct(row["win_rate"])} · 回数 {row["count"]}</p></article>'
+                f'<p class="meta">{rate_meta(_pct(row["profit_rate"]), _pct(row["win_rate"]), str(row["count"]))}</p></article>'
             )
     shown = _book_realized(view["rows"])
     cards = _summary(
@@ -914,7 +936,7 @@ def _tickers(view: dict) -> str:
         "cols-4",
         {2: "focus-violet", 3: "focus-violet"},
     )
-    table = ['<tr><th>Venue</th><th>銘柄</th><th>実現損益</th><th>出来高</th><th>PF</th><th>利益率</th><th>勝率</th><th>回数</th></tr>']
+    table = [f'<tr><th>Venue</th><th>{t("銘柄")}</th><th>{t("実現損益")}</th><th>{t("出来高")}</th><th>PF</th><th>{t("利益率")}</th><th>{t("勝率")}</th><th>{t("回数")}</th></tr>']
     cards_html = []
     for venue_name, rows in _grouped(view["rows"]):
         table.append(f'<tr class="venue-head"><th colspan="8">{escape(venue_name)}</th></tr>')
@@ -938,14 +960,14 @@ def _tickers(view: dict) -> str:
                 f'<p class="big {_tone(row["realized"])}">{_signed(row["realized"], unit)}</p>'
                 f'<p class="big {_pf_tone(row["profit_factor"])}">PF {_pf(row["profit_factor"])}</p>'
                 "</div>"
-                f'<p class="vol">出来高 {_volume_text(row.get("volume") or Decimal("0"), unit)}</p>'
-                f'<p class="meta">利益率 {_pct(row["profit_rate"])} · 勝率 {_pct(row["win_rate"])} · 回数 {row["count"]}</p>'
+                f'<p class="vol">{volume_phrase(_volume_text(row.get("volume") or Decimal("0"), unit))}</p>'
+                f'<p class="meta">{rate_meta(_pct(row["profit_rate"]), _pct(row["win_rate"]), str(row["count"]))}</p>'
                 "</article>"
             )
     rule = (
         ""
         if not view["rows"]
-        else '<p class="rule">実現損益の大きい順。同額は PF が高い順。決済が 1 件以上の銘柄だけ。</p>'
+        else f'<p class="rule">{t("実現損益の大きい順。同額は PF が高い順。決済が 1 件以上の銘柄だけ。")}</p>'
     )
     return (
         cards
@@ -973,7 +995,7 @@ def _backtests(view: dict) -> str:
     for row in view["rows"]:
         table.append(
             "<tr>"
-            f"<td class=\"identity\">{escape(row['strategy_name'])}</td><td class=\"identity\">{escape(row.get('venue') or 'mexc_spot')}</td>"
+            f"<td class=\"identity\">{escape(show_text(row['strategy_name']))}</td><td class=\"identity\">{escape(row.get('venue') or 'mexc_spot')}</td>"
             f"<td class=\"set\">{_pct(row['live_rate'])}</td><td>{_pct(row['back_rate'])}</td><td class=\"{_gap_tone(row['rate_diff'], Decimal('2'))}\">{_points(row['rate_diff'])}</td>"
             f"<td class=\"set\">{_pf(row['live_pf'])}</td><td>{_pf(row['back_pf'])}</td><td class=\"{_gap_tone(row['pf_diff'], Decimal('0.20'))}\">{_plain_signed(row['pf_diff'])}</td>"
             f"<td class=\"set\">{_pct(row['live_win'])}</td><td>{_pct(row['back_win'])}</td><td class=\"{_gap_tone(row['win_diff'], Decimal('2'))}\">{_points(row['win_diff'])}</td>"
@@ -982,20 +1004,20 @@ def _backtests(view: dict) -> str:
             "</tr>"
         )
         cards_html.append(
-            f'<article class="card"><p class="lead">{escape(row["strategy_name"])}</p>'
+            f'<article class="card"><p class="lead">{escape(show_text(row["strategy_name"]))}</p>'
             f'<p class="meta">{escape(row.get("venue") or "mexc_spot")} · {escape(_period_text(row))}</p>'
             f'<p class="sub {_gap_tone(row["rate_diff"], Decimal("2"))}">{_points(row["rate_diff"])}</p>'
-            f'<p class="meta">利益率 {_pct(row["live_rate"])} / {_pct(row["back_rate"])}<br>'
+            f'<p class="meta">{t("利益率")} {_pct(row["live_rate"])} / {_pct(row["back_rate"])}<br>'
             f'PF {_pf(row["live_pf"])} / {_pf(row["back_pf"])} / <span class="{_gap_tone(row["pf_diff"], Decimal("0.20"))}">{_plain_signed(row["pf_diff"])}</span><br>'
-            f'勝率 {_pct(row["live_win"])} / {_pct(row["back_win"])} / <span class="{_gap_tone(row["win_diff"], Decimal("2"))}">{_points(row["win_diff"])}</span><br>'
-            f'回数 {_blank_count(row["live_count"])} / {_blank_count(row["back_count"])} / {_count_diff(row["count_diff"])}</p></article>'
+            f'{t("勝率")} {_pct(row["live_win"])} / {_pct(row["back_win"])} / <span class="{_gap_tone(row["win_diff"], Decimal("2"))}">{_points(row["win_diff"])}</span><br>'
+            f'{t("回数")} {_blank_count(row["live_count"])} / {_blank_count(row["back_count"])} / {_count_diff(row["count_diff"])}</p></article>'
         )
     return (
         cards
-        + '<div class="wide scroll"><table class="compare"><tr><th class="identity">戦略</th><th class="identity">Venue</th>'
-        + '<th class="set">利益率</th><th>BT</th><th>差</th>'
-        + '<th class="set">PF</th><th>BT</th><th>差</th><th class="set">勝率</th><th>BT</th><th>差</th>'
-        + '<th class="set">回数</th><th>BT</th><th>差</th><th class="days set">BT期間</th></tr>'
+        + f'<div class="wide scroll"><table class="compare"><tr><th class="identity">{t("戦略")}</th><th class="identity">Venue</th>'
+        + f'<th class="set">{t("利益率")}</th><th>BT</th><th>{t("差")}</th>'
+        + f'<th class="set">PF</th><th>BT</th><th>{t("差")}</th><th class="set">{t("勝率")}</th><th>BT</th><th>{t("差")}</th>'
+        + f'<th class="set">{t("回数")}</th><th>BT</th><th>{t("差")}</th><th class="days set">{t("BT期間")}</th></tr>'
         + "".join(table)
         + "</table></div>"
         + f'<div class="narrow">{"".join(cards_html)}</div>'
@@ -1009,7 +1031,7 @@ def _schedule(rows: list[dict] | None) -> str:
     overdue = sum(1 for row in rows if row["state"] == "Overdue")
     due = next_due(rows) or "—"
     cards = (
-        '<section class="summary cols-4" aria-label="集計">'
+        f'<section class="summary cols-4" aria-label="{t("集計")}">'
         f"<div><span>Operations Tasks</span><strong>{len(rows)}</strong></div>"
         f'<div class="{"focus-amber" if upcoming else ""}"><span class="{"upcoming" if upcoming else ""}">'
         f'<span class="status-mark" aria-hidden="true">◉</span> Upcoming</span>'
@@ -1021,7 +1043,7 @@ def _schedule(rows: list[dict] | None) -> str:
         "</section>"
     )
     if not rows:
-        return cards + '<p class="empty">登録された運用作業はありません</p>'
+        return cards + f'<p class="empty">{t("登録された運用作業はありません")}</p>'
     table = []
     cards_html = []
     for row in rows:
@@ -1034,12 +1056,12 @@ def _schedule(rows: list[dict] | None) -> str:
         )
         cards_html.append(
             f'<article class="card"><p class="lead">{escape(row["name"])}</p><p class="state">{state}</p>'
-            f'<p>期限 {escape(row["due"])}</p><p class="sub {remain_class}">{remain}</p>'
-            f'<p class="meta">開始 {escape(row["list_from"])}</p></article>'
+            f'<p>{due_phrase(escape(row["due"]))}</p><p class="sub {remain_class}">{remain}</p>'
+            f'<p class="meta">{starts_phrase(escape(row["list_from"]))}</p></article>'
         )
     return (
         cards
-        + '<div class="wide scroll"><table><tr><th>作業名</th><th>開始日</th><th>期限</th><th>状態</th><th>残日数</th></tr>'
+        + f'<div class="wide scroll"><table><tr><th>{t("作業名")}</th><th>{t("開始日")}</th><th>{t("期限")}</th><th>{t("状態")}</th><th>{t("残日数")}</th></tr>'
         + "".join(table)
         + "</table></div>"
         + f'<div class="narrow">{"".join(cards_html)}</div>'
@@ -1061,7 +1083,7 @@ def _audits(view: dict | None) -> str:
         {1: "focus-teal" if view["success"] else "", 2: "focus-loss" if view["failed"] else ""},
     )
     if view["count"] == 0:
-        return cards + '<p class="empty">監査イベントはありません</p>'
+        return cards + f'<p class="empty">{t("監査イベントはありません")}</p>'
     table = []
     cards_html = []
     for row in view["rows"]:
@@ -1084,7 +1106,7 @@ def _audits(view: dict | None) -> str:
         )
     return (
         cards
-        + '<div class="wide scroll"><table><tr><th>イベント種別</th><th>理由</th><th>発生時刻</th><th>戦略</th><th>銘柄</th><th>写し</th></tr>'
+        + f'<div class="wide scroll"><table><tr><th>{t("イベント種別")}</th><th>{t("理由")}</th><th>{t("発生時刻")}</th><th>{t("戦略")}</th><th>{t("銘柄")}</th><th>{t("写し")}</th></tr>'
         + "".join(table)
         + "</table></div>"
         + f'<div class="narrow">{"".join(cards_html)}</div>'
@@ -1097,7 +1119,7 @@ def _summary(items: tuple, columns: str, borders: dict | None = None) -> str:
     for index, (label, value, css) in enumerate(items):
         border = borders.get(index) or ""
         cells.append(f'<div class="{border}"><span>{escape(label)}</span><strong class="{css}">{value}</strong></div>')
-    return f'<section class="summary {columns}" aria-label="集計">{"".join(cells)}</section>'
+    return f'<section class="summary {columns}" aria-label="{t("集計")}">{"".join(cells)}</section>'
 
 
 def _blank_summary(labels: tuple) -> str:
@@ -1358,8 +1380,8 @@ def _grouped(rows: list[dict]) -> list[tuple[str, list[dict]]]:
 def _slim_actual(title: str, value: Decimal, volume: Decimal = Decimal("0"), unit: str = "USDT") -> str:
     return (
         f'<div class="slim"><h3>{escape(title)}</h3>'
-        f'<div class="metric"><span>実績（{escape(unit)}）</span><strong class="{_tone(value)}">{_num(value, signed=False)}</strong>'
-        f'<span>今月の出来高</span><b class="vol">{_volume_text(volume, unit)}</b></div></div>'
+        f'<div class="metric"><span>{actual_label(unit)}</span><strong class="{_tone(value)}">{_num(value, signed=False)}</strong>'
+        f'<span>{t("今月の出来高")}</span><b class="vol">{_volume_text(volume, unit)}</b></div></div>'
     )
 
 
@@ -1438,19 +1460,19 @@ def _position_body(view: dict) -> str:
         rows.append(
             "<article class=\"position\">"
             "<div class=\"prio\">"
-            f"<div class=\"metric pnl\"><span>含み損益</span><strong class=\"{_tone(row['unrealized'])}\">{_signed(row['unrealized'], unit)}</strong>"
+            f"<div class=\"metric pnl\"><span>{t('含み損益')}</span><strong class=\"{_tone(row['unrealized'])}\">{_signed(row['unrealized'], unit)}</strong>"
             f"<span class=\"rate {_tone(row['risk'])}\">{_risk_text(row['risk'])}</span></div>"
-            f"<div class=\"metric hold\"><span>保有時間</span><strong>{escape(row['hold'])}</strong></div>"
-            f"<div class=\"metric qty\"><span>残数量</span><strong>{_qty(row['quantity'])} {escape(row['base'])}</strong></div>"
+            f"<div class=\"metric hold\"><span>{t('保有時間')}</span><strong>{escape(row['hold'])}</strong></div>"
+            f"<div class=\"metric qty\"><span>{t('残数量')}</span><strong>{_qty(row['quantity'])} {escape(row['base'])}</strong></div>"
             "</div>"
-            f"<p class=\"meta\">{escape(row['strategy_name'])} · {escape(row['symbol'])} · {escape(row.get('venue') or 'mexc_spot')} · "
-            f"取得 {escape(row['opened_at'].astimezone(TOKYO).strftime('%Y-%m-%d %H:%M'))} · "
-            f"現在価格 {_price(row['price'])} {escape(unit)}</p></article>"
+            f"<p class=\"meta\">{escape(show_text(row['strategy_name']))} · {escape(row['symbol'])} · {escape(row.get('venue') or 'mexc_spot')} · "
+            f"{opened_phrase(escape(row['opened_at'].astimezone(TOKYO).strftime('%Y-%m-%d %H:%M')))} · "
+            f"{price_phrase(_price(row['price']), escape(unit))}</p></article>"
         )
-    empty = "" if rows else '<p class="empty">建玉はありません</p>'
+    empty = "" if rows else f'<p class="empty">{t("建玉はありません")}</p>'
     return (
         _position_summary(view, "USD")
-        + '<p class="rule">含み損益の小さい順。価格が無い行は末尾。1 行は戦略と銘柄。</p>'
+        + f'<p class="rule">{t("含み損益の小さい順。価格が無い行は末尾。1 行は戦略と銘柄。")}</p>'
         + f'<div class="list">{"".join(rows)}</div>{empty}'
     )
 
@@ -1538,7 +1560,7 @@ def _period_text(row: dict) -> str:
     end = row.get("back_end")
     if days is None and not start:
         return "—"
-    label = "—" if days is None else f"{int(days):,}日"
+    label = "—" if days is None else period_days(int(days))
     if start and end:
         return f"{label} · {start}–{end}"
     return label
@@ -1550,7 +1572,7 @@ def _period_cell(row: dict) -> str:
     end = row.get("back_end")
     if days is None and not (start and end):
         return '<td class="days set">—</td>'
-    label = "—" if days is None else escape(f"{int(days):,}日")
+    label = "—" if days is None else escape(period_days(int(days)))
     span = f'<span class="range">{escape(str(start))}–{escape(str(end))}</span>' if start and end else ""
     return f'<td class="days set">{label}{span}</td>'
 

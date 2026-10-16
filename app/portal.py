@@ -14,6 +14,7 @@ from app.execution.mexc_open_orders import restore_open_orders
 from app.execution.mexc_remote import MexcRemoteError, fetch_open_orders
 from app.portal_data import read_backtests
 from app.portal_pages import STYLE, login_page, render_analytics, render_dashboard, render_operations, render_trading
+from app.portal_text import html_lang, t
 
 router = APIRouter()
 COOKIE = "portal_session"
@@ -72,7 +73,7 @@ def operations_page(request: Request, view: str = "schedule") -> HTMLResponse:
 @router.post("/portal/login")
 def portal_login(password: str = Form(default="")) -> Response:
     if not portal_password_matches(password):
-        return _html(login_page("パスワードが違います。"), status_code=401)
+        return _html(login_page(t("パスワードが違います。")), status_code=401)
     response = RedirectResponse("/portal", status_code=303)
     response.set_cookie(
         COOKIE,
@@ -264,7 +265,7 @@ def _open_orders():
 
 def _html(body: str, status_code: int = 200) -> HTMLResponse:
     page = f"""<!doctype html>
-<html lang="ja">
+<html lang="{html_lang()}">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
