@@ -167,11 +167,19 @@ def execute_arcus(strategy, action: str, client_order_id: str, client: "ArcusCli
 
                 send_audit(order_failed(strategy.strategy_id, public_order_error(exc)))
                 return
-            _report_arcus(strategy, action, prepared["holder"]["result"])
+            _report_arcus(strategy, action, prepared["holder"]["result"], client_order_id)
 
         return LiveResult("accepted", True, follow_up=finish)
     settle()
-    return LiveResult("accepted", True)
+    closed = prepared["holder"]["result"]
+    filled = closed.get("filled") or Decimal("0")
+    if not isinstance(filled, Decimal):
+        filled = Decimal(str(filled))
+    return LiveResult(
+        "accepted",
+        True,
+        realized=_arcus_realized(strategy, action, filled, closed, client_order_id),
+    )
 
 
 def _place_fields(
@@ -248,6 +256,9 @@ class ArcusClient:
             market = self._market_order(action, strategy_id, client_order_id, name, market_id, spec, side, quantity, reduce_only)
             filled = self._filled_size(market)
             market_key = exchange_client_order_id(strategy_id, client_order_id, action, "remainder", "arcus")
+            quoted = None
+            if filled > 0 and isinstance(market, dict) and market.get("orderId"):
+                quoted = _quoted_price(self._read(str(market["orderId"])))
             return _finished(
                 {
                     "limit_order_id": None,
@@ -255,6 +266,7 @@ class ArcusClient:
                     "remaining": quantity - filled,
                     "market": market,
                     "fills": [(market_key, filled)] if filled > 0 else [],
+                    "prices": [(filled, quoted)] if filled > 0 and quoted is not None else [],
                 }
             )
         placed = self._place(market_id, spec, side, "GTT", touch, quantity, reduce_only, limit_id)
@@ -320,7 +332,14 @@ class ArcusClient:
         status = self._read(placed["orderId"])
         remaining = Decimal(str(status.get("remainingSize") or quantity))
         filled = Decimal(str(status.get("filledSize") or "0"))
-        return {"limit_order_id": placed["orderId"], "filled": filled, "remaining": remaining, "market": None}
+        quoted = _quoted_price(status)
+        return {
+            "limit_order_id": placed["orderId"],
+            "filled": filled,
+            "remaining": remaining,
+            "market": None,
+            "prices": [(filled, quoted)] if filled > 0 and quoted is not None else [],
+        }
 
     def _filled_size(self, accepted: dict | None) -> Decimal:
         if not accepted or not accepted.get("orderId"):
@@ -539,7 +558,7 @@ def _combined_price(prices) -> float | None:
     return float(cost / quantity)
 
 
-def _report_arcus(strategy, action: str, result: dict) -> None:
+def _report_arcus(strategy, action: str, result: dict, client_order_id: str) -> None:
     from app.notifications.discord import order_failed, order_success, send_audit
 
     filled = result.get("filled") or Decimal("0")
@@ -556,7 +575,25 @@ def _report_arcus(strategy, action: str, result: dict) -> None:
             float(strategy.size_quote),
             "closed",
             _combined_price(result.get("prices") or []),
+            realized=_arcus_realized(strategy, action, filled, result, client_order_id),
         )
+    )
+
+
+def _arcus_realized(strategy, action: str, filled: Decimal, result: dict, client_order_id: str) -> Decimal | None:
+    if action not in ("COVER", "FLAT"):
+        return None
+    from app.analytics.history import closing_realized_pnl
+
+    return closing_realized_pnl(
+        strategy_name=strategy.strategy_id,
+        symbol=strategy.symbol,
+        venue=strategy.venue,
+        trade_id=f"notify:{client_order_id}",
+        side="buy" if action == "COVER" else "sell",
+        quantity=filled,
+        price=_combined_price(result.get("prices") or []),
+        client_order_id=client_order_id,
     )
 
 

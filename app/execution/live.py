@@ -1,6 +1,7 @@
 import time
 from datetime import datetime, timezone
 from dataclasses import dataclass
+from decimal import Decimal
 from threading import Lock
 from collections.abc import Callable
 
@@ -62,6 +63,7 @@ class LiveResult:
     resend_skipped: bool = False
     average: float | None = None
     follow_up: Callable[[], None] | None = None
+    realized: Decimal | None = None
 
 
 def clear_live_state() -> None:
@@ -350,7 +352,12 @@ def _market_sell(
     _close_buy(strategy, filled, exchange_id)
     if exit_bar_close_ms is not None and open_holding(strategy.strategy_id) is None:
         mark_sold_exit(strategy.strategy_id, exit_bar_close_ms)
-    return LiveResult(status, True, average=average)
+    return LiveResult(
+        status,
+        True,
+        average=average,
+        realized=_close_realized(strategy, filled, average, client_order_id),
+    )
 
 
 def _post_sell_limit(exchange, strategy: Strategy, exchange_id: str, amount: float):
@@ -429,6 +436,13 @@ def _finish_sell(
                     strategy.size_quote,
                     status,
                     combined_average(fills),
+                    venue=strategy.venue,
+                    realized=_close_realized(
+                        strategy,
+                        _base_filled(sold, extra),
+                        combined_average(fills),
+                        client_order_id,
+                    ),
                 )
             )
         except Exception as exc:
@@ -436,3 +450,28 @@ def _finish_sell(
             send_audit(order_failed(strategy.strategy_id, public_order_error(exc)))
         finally:
             _working.discard(strategy.strategy_id)
+
+
+def _base_filled(*amounts) -> Decimal:
+    total = Decimal("0")
+    for amount in amounts:
+        if isinstance(amount, Decimal):
+            total += amount
+        else:
+            total += Decimal(str(amount or 0))
+    return total
+
+
+def _close_realized(strategy: Strategy, quantity, price, client_order_id: str) -> Decimal | None:
+    from app.analytics.history import closing_realized_pnl
+
+    return closing_realized_pnl(
+        strategy_name=strategy.strategy_id,
+        symbol=strategy.symbol,
+        venue=strategy.venue,
+        trade_id=f"notify:{client_order_id}",
+        side="sell",
+        quantity=quantity,
+        price=price,
+        client_order_id=client_order_id,
+    )

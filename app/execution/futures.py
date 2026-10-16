@@ -313,7 +313,12 @@ def _close(
         _lots.pop(strategy.strategy_id, None)
     else:
         _lots[strategy.strategy_id] = left
-    return LiveResult(status, True, average=average)
+    return LiveResult(
+        status,
+        True,
+        average=average,
+        realized=_futures_close_realized(strategy, symbol, filled, average, client_order_id, side),
+    )
 
 
 def _stored_futures(strategy_id: str, order_key: str, filled: float, closing: bool) -> float:
@@ -437,3 +442,23 @@ def _market(exchange, symbol: str, side: str, contracts: float, exchange_id: str
         raise RuntimeError("order status missing")
     average = fetched.get("average")
     return str(status), float(fetched.get("filled") or 0), None if average in (None, "") else float(average)
+
+
+def _futures_close_realized(strategy, symbol: str, filled: float, average, client_order_id: str, side: str):
+    size = CONTRACT_SIZE.get(symbol)
+    if not size or average is None or filled <= 0:
+        return None
+    from decimal import Decimal
+
+    from app.analytics.history import closing_realized_pnl
+
+    return closing_realized_pnl(
+        strategy_name=strategy.strategy_id,
+        symbol=strategy.symbol,
+        venue=strategy.venue,
+        trade_id=f"notify:{client_order_id}",
+        side=side,
+        quantity=Decimal(str(filled)) * Decimal(str(size)),
+        price=average,
+        client_order_id=client_order_id,
+    )

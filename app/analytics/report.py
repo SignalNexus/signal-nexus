@@ -169,6 +169,15 @@ def final_fill_realized(fills: list[FillView]) -> dict[str, Decimal]:
     return {trade.final_trade_id: trade.realized for trade in closed if trade.final_trade_id}
 
 
+def realized_for_closing_fill(history: list[FillView], closing: FillView) -> Decimal | None:
+    prior = [fill for fill in history if fill.trade_id != closing.trade_id]
+    closed, _opens = reconstruct([*prior, closing])
+    match = next((trade for trade in closed if trade.final_trade_id == closing.trade_id), None)
+    if match is None or match.quote_spent <= 0 or match.quote_received <= 0:
+        return None
+    return match.realized
+
+
 def mark_opens(opens: list[OpenPosition], prices: dict) -> list[OpenPosition]:
     marked: list[OpenPosition] = []
     for position in opens:

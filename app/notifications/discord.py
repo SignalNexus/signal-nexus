@@ -3,6 +3,7 @@ import os
 import re
 import threading
 import time
+from decimal import Decimal
 
 import httpx
 
@@ -364,6 +365,7 @@ def order_success(
     average: float | None = None,
     *,
     venue: str | None = None,
+    realized: Decimal | None = None,
 ) -> AuditMessage:
     message = (
         f"{_title('ORDER SUCCESS')}\n"
@@ -388,6 +390,8 @@ def order_success(
     )
     if average is not None and average > 0:
         message += f"\n\nAverage price:\n{_price(average)}"
+    if realized is not None:
+        message += _pnl_line(realized, symbol)
     return AuditMessage(
         message,
         kind="order_success",
@@ -399,6 +403,12 @@ def order_success(
 
 def _price(value: float) -> str:
     return f"{value:.8f}".rstrip("0").rstrip(".")
+
+
+def _pnl_line(value: Decimal, symbol: str) -> str:
+    quote = symbol.split("/")[-1] if "/" in symbol else "USDT"
+    text = f"{value:,.2f}" if value <= 0 else f"+{value:,.2f}"
+    return f"\n\nRealized PnL:\n{text} {quote}"
 
 
 def order_failed(strategy: str, reason: str, *, venue: str | None = None) -> AuditMessage:

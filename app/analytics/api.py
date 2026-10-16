@@ -191,6 +191,7 @@ def arcus_order(
         "sent": result.sent,
         "deferred": False,
         "reason": result.reason,
+        "realized": None if result.realized is None else str(result.realized),
     }
 
 
@@ -258,6 +259,7 @@ def mexc_order(
         "reason": result.reason,
         "resend_skipped": result.resend_skipped,
         "average": result.average,
+        "realized": None if result.realized is None else str(result.realized),
     }
 
 

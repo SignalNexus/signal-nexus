@@ -1,4 +1,5 @@
 import os
+from decimal import Decimal
 
 import httpx
 
@@ -51,10 +52,15 @@ def live_result(payload: dict, *, with_quote: bool) -> LiveResult:
         raw = payload.get("average")
         average = None if raw is None else float(raw)
         resend_skipped = bool(payload.get("resend_skipped"))
+    raw_realized = payload.get("realized")
+    realized = None
+    if raw_realized not in (None, ""):
+        realized = Decimal(str(raw_realized))
     return LiveResult(
         str(payload.get("status") or "order_failed"),
         bool(payload.get("sent")),
         str(payload.get("reason") or ""),
         resend_skipped=resend_skipped,
         average=average,
+        realized=realized,
     )

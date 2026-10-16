@@ -283,6 +283,7 @@ def _run_deployment(
             result.status,
             result.average,
             venue=venue,
+            realized=result.realized,
         ),
     )
     return {"venue": deployment.venue, "status": result.status}
