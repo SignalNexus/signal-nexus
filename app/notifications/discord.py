@@ -12,9 +12,8 @@ from app.notifications.analytics import append_audit, enqueue_audit
 logger = logging.getLogger(__name__)
 
 # Discord が数秒で空く制限だけ、その場で 1 回送り直す。
-# 1 分を超える 429 は連打で待ちが伸びるので、以降の POST は止める。
-# 2026-10-15 に待ちが数万秒まで伸びた。Webhook への POST は止めてある。再開は True に戻す。
-_DISCORD_POSTS_ENABLED = False
+# 1 分を超える 429 は連打で待ちが伸びるので、そのプロセスの以降の POST は止める。
+_DISCORD_POSTS_ENABLED = True
 _RETRY_LIMIT_SECONDS = 5.0
 _PAUSE_AFTER_SECONDS = 60.0
 _send_lock = threading.Lock()
