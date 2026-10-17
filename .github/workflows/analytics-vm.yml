@@ -15,6 +15,7 @@ on:
       - "tests/**"
       - ".github/**"
       - "README.md"
+      - "README_JA.md"
       - ".gitignore"
   workflow_dispatch:
 
