@@ -1,9 +1,10 @@
 import logging
 from contextlib import asynccontextmanager
+from pathlib import Path
 from threading import Thread
 
 from fastapi import FastAPI
-from fastapi.responses import JSONResponse, RedirectResponse
+from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 
 from app.api.webhook import router as webhook_router
 from app.portal import router as portal_router
@@ -33,6 +34,19 @@ async def lifespan(_app: FastAPI):
 app = FastAPI(title="Signal Nexus", lifespan=lifespan)
 app.include_router(webhook_router)
 app.include_router(portal_router)
+
+_ICON_DIR = Path(__file__).resolve().parent / "static"
+_ICON_CACHE = {"Cache-Control": "public, max-age=86400"}
+
+
+@app.get("/favicon.ico", include_in_schema=False)
+def favicon() -> FileResponse:
+    return FileResponse(_ICON_DIR / "favicon-32.png", media_type="image/png", headers=_ICON_CACHE)
+
+
+@app.get("/apple-touch-icon.png", include_in_schema=False)
+def apple_touch_icon() -> FileResponse:
+    return FileResponse(_ICON_DIR / "favicon-180.png", media_type="image/png", headers=_ICON_CACHE)
 
 
 @app.get("/")

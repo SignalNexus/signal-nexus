@@ -270,6 +270,8 @@ def _html(body: str, status_code: int = 200) -> HTMLResponse:
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Signal Nexus</title>
+  <link rel="icon" href="/favicon.ico" type="image/png">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
   <style>{STYLE}</style>
 </head>
 <body>{body}</body>
