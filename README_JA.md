@@ -1,10 +1,10 @@
 # Signal Nexus
 
-Signal Nexus は、自分でホストする取引の運用プラットフォームです。TradingView のアラートは発注の計画になり、複数の取引所へ実行できます。記録、監査、見返しは、一つの運用の流れにあります。
+Signal Nexus は、自分でホストする取引の運用プラットフォームです。TradingView のアラートは発注の計画になり、複数の取引所へ実行できます。記録、監査、分析は、１つのインターフェースで運用が可能となります。
 
 資金は、使っている取引所の口座に残ります。鍵は、自分で動かしている環境に残ります。
 
-`EXECUTION_MODE` を設定しないあいだは、記録は残り、注文は出ません。この状態が `dry_run` です。`live` で注文を出します。投資助言ではありません。
+`EXECUTION_MODE` を設定しないあいだは、記録は残り、注文は出ません。この状態が `dry_run` です。`live` で注文を出します。
 
 英語版 [README.md](README.md) が原文です。
 
@@ -73,6 +73,17 @@ Signal Nexus は、自分の環境へデプロイします。
 Webhook のプロセス（`app.main`）が TradingView のアラートを受けます。Analytics、監査の保存、`live` の発注は、自分で管理する仮想マシン（`app.analytics.api`）で動きます。Buildbook では、Webhook に Render、仮想マシンに Oracle Cloud を使います。
 
 注文を出すと決めるまで、`EXECUTION_MODE` は入れません。`dry_run`、`live`、Kill Switch は、実行モードにあります。
+
+### デプロイの前提
+
+これは、ソフトウェアの要件です。
+
+- `app.main` を動かせる Webhook サービス
+- `app.analytics.api` を動かせる Analytics サービス
+- Analytics サービスから届く PostgreSQL
+- Webhook サービスから Analytics API へ、`ANALYTICS_API_URL` で届く接続
+
+Signal Nexus 自体は、Render にも Oracle Cloud にも縛られません。Buildbook が参照するデプロイは、その二つです。いまのデプロイ自動化は、GitHub Actions、`ubuntu` として `/home/ubuntu` へ SSH する Linux ホスト、443 で HTTPS を出す Caddy、localhost の PostgreSQL、`RENDER_HEALTH_URL` による health の確認を前提にします。別のインフラを使うときは、同じ能力が揃っている場合だけです。
 
 ### デプロイの関係
 
@@ -176,9 +187,45 @@ Analytics サービスは、ポジション、約定、残高を読みます。�
 - `ARCUS_ADDRESS` — Arcus の注文に署名するアドレスです。
 - `ARCUS_SIGNING_KEY` — そのアドレスの署名鍵です。
 
+### 設定の置き場所
+
+これらの定義は、Signal Nexus のどの部品がどの値を読むかを示します。
+
+特定のインフラの実装は定めません。
+
+Webhook サービス
+
+- `WEBHOOK_SECRET`
+- `ANALYTICS_API_URL`
+- `ANALYTICS_API_SECRET`
+- `PORTAL_PASSWORD`
+- `DISCORD_WEBHOOK_URL`
+- `KILL_SWITCH`
+- `EXECUTION_MODE`
+
+Analytics サービスは、同じ `ANALYTICS_API_SECRET` を読みます。
+
+Analytics サービス
+
+- `ANALYTICS_DB_PASSWORD`
+- `ANALYTICS_MEXC_API_KEY`
+- `ANALYTICS_MEXC_API_SECRET`
+- `ANALYTICS_MEXC_FUTURES_API_KEY`
+- `ANALYTICS_MEXC_FUTURES_API_SECRET`
+- `ANALYTICS_ARCUS_ADDRESS`
+
+発注の部品
+
+- `MEXC_API_KEY`
+- `MEXC_API_SECRET`
+- `MEXC_FUTURES_API_KEY`
+- `MEXC_FUTURES_API_SECRET`
+- `ARCUS_ADDRESS`
+- `ARCUS_SIGNING_KEY`
+
 ## デプロイ自動化の変数
 
-Signal Nexus は、Buildbook のワークフローがインフラをデプロイするとき、デプロイ自動化の変数も使います。
+これらの名前は、いまのデプロイ自動化のものです。デプロイの前提は、ソフトウェアの要件です。二つの一覧は別です。
 
 これらの変数は、Signal Nexus の実行時の設定ではありません。そのため、必要な設定には入れていません。
 

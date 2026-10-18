@@ -22,7 +22,7 @@
 
 Buildbook は、公開文書のセットに入らない唯一の正本です。Starter と、すべての Membership から読めます。
 
-Buildbook は Signal Nexus の利用に必須ではありません。Buildbook は、構築から運用までを一通り再現したい利用者向けの完全ガイドです。README は、公開の入口であり、経験のある運用者向けの参照です。Buildbook は、ゼロから再現するための完全な手順書です。
+Buildbook は Signal Nexus の利用に必須ではありません。Buildbook は、参照するデプロイを手順どおり作りたい利用者向けの完全ガイドです。README は、公開の入口であり、経験のある運用者向けの参照です。Buildbook は、その参照実装の手順書です。いまのデプロイ自動化が、どのホストでも動くとは定めません。
 
 ## 文書の入手
 
@@ -190,7 +190,7 @@ Architecture は、どう組まれているかを答えます。
 
 Strategy Integration Guide は、TradingView をどうつなぐかを答えます。
 
-README は、公開の入口であり、経験のある運用者向けの参照です。Buildbook は、何も無い状態から一通り再現する手順を答えます。Buildbook を読むには、Starter または Membership が必要です。
+README は、公開の入口であり、経験のある運用者向けの参照です。Buildbook は、参照するデプロイを何も無い状態から再現する手順を答えます。Buildbook を読むには、Starter または Membership が必要です。
 
 Screen Specification は、運用者が何を見るかを答えます。
 
@@ -201,7 +201,7 @@ graph TD
   README["README: Signal Nexus とは何か"] --> ProductSpecification["Product Specification: なぜ存在するか"]
   ProductSpecification --> Architecture["Architecture: どう組まれているか"]
   Architecture --> StrategyIntegrationGuide["Strategy Integration Guide: TradingView をどうつなぐか"]
-  StrategyIntegrationGuide --> Buildbook["Buildbook: 何も無い状態からどう再現するか"]
+  StrategyIntegrationGuide --> Buildbook["Buildbook: 参照するデプロイをどう再現するか"]
   Buildbook --> ScreenSpecification["Screen Specification: 運用者は何を見るか"]
   ScreenSpecification --> ScreenRelationshipDiagram["Screen Relationship Diagram: 運用者はどう移動するか"]
 ```

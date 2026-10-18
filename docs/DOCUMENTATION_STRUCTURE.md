@@ -22,7 +22,7 @@ English is the canonical text. The Japanese edition is [DOCUMENTATION_STRUCTURE_
 
 Buildbook is the only canonical document that is not part of the public documentation set. Buildbook is available through Starter and all Membership tiers.
 
-Buildbook is not required to deploy Signal Nexus. Buildbook exists for operators who need a complete, step-by-step deployment and operational guide. README is the public entry point and the experienced-operator reference. Buildbook is the complete deployment playbook.
+Buildbook is not required to deploy Signal Nexus. Buildbook exists for operators who need a complete, step-by-step guide to the reference deployment. README is the public entry point and the experienced-operator reference. Buildbook is that reference playbook. It does not establish that any other host can run the current deployment automation.
 
 ## Documentation availability
 
@@ -190,7 +190,7 @@ Architecture answers how it is structured.
 
 Strategy Integration Guide answers how TradingView is connected.
 
-README is the public entry point and the experienced-operator reference. Buildbook answers how a deployment is reproduced from an empty start. Access to Buildbook is Starter or Membership.
+README is the public entry point and the experienced-operator reference. Buildbook answers how the reference deployment is reproduced from an empty start. Access to Buildbook is Starter or Membership.
 
 Screen Specification answers what the operator sees.
 
@@ -201,7 +201,7 @@ graph TD
   README["README: What is Signal Nexus?"] --> ProductSpecification["Product Specification: Why does it exist?"]
   ProductSpecification --> Architecture["Architecture: How is it structured?"]
   Architecture --> StrategyIntegrationGuide["Strategy Integration Guide: How is TradingView connected?"]
-  StrategyIntegrationGuide --> Buildbook["Buildbook: How is a full deployment reproduced?"]
+  StrategyIntegrationGuide --> Buildbook["Buildbook: How is the reference deployment reproduced?"]
   Buildbook --> ScreenSpecification["Screen Specification: What does the operator see?"]
   ScreenSpecification --> ScreenRelationshipDiagram["Screen Relationship Diagram: How does the operator navigate?"]
 ```

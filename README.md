@@ -1,10 +1,10 @@
 # Signal Nexus
 
-Signal Nexus is a self-hosted trading operations platform. A TradingView alert becomes an order plan that can run across more than one venue. The record, the audit, and the review stay in one workflow.
+Signal Nexus is a self-hosted trading operations platform. A TradingView alert becomes an order plan that can run across more than one venue. The record, the audit, and the analysis can be operated from one interface.
 
 Your funds stay at the venue. Your keys stay on infrastructure you run.
 
-With `EXECUTION_MODE` unset, the record is kept and the order is not sent. That mode is `dry_run`. `live` sends orders. It is not investment advice.
+With `EXECUTION_MODE` unset, the record is kept and the order is not sent. That mode is `dry_run`. `live` sends orders.
 
 The Japanese edition is [README_JA.md](README_JA.md).
 
@@ -73,6 +73,17 @@ You deploy Signal Nexus on infrastructure you run.
 The webhook process (`app.main`) receives TradingView alerts. Analytics, the audit store, and live order delivery run on a virtual machine you administer (`app.analytics.api`). The Buildbook uses Render for the webhook and Oracle Cloud for that machine.
 
 Leave `EXECUTION_MODE` unset until you intend to send orders. Runtime Modes describes `dry_run`, `live`, and the kill switch.
+
+### Deployment Assumptions
+
+These are the software requirements:
+
+- A Webhook Service capable of running `app.main`
+- An Analytics Service capable of running `app.analytics.api`
+- A PostgreSQL database reachable by the Analytics Service
+- Connectivity from the Webhook Service to the Analytics API through `ANALYTICS_API_URL`
+
+Signal Nexus itself is not tied to Render or Oracle Cloud. The Buildbook uses those two as the reference deployment. The current deployment automation assumes GitHub Actions, SSH to a Linux host as `ubuntu` under `/home/ubuntu`, Caddy serving HTTPS on port 443, PostgreSQL on localhost, and health checks through `RENDER_HEALTH_URL`. Other infrastructure can be used only when those capabilities are present.
 
 ### Deployment Relationship
 
@@ -176,9 +187,45 @@ Live orders use a different set of keys from the read keys. Spot and futures sta
 - `ARCUS_ADDRESS` — Address that signs Arcus orders.
 - `ARCUS_SIGNING_KEY` — Signing key for that address.
 
+### Configuration Locations
+
+These definitions identify which Signal Nexus component consumes each value.
+
+They do not prescribe a specific infrastructure implementation.
+
+Webhook Service
+
+- `WEBHOOK_SECRET`
+- `ANALYTICS_API_URL`
+- `ANALYTICS_API_SECRET`
+- `PORTAL_PASSWORD`
+- `DISCORD_WEBHOOK_URL`
+- `KILL_SWITCH`
+- `EXECUTION_MODE`
+
+The Analytics Service reads the same `ANALYTICS_API_SECRET`.
+
+Analytics Service
+
+- `ANALYTICS_DB_PASSWORD`
+- `ANALYTICS_MEXC_API_KEY`
+- `ANALYTICS_MEXC_API_SECRET`
+- `ANALYTICS_MEXC_FUTURES_API_KEY`
+- `ANALYTICS_MEXC_FUTURES_API_SECRET`
+- `ANALYTICS_ARCUS_ADDRESS`
+
+Order Execution Components
+
+- `MEXC_API_KEY`
+- `MEXC_API_SECRET`
+- `MEXC_FUTURES_API_KEY`
+- `MEXC_FUTURES_API_SECRET`
+- `ARCUS_ADDRESS`
+- `ARCUS_SIGNING_KEY`
+
 ## Deployment Automation Variables
 
-Signal Nexus also uses deployment automation variables when the Buildbook workflow deploys infrastructure.
+These names belong to the current deployment automation. Deployment Assumptions are the software requirements. The two lists are not the same.
 
 These variables are not part of Signal Nexus runtime configuration and are therefore not listed in Required Configuration.
 
