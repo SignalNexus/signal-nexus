@@ -83,6 +83,7 @@ _EN = {
     "イベント種別": "Event",
     "理由": "Reason",
     "発生時刻": "Time",
+    "会場": "Venue",
     "写し": "Copy",
     "送信済み": "Sent",
     "未設定": "Not configured",

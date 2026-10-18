@@ -254,7 +254,7 @@ def _finish_buy(exchange, strategy, client_order_id, exchange_id, order_id, amou
                     net += extra
             if net <= 0:
                 invalidate()
-                send_audit(order_failed(strategy.strategy_id, "filled base missing"))
+                send_audit(order_failed(strategy.strategy_id, "filled base missing", venue=strategy.venue))
                 return
             send_audit(
                 order_success(
@@ -264,11 +264,12 @@ def _finish_buy(exchange, strategy, client_order_id, exchange_id, order_id, amou
                     strategy.size_quote,
                     status,
                     combined_average(fills),
+                    venue=strategy.venue,
                 )
             )
         except Exception as exc:
             invalidate()
-            send_audit(order_failed(strategy.strategy_id, public_order_error(exc)))
+            send_audit(order_failed(strategy.strategy_id, public_order_error(exc), venue=strategy.venue))
         finally:
             _working.discard(strategy.strategy_id)
 
@@ -424,7 +425,7 @@ def _finish_sell(
                     _close_buy(strategy, extra, remainder_id)
             if sold <= 0 and extra <= 0:
                 invalidate()
-                send_audit(order_failed(strategy.strategy_id, "filled base missing"))
+                send_audit(order_failed(strategy.strategy_id, "filled base missing", venue=strategy.venue))
                 return
             if exit_bar_close_ms is not None and open_holding(strategy.strategy_id) is None:
                 mark_sold_exit(strategy.strategy_id, exit_bar_close_ms)
@@ -447,7 +448,7 @@ def _finish_sell(
             )
         except Exception as exc:
             invalidate()
-            send_audit(order_failed(strategy.strategy_id, public_order_error(exc)))
+            send_audit(order_failed(strategy.strategy_id, public_order_error(exc), venue=strategy.venue))
         finally:
             _working.discard(strategy.strategy_id)
 

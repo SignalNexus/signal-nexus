@@ -44,6 +44,7 @@ class AuditCopyIn(BaseModel):
     strategy: str = ""
     symbol: str = ""
     reason: str = ""
+    venue: str = ""
     content: str = Field(min_length=1, max_length=2000)
 
     @field_validator("kind")
@@ -77,6 +78,7 @@ def accept_audit_copy(
             strategy=body.strategy,
             symbol=body.symbol,
             reason=body.reason,
+            venue=body.venue,
         )
     )
     return {"status": "ok"}
@@ -196,9 +198,8 @@ def _run_deployment(
     payload: WebhookPayload,
     strategy: Strategy,
     deployment: Deployment,
-    show_venue: bool,
 ) -> dict[str, str]:
-    venue = deployment.venue if show_venue else None
+    venue = deployment.venue
     size_quote = deployment.size_quote
     bound = strategy.bound(deployment)
     received = signal_received(payload.strategy_id, payload.symbol, payload.action, size_quote, venue=venue)
@@ -251,6 +252,7 @@ def _run_deployment(
                 payload.symbol,
                 result.reason,
                 payload.exit_bar_close or "",
+                venue=venue,
             ),
         )
         return {"venue": deployment.venue, "status": "not_sent"}
@@ -293,10 +295,9 @@ def _run_live(
     payload: WebhookPayload,
     strategy: Strategy,
     chosen: list[Deployment],
-    show_venue: bool,
 ) -> None:
     for deployment in chosen:
-        _run_deployment(None, payload, strategy, deployment, show_venue)
+        _run_deployment(None, payload, strategy, deployment)
 
 
 def _accepted(targets: tuple[Deployment, ...], chosen: list[Deployment]) -> dict[str, object]:
@@ -347,16 +348,16 @@ async def receive_webhook(request: Request, tasks: BackgroundTasks) -> dict[str,
                 payload.symbol,
                 payload.action,
                 targets[0].size_quote,
+                venue=targets[0].venue if len(targets) == 1 else None,
             ),
         )
         return {"status": "duplicate"}
-    show_venue = len(targets) > 1
     if execution_mode() != "live" or kill_switch_enabled():
         rows = [
-            _run_deployment(tasks, payload, strategy, deployment, show_venue) for deployment in chosen
+            _run_deployment(tasks, payload, strategy, deployment) for deployment in chosen
         ]
         if len(targets) == 1:
             return {"status": rows[0]["status"]}
         return {"status": _overall(rows), "venues": rows}
-    tasks.add_task(_run_live, payload, strategy, chosen, show_venue)
+    tasks.add_task(_run_live, payload, strategy, chosen)
     return _accepted(targets, chosen)

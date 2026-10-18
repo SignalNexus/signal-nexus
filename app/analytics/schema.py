@@ -56,6 +56,9 @@ STATEMENTS = (
     ALTER TABLE audits ADD COLUMN IF NOT EXISTS discord_detail text NOT NULL DEFAULT ''
     """,
     """
+    ALTER TABLE audits ADD COLUMN IF NOT EXISTS venue text NOT NULL DEFAULT ''
+    """,
+    """
     CREATE TABLE IF NOT EXISTS order_links (
         exchange_client_order_id text PRIMARY KEY CHECK (char_length(exchange_client_order_id) = 32),
         client_order_id text NOT NULL CHECK (char_length(client_order_id) > 0),
@@ -272,15 +275,16 @@ def insert_audit(
     recorded_at: datetime,
     discord_status: str = "",
     discord_detail: str = "",
+    venue: str = "",
 ) -> None:
     connection.execute(
         """
         INSERT INTO audits (
-            recorded_at, kind, strategy, symbol, reason, discord_status, discord_detail
+            recorded_at, kind, strategy, symbol, reason, discord_status, discord_detail, venue
         )
         VALUES (
             %(recorded_at)s, %(kind)s, %(strategy)s, %(symbol)s, %(reason)s,
-            %(discord_status)s, %(discord_detail)s
+            %(discord_status)s, %(discord_detail)s, %(venue)s
         )
         """,
         {
@@ -291,6 +295,7 @@ def insert_audit(
             "reason": reason,
             "discord_status": discord_status,
             "discord_detail": discord_detail,
+            "venue": venue,
         },
     )
 
@@ -383,7 +388,7 @@ def load_fills(connection) -> list[tuple]:
 def load_audits(connection) -> list[tuple]:
     return connection.execute(
         """
-        SELECT recorded_at, kind, strategy, symbol, reason, discord_status, discord_detail
+        SELECT recorded_at, kind, strategy, symbol, reason, discord_status, discord_detail, venue
         FROM audits
         ORDER BY recorded_at, id
         """

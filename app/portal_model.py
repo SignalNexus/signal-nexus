@@ -415,6 +415,7 @@ def audits_view(rows: list[dict] | None) -> dict | None:
                 "reason": reason,
                 "strategy": str(row.get("strategy") or ""),
                 "symbol": str(row.get("symbol") or ""),
+                "venue": str(row.get("venue") or ""),
                 "edge": label in {"REJECTED", "FAILED"},
                 "copy": _discord_copy(row),
             }

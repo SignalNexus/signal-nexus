@@ -1104,20 +1104,21 @@ def _audits(view: dict | None) -> str:
         reason = "—" if not row["reason"] else escape(row["reason"])
         strategy = "—" if not row["strategy"] else escape(row["strategy"])
         symbol = "—" if not row["symbol"] else escape(row["symbol"])
+        venue = "—" if not row.get("venue") else escape(row["venue"])
         when = escape(row["at"].strftime("%Y-%m-%d %H:%M"))
         copy = escape(row["copy"])
         kind = f'<span class="kind {tone}">{_audit_mark(row)}{escape(row["label"])}</span>'
         table.append(
-            f'<tr class="{edge}"><td>{when}</td><td>{strategy}</td><td>{symbol}</td><td>{kind}</td>'
+            f'<tr class="{edge}"><td>{when}</td><td>{venue}</td><td>{strategy}</td><td>{symbol}</td><td>{kind}</td>'
             f'<td class="big {reason_class}">{reason}</td><td>{copy}</td></tr>'
         )
         cards_html.append(
-            f'<article class="card {edge}"><p>{when}</p><p class="meta">{strategy} · {symbol}</p>'
+            f'<article class="card {edge}"><p>{when}</p><p>{venue}</p><p class="meta">{strategy} · {symbol}</p>'
             f'<p>{kind}</p><p class="{reason_class}">{reason}</p><p>{copy}</p></article>'
         )
     return (
         cards
-        + f'<div class="wide scroll"><table><tr><th>{t("発生時刻")}</th><th>{t("戦略")}</th><th>{t("銘柄")}</th><th>{t("イベント種別")}</th><th>{t("理由")}</th><th>{t("写し")}</th></tr>'
+        + f'<div class="wide scroll"><table><tr><th>{t("発生時刻")}</th><th>{t("会場")}</th><th>{t("戦略")}</th><th>{t("銘柄")}</th><th>{t("イベント種別")}</th><th>{t("理由")}</th><th>{t("写し")}</th></tr>'
         + "".join(table)
         + "</table></div>"
         + f'<div class="narrow">{"".join(cards_html)}</div>'

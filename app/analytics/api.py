@@ -66,6 +66,7 @@ class AuditIn(BaseModel):
     reason: str = ""
     discord_status: str = ""
     discord_detail: str = ""
+    venue: str = ""
 
     @field_validator("kind")
     @classmethod
@@ -86,6 +87,13 @@ class AuditIn(BaseModel):
     def discord_detail_is_short(cls, value: str) -> str:
         if len(value) > 120:
             raise ValueError("discord_detail is too long")
+        return value
+
+    @field_validator("venue")
+    @classmethod
+    def venue_is_short(cls, value: str) -> str:
+        if len(value) > 64:
+            raise ValueError("venue is too long")
         return value
 
 
@@ -382,6 +390,7 @@ def _audit_json(row: tuple) -> dict[str, str]:
         "reason": row[4],
         "discord_status": row[5],
         "discord_detail": row[6],
+        "venue": row[7] if len(row) > 7 else "",
     }
 
 
@@ -534,6 +543,7 @@ def _store_audit(body: AuditIn) -> None:
             recorded_at=recorded_at,
             discord_status=body.discord_status,
             discord_detail=body.discord_detail,
+            venue=body.venue,
         )
 
 

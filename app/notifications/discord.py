@@ -34,6 +34,7 @@ class AuditMessage(str):
     strategy: str
     symbol: str
     reason: str
+    venue: str
 
     def __new__(
         cls,
@@ -43,12 +44,14 @@ class AuditMessage(str):
         strategy: str,
         symbol: str = "",
         reason: str = "",
+        venue: str = "",
     ):
         created = str.__new__(cls, text)
         created.kind = kind
         created.strategy = strategy
         created.symbol = symbol
         created.reason = reason
+        created.venue = venue
         return created
 
 
@@ -66,9 +69,18 @@ def send_audit(message: str) -> None:
         message.reason,
         status,
         detail,
+        message.venue,
     )
     if not stored:
-        enqueue_audit(message.kind, message.strategy, message.symbol, message.reason, status, detail)
+        enqueue_audit(
+            message.kind,
+            message.strategy,
+            message.symbol,
+            message.reason,
+            status,
+            detail,
+            message.venue,
+        )
 
 
 def _forward_copy(message: AuditMessage) -> bool:
@@ -86,6 +98,7 @@ def _forward_copy(message: AuditMessage) -> bool:
                 "strategy": message.strategy,
                 "symbol": message.symbol,
                 "reason": message.reason,
+                "venue": message.venue,
                 "content": str(message),
             },
             headers={"Authorization": f"Bearer {secret}"},
@@ -221,7 +234,7 @@ def _title(text: str) -> str:
 def _venue_lines(venue: str | None) -> str:
     if not venue:
         return ""
-    return f"\nVenue:\n{venue}\n"
+    return f"Venue:\n{venue}\n\n"
 
 
 def _size_quote(value: float) -> str:
@@ -249,6 +262,7 @@ def validation_rejected(strategy: str, reason: str) -> AuditMessage:
         kind="validation_rejected",
         strategy=strategy,
         reason=reason,
+        venue="",
     )
 
 
@@ -261,9 +275,9 @@ def signal_received(
             "Environment:\n"
             f"{execution_mode()}\n"
             "\n"
+            f"{_venue_lines(venue)}"
             "Strategy:\n"
             f"{strategy}\n"
-            f"{_venue_lines(venue)}"
             "\n"
             "Symbol:\n"
             f"{symbol}\n"
@@ -277,6 +291,7 @@ def signal_received(
         kind="signal_received",
         strategy=strategy,
         symbol=symbol,
+        venue=venue or "",
     )
 
 
@@ -289,9 +304,9 @@ def order_planned(
             "Environment:\n"
             f"{execution_mode()}\n"
             "\n"
+            f"{_venue_lines(venue)}"
             "Strategy:\n"
             f"{strategy}\n"
-            f"{_venue_lines(venue)}"
             "\n"
             "Symbol:\n"
             f"{symbol}\n"
@@ -305,6 +320,7 @@ def order_planned(
         kind="order_planned",
         strategy=strategy,
         symbol=symbol,
+        venue=venue or "",
     )
 
 
@@ -323,9 +339,9 @@ def order_not_sent(
             "Environment:\n"
             f"{execution_mode()}\n"
             "\n"
+            f"{_venue_lines(venue)}"
             "Strategy:\n"
             f"{strategy}\n"
-            f"{_venue_lines(venue)}"
             "\n"
             "Symbol:\n"
             f"{symbol}\n"
@@ -343,16 +359,26 @@ def order_not_sent(
         strategy=strategy,
         symbol=symbol,
         reason=reason,
+        venue=venue or "",
     )
 
 
-def sell_resend_skipped(strategy: str, symbol: str, reason: str, exit_bar_close: str) -> AuditMessage:
+def sell_resend_skipped(
+    strategy: str,
+    symbol: str,
+    reason: str,
+    exit_bar_close: str,
+    *,
+    venue: str | None = None,
+) -> AuditMessage:
+    place = f"{venue} | " if venue else ""
     return AuditMessage(
-        f"SELL RESEND SKIPPED | {execution_mode()} | {strategy} | {symbol} | {reason} {exit_bar_close}",
+        f"SELL RESEND SKIPPED | {execution_mode()} | {place}{strategy} | {symbol} | {reason} {exit_bar_close}",
         kind="sell_resend_skipped",
         strategy=strategy,
         symbol=symbol,
         reason=f"{reason} {exit_bar_close}",
+        venue=venue or "",
     )
 
 
@@ -372,9 +398,9 @@ def order_success(
         "Environment:\n"
         f"{execution_mode()}\n"
         "\n"
+        f"{_venue_lines(venue)}"
         "Strategy:\n"
         f"{strategy}\n"
-        f"{_venue_lines(venue)}"
         "\n"
         "Symbol:\n"
         f"{symbol}\n"
@@ -398,6 +424,7 @@ def order_success(
         strategy=strategy,
         symbol=symbol,
         reason=status,
+        venue=venue or "",
     )
 
 
@@ -418,9 +445,9 @@ def order_failed(strategy: str, reason: str, *, venue: str | None = None) -> Aud
             "Environment:\n"
             f"{execution_mode()}\n"
             "\n"
+            f"{_venue_lines(venue)}"
             "Strategy:\n"
             f"{strategy}\n"
-            f"{_venue_lines(venue)}"
             "\n"
             "Reason:\n"
             f"{reason}"
@@ -428,6 +455,7 @@ def order_failed(strategy: str, reason: str, *, venue: str | None = None) -> Aud
         kind="order_failed",
         strategy=strategy,
         reason=reason,
+        venue=venue or "",
     )
 
 
@@ -440,9 +468,9 @@ def duplicate_discarded(
             "Environment:\n"
             f"{execution_mode()}\n"
             "\n"
+            f"{_venue_lines(venue)}"
             "Strategy:\n"
             f"{strategy}\n"
-            f"{_venue_lines(venue)}"
             "\n"
             "Symbol:\n"
             f"{symbol}\n"
@@ -456,4 +484,5 @@ def duplicate_discarded(
         kind="duplicate_discarded",
         strategy=strategy,
         symbol=symbol,
+        venue=venue or "",
     )

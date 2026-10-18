@@ -38,8 +38,38 @@ def floor_to_places(value: float, places: int) -> str:
     return format(floored, "f")
 
 
+def _size_step(info: dict) -> Decimal | None:
+    raw = info.get("baseSizePrecision")
+    if isinstance(raw, bool) or raw in (None, ""):
+        return None
+    try:
+        step = Decimal(str(raw).strip())
+    except Exception:
+        return None
+    if step < 0:
+        return None
+    return step
+
+
+def floor_to_step(value: float, step: Decimal) -> str:
+    if step == 0:
+        return floor_to_places(value, 0)
+    amount = Decimal(str(value))
+    units = (amount / step).to_integral_value(rounding=ROUND_DOWN)
+    floored = units * step
+    text = format(floored, "f")
+    if "." in text:
+        text = text.rstrip("0").rstrip(".")
+    return text or "0"
+
+
 def sized_amount(exchange, symbol: str, amount: float) -> float | str:
-    places = _decimal_places(_symbol_info(exchange, symbol), "baseAssetPrecision")
+    info = _symbol_info(exchange, symbol)
+    # baseAssetPrecision can be finer than the order step MEXC accepts.
+    step = _size_step(info)
+    if step is not None:
+        return floor_to_step(amount, step)
+    places = _decimal_places(info, "baseAssetPrecision")
     if places is None:
         return amount
     return floor_to_places(amount, places)

@@ -4,7 +4,7 @@ import time
 
 import httpx
 
-_pending: list[tuple[str, str, str, str, str, str]] = []
+_pending: list[tuple[str, str, str, str, str, str, str]] = []
 _guard = threading.Lock()
 _flusher: threading.Thread | None = None
 
@@ -16,6 +16,7 @@ def append_audit(
     reason: str,
     discord_status: str = "",
     discord_detail: str = "",
+    venue: str = "",
 ) -> bool:
     return _post(
         "/api/audits",
@@ -26,6 +27,7 @@ def append_audit(
             "reason": reason,
             "discord_status": discord_status,
             "discord_detail": discord_detail,
+            "venue": venue,
         },
     )
 
@@ -37,10 +39,11 @@ def enqueue_audit(
     reason: str,
     discord_status: str = "",
     discord_detail: str = "",
+    venue: str = "",
 ) -> None:
     global _flusher
     with _guard:
-        _pending.append((kind, strategy, symbol, reason, discord_status, discord_detail))
+        _pending.append((kind, strategy, symbol, reason, discord_status, discord_detail, venue))
         if _flusher is not None and _flusher.is_alive():
             return
         _flusher = threading.Thread(target=_flush_forever, daemon=True)

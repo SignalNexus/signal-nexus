@@ -165,7 +165,7 @@ def execute_arcus(strategy, action: str, client_order_id: str, client: "ArcusCli
                 from app.execution.order_executor import public_order_error
                 from app.notifications.discord import order_failed, send_audit
 
-                send_audit(order_failed(strategy.strategy_id, public_order_error(exc)))
+                send_audit(order_failed(strategy.strategy_id, public_order_error(exc), venue=strategy.venue))
                 return
             _report_arcus(strategy, action, prepared["holder"]["result"], client_order_id)
 
@@ -565,7 +565,7 @@ def _report_arcus(strategy, action: str, result: dict, client_order_id: str) -> 
     if not isinstance(filled, Decimal):
         filled = Decimal(str(filled))
     if filled <= 0:
-        send_audit(order_failed(strategy.strategy_id, "filled base missing"))
+        send_audit(order_failed(strategy.strategy_id, "filled base missing", venue=strategy.venue))
         return
     send_audit(
         order_success(
@@ -575,6 +575,7 @@ def _report_arcus(strategy, action: str, result: dict, client_order_id: str) -> 
             float(strategy.size_quote),
             "closed",
             _combined_price(result.get("prices") or []),
+            venue=strategy.venue,
             realized=_arcus_realized(strategy, action, filled, result, client_order_id),
         )
     )
