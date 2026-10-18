@@ -3,9 +3,10 @@ from pathlib import Path
 
 import yaml
 
+from app.config_dir import config_file
 from app.venues import asset_class_of, enabled_venues
 
-REGISTRY_PATH = Path(__file__).resolve().parents[2] / "config" / "strategies.yml"
+REGISTRY_PATH = config_file("strategies.yml")
 
 
 class RegistryRejection(Exception):

@@ -4,7 +4,7 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 import yaml
 
-ROOT = Path(__file__).resolve().parents[1]
+from app.config_dir import config_file
 
 # Japanese wording is the source. It is used only when language is japanese.
 # When language is absent, the portal is English.
@@ -91,7 +91,7 @@ _EN = {
 
 
 def _locale_document(path: Path | None = None) -> dict:
-    source = path or (ROOT / "config" / "locale.yml")
+    source = path or config_file("locale.yml")
     try:
         loaded = yaml.safe_load(source.read_text(encoding="utf-8"))
     except (OSError, yaml.YAMLError):

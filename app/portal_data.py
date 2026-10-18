@@ -4,14 +4,14 @@ from pathlib import Path
 
 import yaml
 
+from app.config_dir import config_file
 from app.portal_text import remaining_label
 
-ROOT = Path(__file__).resolve().parents[1]
 ORDER_QUOTE = Decimal("10")
 
 
 def read_month_target(path: Path | None = None) -> Decimal | None:
-    source = path or ROOT / "config" / "month_target.yml"
+    source = path or config_file("month_target.yml")
     if not source.is_file():
         return None
     loaded = yaml.safe_load(source.read_text(encoding="utf-8"))
@@ -27,7 +27,7 @@ def read_month_target(path: Path | None = None) -> Decimal | None:
 
 
 def read_backtests(path: Path | None = None) -> dict[str, dict[str, Decimal | int | str | None]]:
-    source = path or ROOT / "config" / "strategy_results.yml"
+    source = path or config_file("strategy_results.yml")
     if not source.is_file():
         return {}
     loaded = yaml.safe_load(source.read_text(encoding="utf-8"))
@@ -163,7 +163,7 @@ def next_due(rows: list[dict]) -> str | None:
 
 
 def read_schedule(today: date, path: Path | None = None) -> list[dict] | None:
-    source = path or ROOT / "config" / "ops_schedule.yml"
+    source = path or config_file("ops_schedule.yml")
     try:
         loaded = yaml.safe_load(source.read_text(encoding="utf-8"))
     except (OSError, yaml.YAMLError):
@@ -174,7 +174,7 @@ def read_schedule(today: date, path: Path | None = None) -> list[dict] | None:
 
 
 def read_ops_items(today: date, path: Path | None = None) -> list[dict]:
-    source = path or ROOT / "config" / "ops_schedule.yml"
+    source = path or config_file("ops_schedule.yml")
     if not source.is_file():
         return []
     loaded = yaml.safe_load(source.read_text(encoding="utf-8"))

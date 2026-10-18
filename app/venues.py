@@ -3,7 +3,9 @@ from pathlib import Path
 
 import yaml
 
-REGISTRY_PATH = Path(__file__).resolve().parents[1] / "config" / "venues.yml"
+from app.config_dir import config_file
+
+REGISTRY_PATH = config_file("venues.yml")
 
 
 @dataclass(frozen=True)
