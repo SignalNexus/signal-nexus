@@ -1,103 +1,204 @@
 # Signal Nexus
 
-## What is Signal Nexus?
+Signal Nexus is a self-hosted trading operations platform. A TradingView alert becomes an order plan that can run across more than one venue. The record, the audit, and the review stay in one workflow.
 
-Signal Nexus helps traders operate a self-hosted TradingView automation workflow, without handing funds or exchange API keys to a third party. The same service includes a portal for reviewing the operation.
+Your funds stay at the venue. Your keys stay on infrastructure you run.
 
-A TradingView alert is mapped to a strategy and turned into an execution plan. Analytics keeps a record of that operation, so you can review it over time and improve how the signal is run. You choose the next change.
+With `EXECUTION_MODE` unset, the record is kept and the order is not sent. That mode is `dry_run`. `live` sends orders. It is not investment advice.
 
-Your funds stay at your exchange. Your keys stay on your infrastructure. With `EXECUTION_MODE` unset, the record is kept and the order is not sent. That mode is `dry_run`. It is not investment advice.
+The Japanese edition is [README_JA.md](README_JA.md).
 
-## Architecture
+## What Signal Nexus Does
 
-A TradingView alert enters Signal Nexus. It is mapped to a strategy in `config/strategies.yml`, checked, and turned into an execution plan. Analytics keeps that record so the operation can be reviewed and improved later. It is not only a log of the webhook. In `dry_run`, the order is not sent.
+TradingView sends an alert. Signal Nexus maps it to a strategy, plans the order, and keeps the operation as a record.
 
-```text
-TradingView alert
-        |
-        v
-Signal Nexus
-        |
-        +-- strategy mapping
-        +-- execution planning
-        |
-        v
-Analytics record
-        |
-        v
-Review and improve
-```
+- TradingView signal ingestion. The alert arrives as a webhook and is mapped to a strategy in `config/strategies.yml`.
+- Multi-venue execution. One workflow can run that plan on more than one venue. In `dry_run`, the order is not sent.
+- Analytics collection. The alert, the plan, and, when an order is sent, the venue result are kept as the operational record.
+- Audit notifications. The audit row stays in Postgres. Discord can receive a copy.
+- Unified operational workflow. Dashboard, Analytics, and Audit are views of that same run.
 
-## Capabilities
-
-- TradingView webhook intake
-- Strategy mapping
-- Execution planning
-- Analytics records you can review and improve from
-- Discord audit notifications
-- Self-hosted deployment
+You choose the next change. Signal Nexus keeps the record.
 
 ## Supported Venues
 
-Current:
+Current support:
 
 - MEXC Spot
 - MEXC Futures
 - Arcus
 
-Planned:
+Membership includes future venue additions.
 
-- Hyperliquid
-- Paradex
-- GRVT
+## Architecture
 
-A planned venue is not an order path yet.
+```mermaid
+graph LR
+    TV[TradingView]
+    SN[Signal Nexus]
+    CEX[CEX Venues]
+    DEX[DEX Venues]
+    UI[Dashboard Analytics Audit]
 
-## Environment Variables
-
-These names belong to this repository. This file does not say how to create the values.
-
-| Variable | Required | Purpose |
-| --- | --- | --- |
-| `WEBHOOK_SECRET` | Required | Authenticate webhook requests |
-| `DISCORD_WEBHOOK_URL` | Recommended | Deliver audit notifications to Discord |
-| `EXECUTION_MODE` | Optional | Unset means `dry_run`. `live` sends orders |
-
-## Notifications
-
-Audit notifications can be delivered to Discord through `DISCORD_WEBHOOK_URL`. Discord is a delivery destination. The audit record itself stays in Postgres.
-
-Discord notifications are outside Validation. Validation only checks the webhook process and the Analytics API process.
-
-## Prerequisites
-
-This file assumes the following already exist. It does not install them.
-
-- Windows 11 Home
-- Python 3.12 (`py -3.12`)
-- Git
-- GitHub account
-- Render account
-- A Linux VM with a shell
-
-You run the commands below on Windows 11 Home. The Analytics API runs on the Linux VM.
-
-## Quick Start
-
-Start from a clone of your copy of this repository. Edit `config/` only.
-
-```powershell
-py -3.12 -m venv .venv
-.\.venv\Scripts\Activate.ps1
-python -m pip install -r requirements.txt
-$env:WEBHOOK_SECRET = "replace-me"
+    TV --> SN
+    SN --> CEX
+    SN --> DEX
+    SN --> UI
 ```
 
-Leave `EXECUTION_MODE` unset. Choose your own `WEBHOOK_SECRET`. Do not reuse the placeholder.
+TradingView generates the signal. Signal Nexus receives it and can run it on a CEX venue and a DEX venue. You watch that activity from one operational view.
 
-Optional: set `DISCORD_WEBHOOK_URL` to deliver audit notifications to Discord. This file does not say how to create that URL. Validation does not require it.
+MEXC is the CEX path. Arcus is the DEX path.
 
-Replace `config/strategies.yml` with:
+The full layout is in [Architecture](docs/architecture/ARCHITECTURE.md).
+
+## Components
+
+| Component | Role |
+| --- | --- |
+| TradingView | Sends the alert |
+| Webhook | Maps the alert to a strategy and plans the order |
+| Venue adapter | Carries a live order to MEXC or Arcus |
+| Analytics | Keeps the operational record |
+| Postgres | Stores the audit row |
+| Portal | Shows Dashboard, Analytics, and Audit |
+| Discord | Receives an audit copy |
+
+The Portal is protected by `PORTAL_PASSWORD`, which is supplied through environment configuration.
+
+## Deployment
+
+You deploy Signal Nexus on infrastructure you run.
+
+The webhook process (`app.main`) receives TradingView alerts. Analytics, the audit store, and live order delivery run on a virtual machine you administer (`app.analytics.api`). The Buildbook uses Render for the webhook and Oracle Cloud for that machine.
+
+Leave `EXECUTION_MODE` unset until you intend to send orders. Runtime Modes describes `dry_run`, `live`, and the kill switch.
+
+### Deployment Relationship
+
+```text
+Render Webhook Service
+        ↓
+ANALYTICS_API_URL
+        ↓
+Analytics API
+        ↓
+Postgres
+
+Discord notifications
+        ↑
+Webhook Service
+```
+
+The Webhook Service receives alerts. The Analytics API stores operational records. Postgres persists audit and analytics data. Discord receives audit copies generated by the Webhook Service.
+
+The webhook process uses:
+
+- Build command: `pip install -r requirements.txt`
+- Start command: `uvicorn app.main:app --host 0.0.0.0 --port $PORT`
+
+A deployment is ready for the [Strategy Integration Guide](docs/integration/STRATEGY_INTEGRATION_GUIDE.md) when:
+
+1. Webhook `GET /health` returns `{"status":"ok"}`.
+2. Analytics API `GET /health` returns `{"status":"ok"}`.
+3. `POST /webhook` returns `{"status":"dry_run"}`.
+
+Each health result shows that the process answered.
+
+If you already operate GitHub, Render, a Linux machine, TradingView, and secret management, the process above, Required Configuration, and Strategy Configuration are the public deploy entry.
+
+To reproduce that environment from an empty start, follow the Signal Nexus Buildbook. Starter and Membership include the Buildbook. The Buildbook is the complete deployment playbook.
+
+## Runtime Modes
+
+### dry_run
+
+`EXECUTION_MODE` is unset.
+
+- The audit record is created.
+- The analytics record is created.
+- Discord notifications are delivered.
+- Orders are not sent.
+
+The analytics record is written when `ANALYTICS_API_URL` and `ANALYTICS_API_SECRET` are set. Discord delivery uses `DISCORD_WEBHOOK_URL`. The audit row stays in Postgres.
+
+### live
+
+`EXECUTION_MODE=live`.
+
+- Order execution is enabled.
+- Venue orders may be placed.
+
+### Kill Switch
+
+`KILL_SWITCH=true` prevents new order placement.
+
+## Required Configuration
+
+These are the runtime names. This section does not say how to create the values. `EXECUTION_MODE` stays unset for `dry_run`.
+
+### Webhook Service
+
+The webhook process holds these. They authenticate alerts, reach the Analytics API, open the portal, and decide whether an order is sent.
+
+- `WEBHOOK_SECRET` — `POST /webhook` compares this with the JSON field `secret`.
+- `ANALYTICS_API_URL` — Where the webhook reaches the Analytics API. The URL carries no secret.
+- `ANALYTICS_API_SECRET` — Shared secret for that call. The same value is set on the Analytics service. It is not `WEBHOOK_SECRET`.
+- `PORTAL_PASSWORD` — Password for the portal served by the webhook process.
+- `DISCORD_WEBHOOK_URL` — Where an audit copy is delivered. The audit row stays in Postgres.
+- `KILL_SWITCH` — `true` stops new orders. `false` leaves the order path open.
+- `EXECUTION_MODE` — Unset means `dry_run`. `live` sends orders.
+
+### Analytics Service
+
+The Analytics API stores the operational record in Postgres on the virtual machine. This value is in `analytics.env`.
+
+- `ANALYTICS_DB_PASSWORD` — Password of the local Postgres role `signalnexus`.
+
+### Analytics Read Keys
+
+The Analytics service reads positions, fills, and balances. These keys do not send orders. Spot and futures are separate keys. Arcus fills are read without a signature. These values are in `analytics.env`.
+
+- `ANALYTICS_MEXC_API_KEY` — MEXC spot read key.
+- `ANALYTICS_MEXC_API_SECRET` — Secret of that read key.
+- `ANALYTICS_MEXC_FUTURES_API_KEY` — MEXC futures read key.
+- `ANALYTICS_MEXC_FUTURES_API_SECRET` — Secret of that read key.
+- `ANALYTICS_ARCUS_ADDRESS` — Address used to read Arcus fills.
+
+### Order Execution Keys
+
+Live orders use a different set of keys from the read keys. Spot and futures stay separate. MEXC order keys have withdrawal off. These MEXC values are in `mexc.env`. Arcus orders are signed with `ARCUS_ADDRESS` and `ARCUS_SIGNING_KEY`, in `arcus.env`. That pair can be the same wallet as `ANALYTICS_ARCUS_ADDRESS`. The signing key is required only for orders.
+
+- `MEXC_API_KEY` — MEXC spot order key.
+- `MEXC_API_SECRET` — Secret of that order key.
+- `MEXC_FUTURES_API_KEY` — MEXC futures order key.
+- `MEXC_FUTURES_API_SECRET` — Secret of that order key.
+- `ARCUS_ADDRESS` — Address that signs Arcus orders.
+- `ARCUS_SIGNING_KEY` — Signing key for that address.
+
+## Deployment Automation Variables
+
+Signal Nexus also uses deployment automation variables when the Buildbook workflow deploys infrastructure.
+
+These variables are not part of Signal Nexus runtime configuration and are therefore not listed in Required Configuration.
+
+They are documented in the Buildbook appendices.
+
+- `ANALYTICS_SSH_HOST`, `ANALYTICS_SSH_HOST_FINGERPRINT`, and `ANALYTICS_SSH_PRIVATE_KEY` support GitHub Actions deployment to the Analytics VM.
+- `RENDER_HEALTH_URL` supports deployment validation and health verification.
+- `CADDY_SITE_ADDRESS` defines the HTTPS hostname used by the Analytics VM deployment.
+
+These variables are deployment transport and infrastructure variables.
+
+They are not Signal Nexus business configuration.
+
+Signal Nexus runtime configuration is fully documented in Required Configuration.
+
+The Buildbook remains the authoritative source for deployment automation variables.
+
+## Strategy Configuration
+
+`config/strategies.yml` maps an alert to an order plan. The key is `strategy_id`. The alert's `strategy_id` and `symbol` must match that row. The order amount is `size_quote` on the row. The alert body does not carry `size` or `size_quote`.
 
 ```yaml
 btc_long_example:
@@ -107,65 +208,54 @@ btc_long_example:
   venue: mexc_spot
 ```
 
-`size_quote` is the order amount in USDT. The webhook body does not carry an amount.
+`size_quote` is the order amount in USDT. `side` is `long` or `short`. `venue` is `mexc_spot`, `mexc_futures`, or `arcus`. A short row cannot use a spot venue.
 
-In the same PowerShell window:
+## Webhook Payload
 
-```powershell
-python -m uvicorn app.main:app --host 127.0.0.1 --port 8000
+`POST /webhook` accepts a JSON body. The secret travels in `secret`. There is no authentication header.
+
+```json
+{
+  "secret": "your_webhook_secret",
+  "strategy_id": "btc_long_example",
+  "symbol": "BTC/USDT",
+  "action": "BUY",
+  "bar_time": "2026-10-16T00:00:00Z",
+  "client_order_id": "btc_long_example_20261016000000_buy"
+}
 ```
 
-On the Linux VM, from a clone of the same code:
+| Field | Meaning |
+| --- | --- |
+| `secret` | The same string as `WEBHOOK_SECRET` |
+| `strategy_id` | The key in `config/strategies.yml` |
+| `symbol` | The `symbol` on that row |
+| `action` | An action that row accepts |
+| `bar_time` | ISO-8601 time, such as `2026-10-16T00:00:00Z` |
+| `client_order_id` | An id for this attempt. A repeat for that venue is discarded |
 
-```bash
-python3 -m venv .venv
-source .venv/bin/activate
-python -m pip install -r requirements.txt
-python -m app.analytics.api
-```
+`exit_bar_close` is optional, and only with `SELL` or `STOP`. It is an ISO-8601 time.
 
-The Analytics API listens on port 8080. This process does not open Postgres.
+A body that contains `size` or `size_quote` is HTTP 422. The amount stays in `size_quote` on the strategy row.
 
-## Render Deployment
+| Row | Actions |
+| --- | --- |
+| `side: long` and a spot venue | `BUY`, `SELL`, `STOP` |
+| `side: long` and a futures venue | `LONG`, `FLAT` |
+| `side: short` and a futures venue | `SHORT`, `COVER` |
 
-On your Render Web Service, use:
+Any other action for that row is rejected. One symbol on one venue cannot have both a long row and a short row.
 
-- Build command: `pip install -r requirements.txt`
-- Start command: `uvicorn app.main:app --host 0.0.0.0 --port $PORT`
-- Environment: set `WEBHOOK_SECRET` to your secret. Leave `EXECUTION_MODE` unset.
+A secret mismatch is HTTP 401 and `{"detail":"unauthorized"}`. A rejected alert is HTTP 422, and the order is not sent. A repeated `client_order_id` is HTTP 200 and `{"status":"duplicate"}`. A match with `EXECUTION_MODE` unset is `{"status":"dry_run"}`. A match with `KILL_SWITCH` set to `true` is `{"status":"killed"}`. A match with `EXECUTION_MODE=live` is `{"status":"accepted"}`, and the order goes to `venue` for `size_quote` USDT.
 
-The deployed `config/strategies.yml` must contain `btc_long_example`, as saved in Quick Start. The hostname belongs to your service. This file does not name one.
+## Where to go next
 
-## Validation
-
-These three results are the end of this file.
-
-1. Render `GET /health` returns `{"status":"ok"}`.
-
-```powershell
-curl.exe -i https://<your-host>/health
-```
-
-2. Analytics API `GET /health` returns `{"status":"ok"}`. On the VM:
-
-```bash
-curl -i http://127.0.0.1:8080/health
-```
-
-3. `POST /webhook` returns `{"status":"dry_run"}`.
-
-```powershell
-curl.exe -i -X POST https://<your-host>/webhook `
-  -H "Content-Type: application/json" `
-  -d "{\"secret\":\"replace-me\",\"strategy_id\":\"btc_long_example\",\"symbol\":\"BTC/USDT\",\"action\":\"BUY\",\"bar_time\":\"2026-10-15T00:00:00Z\",\"client_order_id\":\"btc_long_example_20261015000000_buy\"}"
-```
-
-Use the same secret as `WEBHOOK_SECRET`. A different secret returns HTTP 401 and `{"detail":"unauthorized"}`. A body that contains `size` or `size_quote` returns HTTP 422.
-
-Each health check shows only that its process answered. Discord notifications are outside Validation. Postgres, a venue, and the importer are outside these checks. An alert sent from TradingView is not one of them.
-
-## Learn More
-
-For the portal, what analytics shows, which audits are kept, the public and private boundary, and the product names, see [docs/product/PRODUCT_SPECIFICATION.md](docs/product/PRODUCT_SPECIFICATION.md). The Japanese edition is [docs/product/PRODUCT_SPECIFICATION_JA.md](docs/product/PRODUCT_SPECIFICATION_JA.md).
-
-Installing Python, Git, GitHub, Render, a Linux VM, or SSH is in the Signal Nexus Buildbook. This file does not repeat those steps.
+| Question | Document |
+| --- | --- |
+| What does the operator get? | [Product Specification](docs/product/PRODUCT_SPECIFICATION.md) |
+| How is the system structured? | [Architecture](docs/architecture/ARCHITECTURE.md) |
+| How is TradingView connected? | [Strategy Integration Guide](docs/integration/STRATEGY_INTEGRATION_GUIDE.md) |
+| What does each screen show? | [Screen Specification](docs/ui/SCREEN_SPECIFICATION.md) |
+| How do the screens connect? | [Screen Relationship Diagram](docs/ui/SCREEN_RELATIONSHIP_DIAGRAM.md) |
+| How is a full deployment reproduced? | Signal Nexus Buildbook (Starter or Membership) |
+| How do the documents divide? | [Documentation Structure](docs/DOCUMENTATION_STRUCTURE.md) |

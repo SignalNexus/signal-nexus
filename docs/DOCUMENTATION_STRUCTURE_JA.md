@@ -18,11 +18,11 @@
 | Screen Specification | Public | 画面仕様の正本 | 目的、分かること、表示するもの、各画面からの移動 | API 設計、データベース設計、構築手順 |
 | Screen Relationship Diagram | Public | 画面遷移の正本 | 画面のツリーと、画面から画面への移動 | 項目の一覧、構築手順 |
 | Product Specification | Public | 製品説明の正本 | 利用者が得るもの、対応する取引所、製品名 | 導入手順、画面の表示名の定義、価格 |
-| README | Public | 入口 | このリポジトリのコマンド、Render の Build と Start、三つの確認 | このファイルの表、導入の教科書、画面仕様 |
+| README | Public | 公開の入口と、経験のある運用者向けの参照 | Signal Nexus が何か、実行モード、設定、Webhook と戦略の要約、Build と Start、三つの確認 | このファイルの表、導入の教科書、画面仕様 |
 
 Buildbook は、公開文書のセットに入らない唯一の正本です。Starter と、すべての Membership から読めます。
 
-Buildbook は Signal Nexus の利用に必須ではありません。Buildbook は、構築から運用までを一通り再現したい利用者向けの完全ガイドです。README は公開されているデプロイの入口です。Buildbook は、ゼロから再現するための完全な手順書です。
+Buildbook は Signal Nexus の利用に必須ではありません。Buildbook は、構築から運用までを一通り再現したい利用者向けの完全ガイドです。README は、公開の入口であり、経験のある運用者向けの参照です。Buildbook は、ゼロから再現するための完全な手順書です。
 
 ## 文書の入手
 
@@ -128,7 +128,7 @@ Signal Nexus をデプロイしたい。
 
 まず README を参照してください。
 
-README には公開されているデプロイ手順と確認手順があります。
+README は、経験のある運用者向けの公開の入口です。デプロイの入口と確認の流れを含みます。
 
 既に必要なサービスや環境構築に慣れている場合は、README だけで十分な場合があります。
 
@@ -190,7 +190,7 @@ Architecture は、どう組まれているかを答えます。
 
 Strategy Integration Guide は、TradingView をどうつなぐかを答えます。
 
-README は、公開されているデプロイの入口です。Buildbook は、何も無い状態から一通り再現する手順を答えます。Buildbook を読むには、Starter または Membership が必要です。
+README は、公開の入口であり、経験のある運用者向けの参照です。Buildbook は、何も無い状態から一通り再現する手順を答えます。Buildbook を読むには、Starter または Membership が必要です。
 
 Screen Specification は、運用者が何を見るかを答えます。
 

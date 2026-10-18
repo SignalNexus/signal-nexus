@@ -1,103 +1,204 @@
 # Signal Nexus
 
-## Signal Nexus とは
+Signal Nexus は、自分でホストする取引の運用プラットフォームです。TradingView のアラートは発注の計画になり、複数の取引所へ実行できます。記録、監査、見返しは、一つの運用の流れにあります。
 
-Signal Nexus は、TradingView のアラートを、自分の環境で運用するためのソフトウェアです。資金も、取引所の API キーも、第三者には渡しません。同じサービスに、運用を見返すポータルがあります。
+資金は、使っている取引所の口座に残ります。鍵は、自分で動かしている環境に残ります。
 
-アラートは戦略に割り当てられ、発注の計画になります。Analytics には、その運用の記録が残ります。あとから見返し、シグナルの動かし方を自分で直せます。次に何を変えるかは、自分で決めます。
+`EXECUTION_MODE` を設定しないあいだは、記録は残り、注文は出ません。この状態が `dry_run` です。`live` で注文を出します。投資助言ではありません。
 
-資金は、使っている取引所の口座に残ります。API キーは、自分の環境に残ります。`EXECUTION_MODE` を設定しないあいだは、記録は残り、注文は出ません。この状態が `dry_run` です。投資助言ではありません。
+英語版 [README.md](README.md) が原文です。
 
-## 構成
+## Signal Nexus がすること
 
-入口は TradingView のアラートです。Signal Nexus が受け取り、`config/strategies.yml` の戦略に割り当て、内容を確認し、発注の計画を作ります。Analytics は、Webhook の控えではありません。運用の記録として残り、あとから見返し、動かし方を直すために使います。`dry_run` では、注文は出ません。
+TradingView がアラートを送ります。Signal Nexus はそれを戦略に割り当て、発注の計画を作り、運用の記録として残します。
 
-```text
-TradingView のアラート
-        |
-        v
-Signal Nexus
-        |
-        +-- 戦略への割り当て
-        +-- 発注の計画
-        |
-        v
-Analytics の記録
-        |
-        v
-見返し、運用を直す
-```
+- TradingView のシグナル取り込み。アラートは Webhook として届き、`config/strategies.yml` の戦略に割り当てられます。
+- 複数の取引所への実行。一つの運用で、その計画を複数の取引所へ出せます。`dry_run` では注文は出ません。
+- Analytics の収集。アラート、計画、注文を出したときの取引所の結果が、運用の記録として残ります。
+- 監査の通知。監査の行は Postgres に残ります。Discord へ写しを届けられます。
+- 一つの運用の流れ。Dashboard、Analytics、Audit は、同じ運用の見え方です。
 
-## できること
-
-- TradingView の Webhook を受ける
-- アラートを戦略に割り当てる
-- 発注の計画を作る
-- 見返しと運用の修正に使う Analytics の記録
-- Discord への監査通知
-- 自分の環境へのデプロイ
+次に何を変えるかは、自分で決めます。Signal Nexus は記録を残します。
 
 ## 対応する取引所
 
-いま使えるもの:
+いま対応している取引所:
 
 - MEXC 現物
 - MEXC 先物
 - Arcus
 
-予定:
+Membership には、今後追加される取引所が含まれます。
 
-- Hyperliquid
-- Paradex
-- GRVT
+## 構成
 
-予定の取引所は、まだ発注先ではありません。
+```mermaid
+graph LR
+    TV[TradingView]
+    SN[Signal Nexus]
+    CEX[CEX Venues]
+    DEX[DEX Venues]
+    UI[Dashboard Analytics Audit]
 
-## 環境変数
-
-名前は、このリポジトリのものです。値の作り方は書きません。
-
-| 変数 | 要否 | 役割 |
-| --- | --- | --- |
-| `WEBHOOK_SECRET` | 必須 | Webhook のリクエストを確認する |
-| `DISCORD_WEBHOOK_URL` | 推奨 | 監査の通知を Discord へ届ける |
-| `EXECUTION_MODE` | 任意 | 未設定は `dry_run`。`live` で注文を出す |
-
-## 通知
-
-監査の通知は、`DISCORD_WEBHOOK_URL` から Discord へ届けられます。Discord は届け先です。監査の記録そのものは Postgres に残ります。
-
-Discord への通知は、確認の対象外です。確認するのは、Webhook のプロセスと Analytics API のプロセスが応答することだけです。
-
-## 前提
-
-このファイルは、次がすでに揃っている前提で書かれています。インストール方法は書きません。
-
-- Windows 11 Home
-- Python 3.12（`py -3.12`）
-- Git
-- GitHub アカウント
-- Render アカウント
-- ログインできる Linux の VM
-
-下のコマンドは Windows 11 Home で実行します。Analytics API は Linux の VM で動きます。
-
-## クイックスタート
-
-自分用に clone したこのリポジトリから始めます。書き換えてよいのは `config/` だけです。
-
-```powershell
-py -3.12 -m venv .venv
-.\.venv\Scripts\Activate.ps1
-python -m pip install -r requirements.txt
-$env:WEBHOOK_SECRET = "replace-me"
+    TV --> SN
+    SN --> CEX
+    SN --> DEX
+    SN --> UI
 ```
 
-`EXECUTION_MODE` は設定しないでください。`WEBHOOK_SECRET` は、自分で決めた値にします。例の `replace-me` は、そのまま使わないでください。
+TradingView がシグナルを出します。Signal Nexus が受け取り、CEX と DEX へ実行できます。その動きは、一つの運用の画面から見ます。
 
-任意です。監査の通知を Discord へ届けるときは、`DISCORD_WEBHOOK_URL` を設定します。URL の作り方は書きません。確認では使いません。
+いまの CEX は MEXC です。いまの DEX は Arcus です。
 
-`config/strategies.yml` を次の内容に置き換えます。
+構成の全体は [Architecture](docs/architecture/ARCHITECTURE_JA.md) にあります。
+
+## 部品
+
+| 部品 | 役割 |
+| --- | --- |
+| TradingView | アラートを送る |
+| Webhook | アラートを戦略に割り当て、発注の計画を作る |
+| 取引所アダプター | `live` の注文を MEXC または Arcus へ渡す |
+| Analytics | 運用の記録を残す |
+| Postgres | 監査の行を保存する |
+| ポータル | Dashboard、Analytics、Audit を表示する |
+| Discord | 監査の写しを受け取る |
+
+ポータルは `PORTAL_PASSWORD` で保護されます。値は環境の設定で渡します。
+
+## デプロイ
+
+Signal Nexus は、自分の環境へデプロイします。
+
+Webhook のプロセス（`app.main`）が TradingView のアラートを受けます。Analytics、監査の保存、`live` の発注は、自分で管理する仮想マシン（`app.analytics.api`）で動きます。Buildbook では、Webhook に Render、仮想マシンに Oracle Cloud を使います。
+
+注文を出すと決めるまで、`EXECUTION_MODE` は入れません。`dry_run`、`live`、Kill Switch は、実行モードにあります。
+
+### デプロイの関係
+
+```text
+Render Webhook Service
+        ↓
+ANALYTICS_API_URL
+        ↓
+Analytics API
+        ↓
+Postgres
+
+Discord notifications
+        ↑
+Webhook Service
+```
+
+Webhook サービスがアラートを受けます。Analytics API が運用の記録を残します。Postgres が監査と Analytics のデータを保持します。Discord は、Webhook サービスが作った監査の写しを受け取ります。
+
+Webhook のプロセスは次です。
+
+- Build command: `pip install -r requirements.txt`
+- Start command: `uvicorn app.main:app --host 0.0.0.0 --port $PORT`
+
+次の三つが揃うと、[Strategy Integration Guide](docs/integration/STRATEGY_INTEGRATION_GUIDE_JA.md) へ進めます。
+
+1. Webhook の `GET /health` が `{"status":"ok"}` になる。
+2. Analytics API の `GET /health` が `{"status":"ok"}` になる。
+3. `POST /webhook` が `{"status":"dry_run"}` になる。
+
+health が示すのは、そのプロセスが応答したことです。
+
+GitHub、Render、Linux のマシン、TradingView、secret の扱いに慣れている場合、上のプロセスと、必要な設定、戦略の設定が、公開されているデプロイの入口です。
+
+何も無い状態からその環境を再現するには、Signal Nexus Buildbook に従います。Starter と Membership に Buildbook が含まれます。Buildbook は、完全な構築の手順書です。
+
+## 実行モード
+
+### dry_run
+
+`EXECUTION_MODE` は未設定です。
+
+- 監査の記録が残ります。
+- Analytics の記録が残ります。
+- Discord へ通知が届きます。
+- 注文は出ません。
+
+Analytics の記録は、`ANALYTICS_API_URL` と `ANALYTICS_API_SECRET` があるときに書かれます。Discord へ届けるときは `DISCORD_WEBHOOK_URL` を使います。監査の行は Postgres に残ります。
+
+### live
+
+`EXECUTION_MODE=live` です。
+
+- 発注が有効になります。
+- 取引所へ注文が出ることがあります。
+
+### Kill Switch
+
+`KILL_SWITCH=true` は、新しい注文を止めます。
+
+## 必要な設定
+
+次は、実行時の名前です。値の作り方は書きません。`dry_run` では `EXECUTION_MODE` を未設定のままにします。
+
+### Webhook サービス
+
+Webhook のプロセスが持ちます。アラートの確認、Analytics API への到達、ポータルを開くこと、注文を出すかどうかが、ここにあります。
+
+- `WEBHOOK_SECRET` — `POST /webhook` が、JSON の `secret` とこの値を比べます。
+- `ANALYTICS_API_URL` — Webhook が Analytics API に届く先です。URL に秘密は入れません。
+- `ANALYTICS_API_SECRET` — その呼び出しの共有の秘密です。同じ値を Analytics サービスにも置きます。`WEBHOOK_SECRET` とは別です。
+- `PORTAL_PASSWORD` — Webhook のプロセスが出すポータルのパスワードです。
+- `DISCORD_WEBHOOK_URL` — 監査の写しの届け先です。監査の行は Postgres に残ります。
+- `KILL_SWITCH` — `true` で新しい注文を止めます。`false` では発注の経路を開いたままにします。
+- `EXECUTION_MODE` — 未設定は `dry_run` です。`live` で注文を出します。
+
+### Analytics サービス
+
+Analytics API は、仮想マシンの Postgres に運用の記録を残します。この値は `analytics.env` にあります。
+
+- `ANALYTICS_DB_PASSWORD` — ローカル Postgres のロール `signalnexus` のパスワードです。
+
+### Analytics の読み取りキー
+
+Analytics サービスは、ポジション、約定、残高を読みます。これらのキーでは注文を出しません。現物と先物は別のキーです。Arcus の約定は、署名せずに読みます。これらの値は `analytics.env` にあります。
+
+- `ANALYTICS_MEXC_API_KEY` — MEXC 現物の読み取りキーです。
+- `ANALYTICS_MEXC_API_SECRET` — その秘密です。
+- `ANALYTICS_MEXC_FUTURES_API_KEY` — MEXC 先物の読み取りキーです。
+- `ANALYTICS_MEXC_FUTURES_API_SECRET` — その秘密です。
+- `ANALYTICS_ARCUS_ADDRESS` — Arcus の約定を読むアドレスです。
+
+### 発注キー
+
+`live` の注文は、読み取りキーとは別の組を使います。現物と先物は分けたままです。MEXC の発注キーは、出金を無効にします。MEXC の値は `mexc.env` にあります。Arcus の注文は `ARCUS_ADDRESS` と `ARCUS_SIGNING_KEY` で署名します。この組は `arcus.env` にあります。`ANALYTICS_ARCUS_ADDRESS` と同じウォレットでもかまいません。署名鍵が要るのは注文だけです。
+
+- `MEXC_API_KEY` — MEXC 現物の発注キーです。
+- `MEXC_API_SECRET` — その秘密です。
+- `MEXC_FUTURES_API_KEY` — MEXC 先物の発注キーです。
+- `MEXC_FUTURES_API_SECRET` — その秘密です。
+- `ARCUS_ADDRESS` — Arcus の注文に署名するアドレスです。
+- `ARCUS_SIGNING_KEY` — そのアドレスの署名鍵です。
+
+## デプロイ自動化の変数
+
+Signal Nexus は、Buildbook のワークフローがインフラをデプロイするとき、デプロイ自動化の変数も使います。
+
+これらの変数は、Signal Nexus の実行時の設定ではありません。そのため、必要な設定には入れていません。
+
+文書は、Buildbook の別紙にあります。
+
+- `ANALYTICS_SSH_HOST`、`ANALYTICS_SSH_HOST_FINGERPRINT`、`ANALYTICS_SSH_PRIVATE_KEY` は、GitHub Actions から Analytics の仮想マシンへデプロイするために使います。
+- `RENDER_HEALTH_URL` は、デプロイの確認と health の確認に使います。
+- `CADDY_SITE_ADDRESS` は、Analytics の仮想マシンのデプロイが使う HTTPS のホスト名です。
+
+これらの変数は、デプロイの輸送とインフラの変数です。
+
+Signal Nexus の業務設定ではありません。
+
+Signal Nexus の実行時の設定は、必要な設定にすべて書いてあります。
+
+デプロイ自動化の変数の正本は、Buildbook です。
+
+## 戦略の設定
+
+`config/strategies.yml` が、アラートを発注の計画に割り当てます。キーが `strategy_id` です。アラートの `strategy_id` と `symbol` は、その行と一致させます。注文額は、その行の `size_quote` です。アラートの本文に `size` も `size_quote` も入れません。
 
 ```yaml
 btc_long_example:
@@ -107,65 +208,54 @@ btc_long_example:
   venue: mexc_spot
 ```
 
-`size_quote` は、USDT 建ての注文額です。Webhook の本文に金額は入れません。
+`size_quote` は USDT 建ての注文額です。`side` は `long` または `short` です。`venue` は `mexc_spot`、`mexc_futures`、`arcus` です。`short` の行は、現物には置けません。
 
-同じ PowerShell で、次を起動します。
+## Webhook の本文
 
-```powershell
-python -m uvicorn app.main:app --host 127.0.0.1 --port 8000
+`POST /webhook` は JSON を受けます。秘密は `secret` に載せます。認証ヘッダはありません。
+
+```json
+{
+  "secret": "your_webhook_secret",
+  "strategy_id": "btc_long_example",
+  "symbol": "BTC/USDT",
+  "action": "BUY",
+  "bar_time": "2026-10-16T00:00:00Z",
+  "client_order_id": "btc_long_example_20261016000000_buy"
+}
 ```
 
-Linux の VM では、同じコードを clone してから実行します。
+| 欄 | 意味 |
+| --- | --- |
+| `secret` | `WEBHOOK_SECRET` と同じ文字列 |
+| `strategy_id` | `config/strategies.yml` のキー |
+| `symbol` | その行の `symbol` |
+| `action` | その行が受け付けるアクション |
+| `bar_time` | ISO-8601 の時刻。例は `2026-10-16T00:00:00Z` |
+| `client_order_id` | その一回の id。同じ venue での再送は破棄される |
 
-```bash
-python3 -m venv .venv
-source .venv/bin/activate
-python -m pip install -r requirements.txt
-python -m app.analytics.api
-```
+`exit_bar_close` は任意で、`SELL` または `STOP` のときだけです。こちらも ISO-8601 の時刻です。
 
-Analytics API はポート 8080 で待ち受けます。この確認では Postgres は使いません。
+本文に `size` または `size_quote` があると、HTTP 422 です。金額は戦略の行の `size_quote` に残します。
 
-## Render への配置
+| 行 | アクション |
+| --- | --- |
+| `side: long` で現物 | `BUY`、`SELL`、`STOP` |
+| `side: long` で先物 | `LONG`、`FLAT` |
+| `side: short` で先物 | `SHORT`、`COVER` |
 
-自分の Render Web Service には、次を設定します。
+それ以外のアクションは、その行では拒否されます。同じ取引所の同じシンボルに、long の行と short の行を同時には置けません。
 
-- Build command: `pip install -r requirements.txt`
-- Start command: `uvicorn app.main:app --host 0.0.0.0 --port $PORT`
-- 環境変数: `WEBHOOK_SECRET` に、自分で決めた値を入れる。`EXECUTION_MODE` は入れない。
+`secret` が違うときは HTTP 401 で、本文は `{"detail":"unauthorized"}` です。拒否されたアラートは HTTP 422 で、注文は出ません。同じ `client_order_id` の再送は HTTP 200 と `{"status":"duplicate"}` です。`EXECUTION_MODE` が未設定の一致は `{"status":"dry_run"}` です。`KILL_SWITCH` が `true` の一致は `{"status":"killed"}` です。`EXECUTION_MODE=live` の一致は `{"status":"accepted"}` で、`venue` へ `size_quote` USDT の注文を出します。
 
-デプロイする `config/strategies.yml` には、クイックスタートで保存した `btc_long_example` を含めてください。URL のホスト名は、そのサービスに表示されたものを使います。このファイルには書きません。
+## 次に読むもの
 
-## 確認
-
-このファイルの完了は、次の三つです。
-
-1. Render の `GET /health` が `{"status":"ok"}` になる。
-
-```powershell
-curl.exe -i https://<your-host>/health
-```
-
-2. Analytics API の `GET /health` が `{"status":"ok"}` になる。VM の中で実行します。
-
-```bash
-curl -i http://127.0.0.1:8080/health
-```
-
-3. `POST /webhook` が `{"status":"dry_run"}` になる。
-
-```powershell
-curl.exe -i -X POST https://<your-host>/webhook `
-  -H "Content-Type: application/json" `
-  -d "{\"secret\":\"replace-me\",\"strategy_id\":\"btc_long_example\",\"symbol\":\"BTC/USDT\",\"action\":\"BUY\",\"bar_time\":\"2026-10-15T00:00:00Z\",\"client_order_id\":\"btc_long_example_20261015000000_buy\"}"
-```
-
-`secret` は、設定した `WEBHOOK_SECRET` と同じ値にしてください。違う値は HTTP 401 で、本文は `{"detail":"unauthorized"}` です。本文に `size` または `size_quote` があると、HTTP 422 です。
-
-health が示すのは、そのプロセスが応答したことだけです。Discord への通知は、確認の対象外です。Postgres、取引所、Importer も対象外です。TradingView から実際にアラートを送ることも、対象外です。
-
-## 詳しく知る
-
-ポータル、Analytics で見られるもの、残る監査、公開と非公開の境界、製品の名前は [docs/product/PRODUCT_SPECIFICATION_JA.md](docs/product/PRODUCT_SPECIFICATION_JA.md) にあります。英語版が正本です。
-
-Python、Git、GitHub、Render、Linux の VM、SSH の入れ方は Signal Nexus Buildbook にあります。このファイルでは繰り返しません。
+| 知りたいこと | 文書 |
+| --- | --- |
+| 利用者の手元に何が残るか | [Product Specification](docs/product/PRODUCT_SPECIFICATION_JA.md) |
+| システムがどう構成されているか | [Architecture](docs/architecture/ARCHITECTURE_JA.md) |
+| TradingView をどう繋ぐか | [Strategy Integration Guide](docs/integration/STRATEGY_INTEGRATION_GUIDE_JA.md) |
+| 各画面に何が出るか | [Screen Specification](docs/ui/SCREEN_SPECIFICATION_JA.md) |
+| 画面がどう繋がるか | [Screen Relationship Diagram](docs/ui/SCREEN_RELATIONSHIP_DIAGRAM_JA.md) |
+| 一通りのデプロイをどう再現するか | Signal Nexus Buildbook（Starter または Membership） |
+| 文書がどう分かれるか | [Documentation Structure](docs/DOCUMENTATION_STRUCTURE_JA.md) |

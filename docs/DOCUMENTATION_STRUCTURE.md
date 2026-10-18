@@ -18,11 +18,11 @@ English is the canonical text. The Japanese edition is [DOCUMENTATION_STRUCTURE_
 | Screen Specification | Public | Canonical screen content | Purpose, what the user can learn, displayed information, navigation of each view | API design, database design, build steps |
 | Screen Relationship Diagram | Public | Canonical screen navigation | The view tree and the jumps between views | Field lists, build steps |
 | Product Specification | Public | Canonical product description | What the operator gets, venues, lineup names | Install steps, screen label definitions, prices |
-| README | Public | Deploy entry | Repository commands, Render build and start, the three validation checks | The tables in this file, install tutorials, screen specifications |
+| README | Public | Public entry and experienced-operator reference | What Signal Nexus is, runtime modes, configuration, the webhook and strategy summary, build and start commands, the three validation checks | The tables in this file, install tutorials, screen specifications |
 
 Buildbook is the only canonical document that is not part of the public documentation set. Buildbook is available through Starter and all Membership tiers.
 
-Buildbook is not required to deploy Signal Nexus. Buildbook exists for operators who need a complete, step-by-step deployment and operational guide. README is the public deploy entry. Buildbook is the complete deployment playbook.
+Buildbook is not required to deploy Signal Nexus. Buildbook exists for operators who need a complete, step-by-step deployment and operational guide. README is the public entry point and the experienced-operator reference. Buildbook is the complete deployment playbook.
 
 ## Documentation availability
 
@@ -128,7 +128,7 @@ I want to deploy Signal Nexus.
 
 Start with README.
 
-README contains the public deployment entry and validation flow.
+README is the public entry point for an experienced operator. It includes the deployment entry and the validation flow.
 
 If README is sufficient for your environment and experience level, no additional documentation is required.
 
@@ -190,7 +190,7 @@ Architecture answers how it is structured.
 
 Strategy Integration Guide answers how TradingView is connected.
 
-README is the public deploy entry. Buildbook answers how a deployment is reproduced from an empty start. Access to Buildbook is Starter or Membership.
+README is the public entry point and the experienced-operator reference. Buildbook answers how a deployment is reproduced from an empty start. Access to Buildbook is Starter or Membership.
 
 Screen Specification answers what the operator sees.
 
