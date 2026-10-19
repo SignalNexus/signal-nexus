@@ -19,6 +19,10 @@ English is the canonical text. The Japanese edition is [DOCUMENTATION_STRUCTURE_
 | Screen Relationship Diagram | Public | Canonical screen navigation | The view tree and the jumps between views | Field lists, build steps |
 | Product Specification | Public | Canonical product description | What the operator gets, venues, lineup names | Install steps, screen label definitions, prices |
 | README | Public | Public entry and experienced-operator reference | What Signal Nexus is, runtime modes, configuration, the webhook and strategy summary, build and start commands, the three validation checks | The tables in this file, install tutorials, screen specifications |
+| LICENSE | Public | Community Edition license | Permissions, prohibitions, brand, reserved commercial rights | Trading-risk narrative, vulnerability-reporting steps |
+| DISCLAIMER | Public | Offer terms for the Community Edition | Advice boundary, no asset management, no profit guarantee, warranty, liability, third parties | The copyright grant |
+| RISK_DISCLOSURE | Public | Cryptocurrency and perpetual-market risks | Market, leverage, liquidity, liquidation, venue, contract, infrastructure, operation, regulation, how a stored result can differ | A guarantee of profit |
+| SECURITY | Public | Vulnerability-reporting policy | How to report, scope, disclosure, response | A bug bounty |
 
 Buildbook is the only canonical document that is not part of the public documentation set. Buildbook is available through Starter and all Membership tiers.
 
@@ -34,6 +38,10 @@ Public documentation:
 - Screen Specification
 - Screen Relationship Diagram
 - Product Specification
+- LICENSE
+- DISCLAIMER
+- RISK_DISCLOSURE
+- SECURITY
 
 Starter documentation:
 
@@ -62,7 +70,7 @@ Signal Nexus documentation is available through different access levels.
 
 ### Free
 
-Public documentation and the open-source platform.
+Public documentation and the source-available Community Edition.
 
 Includes:
 
@@ -72,6 +80,10 @@ Includes:
 - Screen Specification
 - Screen Relationship Diagram
 - Product Specification
+- LICENSE
+- DISCLAIMER
+- RISK_DISCLOSURE
+- SECURITY
 
 ### Starter
 

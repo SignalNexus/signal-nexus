@@ -19,6 +19,10 @@
 | Screen Relationship Diagram | Public | 画面遷移の正本 | 画面のツリーと、画面から画面への移動 | 項目の一覧、構築手順 |
 | Product Specification | Public | 製品説明の正本 | 利用者が得るもの、対応する取引所、製品名 | 導入手順、画面の表示名の定義、価格 |
 | README | Public | 公開の入口と、経験のある運用者向けの参照 | Signal Nexus が何か、実行モード、設定、Webhook と戦略の要約、Build と Start、三つの確認 | このファイルの表、導入の教科書、画面仕様 |
+| LICENSE | Public | Community Edition のライセンス | 許可、禁止、ブランド、留保された商用の権利 | 取引リスクの叙述、脆弱性の報告手順 |
+| DISCLAIMER | Public | Community Edition を提供する条件 | 助言との境界、資産運用をしないこと、利益を保証しないこと、保証、責任、第三者 | 著作権の許諾 |
+| RISK_DISCLOSURE | Public | 暗号資産と無期限市場のリスク | 相場、レバレッジ、流動性、清算、会場、契約、基盤、運用、規制、保存された結果が後日と異なりうること | 利益の保証 |
+| SECURITY | Public | 脆弱性の報告方針 | 報告方法、範囲、開示、対応 | 報奨金 |
 
 Buildbook は、公開文書のセットに入らない唯一の正本です。Starter と、すべての Membership から読めます。
 
@@ -34,6 +38,10 @@ Buildbook は Signal Nexus の利用に必須ではありません。Buildbook �
 - Screen Specification
 - Screen Relationship Diagram
 - Product Specification
+- LICENSE
+- DISCLAIMER
+- RISK_DISCLOSURE
+- SECURITY
 
 Starter の文書:
 
@@ -62,7 +70,7 @@ Alpha Membership は Starter を含みます。Beta Membership は Alpha Members
 
 ### Free
 
-公開文書と、公開されているプラットフォームです。
+公開文書と、ソースを公開している Community Edition です。
 
 含むもの:
 
@@ -72,6 +80,10 @@ Alpha Membership は Starter を含みます。Beta Membership は Alpha Members
 - Screen Specification
 - Screen Relationship Diagram
 - Product Specification
+- LICENSE
+- DISCLAIMER
+- RISK_DISCLOSURE
+- SECURITY
 
 ### Starter
 

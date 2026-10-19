@@ -306,3 +306,15 @@ btc_long_example:
 | 画面がどう繋がるか | [Screen Relationship Diagram](docs/ui/SCREEN_RELATIONSHIP_DIAGRAM_JA.md) |
 | 一通りのデプロイをどう再現するか | Signal Nexus Buildbook（Starter または Membership） |
 | 文書がどう分かれるか | [Documentation Structure](docs/DOCUMENTATION_STRUCTURE_JA.md) |
+
+## 法務
+
+Signal Nexus Community Edition は、ソースを公開したソフトウェアです。ソースの閲覧、学習、教育、非商用の研究、そして自分自身のための個人利用ができます。著作権、ブランド、商用の権利は作者が保持します。この版は、独自のライセンスで公開しています。オープンソース・ライセンスではありません。正本は英語です。
+
+- [LICENSE](LICENSE_JA.md)
+- [DISCLAIMER](DISCLAIMER_JA.md)
+- [RISK DISCLOSURE](RISK_DISCLOSURE_JA.md)
+
+## セキュリティ
+
+脆弱性は、公開の Issue ではなく、[Security Policy](SECURITY_JA.md) に従って非公開で報告します。

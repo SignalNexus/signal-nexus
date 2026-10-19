@@ -306,3 +306,17 @@ A secret mismatch is HTTP 401 and `{"detail":"unauthorized"}`. A rejected alert 
 | How do the screens connect? | [Screen Relationship Diagram](docs/ui/SCREEN_RELATIONSHIP_DIAGRAM.md) |
 | How is a full deployment reproduced? | Signal Nexus Buildbook (Starter or Membership) |
 | How do the documents divide? | [Documentation Structure](docs/DOCUMENTATION_STRUCTURE.md) |
+
+## Legal
+
+Signal Nexus Community Edition is source-available software. You may read the source, learn from it, use it in teaching and non-commercial research, and run it for your own personal use. The author keeps the copyright, the brand, and every commercial right. This edition is published under its own license, not under an open-source license. English is the canonical text.
+
+- [LICENSE](LICENSE.md)
+- [DISCLAIMER](DISCLAIMER.md)
+- [RISK DISCLOSURE](RISK_DISCLOSURE.md)
+
+The Japanese editions are [LICENSE_JA.md](LICENSE_JA.md), [DISCLAIMER_JA.md](DISCLAIMER_JA.md), and [RISK_DISCLOSURE_JA.md](RISK_DISCLOSURE_JA.md).
+
+## Security
+
+Report a vulnerability in private, through the [Security Policy](SECURITY.md). The Japanese edition is [SECURITY_JA.md](SECURITY_JA.md).
