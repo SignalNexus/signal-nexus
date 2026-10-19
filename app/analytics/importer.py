@@ -291,7 +291,22 @@ def _ingest_futures(connection, strategies: dict, now: datetime) -> int:
                 logger.error("futures history was skipped: %s", type(exc).__name__)
         inserted += _store_open_futures(connection, positions)
     logger.warning("futures stored=%s", inserted)
+    if inserted:
+        _refresh_futures_lots()
     return inserted
+
+
+def _refresh_futures_lots() -> None:
+    from app.execution.strategy_lots import configured
+
+    if not configured():
+        return
+    try:
+        from app.execution.futures import refresh_futures_from_store
+
+        refresh_futures_from_store()
+    except Exception:
+        logger.warning("futures lot was not refreshed")
 
 
 def _read_futures(read, label: str):
@@ -344,12 +359,71 @@ def _position_rows(payload) -> list[dict]:
 
 
 def _store_futures_fill(connection, row: dict) -> bool:
+    if row["strategy_name"] != UNCLASSIFIED and _claim_unclassified_futures(connection, row):
+        _drop_open_patch(connection, row["symbol"])
+        _remember_futures_lot(connection, row)
+        return True
     if _futures_order_known(connection, row["exchange_order_id"]):
         return False
     stored = insert_fill(connection, ignore_conflict=True, **row)
     if stored:
         _drop_open_patch(connection, row["symbol"])
+        if row["strategy_name"] != UNCLASSIFIED:
+            _remember_futures_lot(connection, row)
     return stored
+
+
+def _claim_unclassified_futures(connection, row: dict) -> bool:
+    order_id = row.get("exchange_order_id") or ""
+    if not order_id:
+        return False
+    updated = connection.execute(
+        """
+        UPDATE fills
+        SET strategy_name = %(strategy_name)s,
+            exchange_client_order_id = %(exchange_client_order_id)s,
+            client_order_id = COALESCE(%(client_order_id)s, client_order_id),
+            signal_time = COALESCE(%(signal_time)s, signal_time),
+            signal_price = COALESCE(%(signal_price)s, signal_price)
+        WHERE venue = 'mexc_futures'
+          AND exchange_order_id = %(exchange_order_id)s
+          AND strategy_name = %(unclassified)s
+        """,
+        {
+            "strategy_name": row["strategy_name"],
+            "exchange_client_order_id": row.get("exchange_client_order_id"),
+            "client_order_id": row.get("client_order_id"),
+            "signal_time": row.get("signal_time"),
+            "signal_price": row.get("signal_price"),
+            "exchange_order_id": order_id,
+            "unclassified": UNCLASSIFIED,
+        },
+    )
+    return updated.rowcount > 0
+
+
+def _remember_futures_lot(connection, row: dict) -> None:
+    from app.analytics.schema import load_applied_fill, load_strategy_lots, save_applied_fill, save_strategy_lot
+
+    client_id = row.get("exchange_client_order_id") or ""
+    if len(client_id) != 32 or client_id[10] not in ("h", "c", "l", "f"):
+        return
+    size = _contract_size(row["symbol"])
+    if size <= 0:
+        return
+    contracts = row["quantity"] / size
+    if contracts <= 0:
+        return
+    previous = load_applied_fill(connection, "mexc_futures", client_id)
+    if contracts < previous:
+        contracts = previous
+    delta = contracts - previous
+    current = load_strategy_lots(connection, "mexc_futures").get(row["strategy_name"], Decimal("0"))
+    updated = current - delta if client_id[10] in ("c", "f") else current + delta
+    if updated <= 0:
+        updated = Decimal("0")
+    save_strategy_lot(connection, "mexc_futures", row["strategy_name"], updated)
+    save_applied_fill(connection, "mexc_futures", client_id, contracts)
 
 
 def _futures_order_known(connection, order_id: str) -> bool:
