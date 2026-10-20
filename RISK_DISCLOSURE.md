@@ -86,6 +86,14 @@ You are responsible for knowing whether your use is lawful where you are, and wh
 
 This document is not legal advice. A personal, educational, or research use can still be regulated as trading.
 
+## Platform Dependency Risk
+
+The path from an alert to a venue depends on services the Author does not operate. Those services include TradingView, Render, Oracle Cloud, and the API of a DEX. A DEX can also end.
+
+A change to any of them can require an update to the Buildbook, to a procedure, or to a setting. A future compatibility, continued use, and continued operation are not guaranteed.
+
+Where the steps name Render or Oracle Cloud, those names are the reference environment used to write the procedure. They are not a promise that the same steps will keep working after that provider changes.
+
 ## Performance Disclaimer
 
 The statement that past results do not guarantee a future result is in [DISCLAIMER.md](DISCLAIMER.md). This section describes how a stored result can differ from a later fill.

@@ -2,7 +2,7 @@
 
 Signal Nexus is a self-hosted trading operations platform. A TradingView alert becomes an order plan that can run across more than one venue. The record, the audit, and the analysis can be operated from one interface.
 
-Your funds stay at the venue. Your keys stay on infrastructure you run.
+Your funds stay at the venue. Your keys stay on infrastructure you run. Signal Nexus does not custody assets.
 
 With `EXECUTION_MODE` unset, the record is kept and the order is not sent. That mode is `dry_run`. `live` sends orders.
 
@@ -28,7 +28,7 @@ Current support:
 - MEXC Futures
 - Arcus
 
-Membership includes future venue additions.
+This public release does not include venues added later.
 
 ## Architecture
 
@@ -48,7 +48,7 @@ graph LR
 
 TradingView generates the signal. Signal Nexus receives it and can run it on a CEX venue and a DEX venue. You watch that activity from one operational view.
 
-MEXC is the CEX path. Arcus is the DEX path.
+Current public release venue adapters are MEXC Spot, MEXC Futures, and Arcus.
 
 The full layout is in [Architecture](docs/architecture/ARCHITECTURE.md).
 
@@ -83,7 +83,7 @@ These are the software requirements:
 - A PostgreSQL database reachable by the Analytics Service
 - Connectivity from the Webhook Service to the Analytics API through `ANALYTICS_API_URL`
 
-Signal Nexus itself is not tied to Render or Oracle Cloud. The Buildbook uses those two as the reference deployment. The current deployment automation assumes GitHub Actions, SSH to a Linux host as `ubuntu` under `/home/ubuntu`, Caddy serving HTTPS on port 443, PostgreSQL on localhost, and health checks through `RENDER_HEALTH_URL`. Other infrastructure can be used only when those capabilities are present.
+Signal Nexus itself is not tied to Render or Oracle Cloud. The Buildbook uses those two as the reference environment, not as a required purchase. The current deployment automation assumes GitHub Actions, SSH to a Linux host as `ubuntu` under `/home/ubuntu`, Caddy serving HTTPS on port 443, PostgreSQL on localhost, and health checks through `RENDER_HEALTH_URL`. Equivalent infrastructure may also be used when those capabilities are present.
 
 ### Deployment Relationship
 
@@ -118,7 +118,7 @@ Each health result shows that the process answered.
 
 If you already operate GitHub, Render, a Linux machine, TradingView, and secret management, the process above, Required Configuration, and Strategy Configuration are the public deploy entry.
 
-To reproduce that environment from an empty start, follow the Signal Nexus Buildbook. Starter and Membership include the Buildbook. The Buildbook is the complete deployment playbook.
+To reproduce that environment from an empty start, follow the Signal Nexus Buildbook. Starter includes the Buildbook. The Buildbook is the complete deployment playbook.
 
 ## Runtime Modes
 
@@ -304,7 +304,7 @@ A secret mismatch is HTTP 401 and `{"detail":"unauthorized"}`. A rejected alert 
 | How is TradingView connected? | [Strategy Integration Guide](docs/integration/STRATEGY_INTEGRATION_GUIDE.md) |
 | What does each screen show? | [Screen Specification](docs/ui/SCREEN_SPECIFICATION.md) |
 | How do the screens connect? | [Screen Relationship Diagram](docs/ui/SCREEN_RELATIONSHIP_DIAGRAM.md) |
-| How is a full deployment reproduced? | Signal Nexus Buildbook (Starter or Membership) |
+| How is a full deployment reproduced? | Signal Nexus Buildbook (Starter) |
 | How do the documents divide? | [Documentation Structure](docs/DOCUMENTATION_STRUCTURE.md) |
 
 ## Legal

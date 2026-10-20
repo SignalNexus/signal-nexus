@@ -4,7 +4,7 @@ Signal Nexus Community Edition
 
 English is the canonical text. The Japanese edition is [DISCLAIMER_JA.md](DISCLAIMER_JA.md). This disclaimer is part of the terms on which the Community Edition is offered. The permissions and the reservations are in [LICENSE.md](LICENSE.md). The trading risks are in [RISK_DISCLOSURE.md](RISK_DISCLOSURE.md).
 
-The Community Edition is source-available software for reading, learning, education, non-commercial research, and personal use. It is self-hosted. Your funds stay at the venue. Your keys stay on infrastructure you run.
+The Community Edition is source-available software for reading, learning, education, non-commercial research, and personal use. It is self-hosted. Your funds stay at the venue. Your keys stay on infrastructure you run. Signal Nexus does not custody assets.
 
 ## Not Investment Advice
 
@@ -84,8 +84,14 @@ You operate the deployment. Maintenance, backups, secrets, and the decision to k
 
 ## Third Party Services
 
-The Community Edition can talk to services the Author does not control. Those services include exchanges, perpetual and other DEX protocols, RPC providers, oracles, TradingView, Discord, cloud hosts, and data providers.
+The Community Edition can talk to services the Author does not control. Those services include TradingView, Render, Oracle Cloud, GitHub, Discord, Stripe, exchanges, perpetual and other DEX protocols, RPC providers, oracles, and data providers.
 
-The Author is not a party to your agreement with any of them. The Author is not responsible for their availability, their fees, their rule changes, their insolvency, their trading halts, their incorrect data, or their acts and omissions.
+Signal Nexus is not the operator of those services. Signal Nexus does not sell a right to use them. Signal Nexus is not a hosting business, not a reseller of cloud accounts, and not a seller of TradingView Invite-only Script access.
 
-A venue name in the documentation identifies an integration. It is not an endorsement, a partnership, or a representation that the venue is safe.
+The Author does not grant a Render account, an Oracle Cloud account, a TradingView account, or a venue account. You use your own account under that service's terms.
+
+The Author is not a party to your agreement with any of them. The Author is not responsible for a change to their specification, their terms, their prices, or their API, or for the end of their service. The Author is not responsible for their availability, their insolvency, their trading halts, their incorrect data, or their acts and omissions.
+
+The Author is responsible only for the deliverable Signal Nexus itself provides: software, configuration, research artifacts, Pine code, documentation, and operating know-how, within the edition you received. Compatibility, continued use, and continued operation on a third-party service are not part of that deliverable.
+
+A name in the documentation identifies a reference environment or an integration. Render and Oracle Cloud, where the steps name them, are that reference environment. They are not a required purchase and not an endorsement, a partnership, or a representation that the service is safe.

@@ -8,7 +8,7 @@ This document describes the product and its value proposition. The Japanese edit
 
 Deployment topology is defined in Architecture.
 
-Render receives alerts.
+In the reference environment, Render receives alerts. Oracle Cloud is the reference place for the virtual machine. Equivalent infrastructure may also be used.
 
 The VM stores records and performs exchange-facing operations.
 
@@ -29,7 +29,7 @@ With `EXECUTION_MODE` unset, the order is not sent. That mode is `dry_run`. `liv
 
 Your funds, your keys, your infrastructure.
 
-Funds stay at your exchange. Exchange API keys stay on infrastructure you run. Signal Nexus does not hold either.
+Funds stay at your exchange. Exchange API keys stay on infrastructure you run. Signal Nexus does not custody assets. Signal Nexus does not hold either.
 
 ## Supported Venues
 
@@ -123,6 +123,5 @@ Names only. This document does not set a price.
 - Starter. The same platform, plus the Buildbook that prepares a new machine, and a place to ask questions. It is not a second program.
 - Profit Pack. A purchase-day set of strategies read for net result. Results are not in this document.
 - Volume Pack. A purchase-day set of strategies read for activity you choose to continue. Results are not in this document.
-- Complete. Starter together with the two purchase-day packs. It does not add a separate support contract.
-- Alpha. Later venue adapters that are not in the public platform, after that venue is enabled and documented.
-- Beta. Alpha, plus later updates of the strategy packs during the membership. How strategies are chosen is not included.
+- Complete. Starter together with the two purchase-day packs. It does not add a separate support contract. It is not a higher edition of either pack.
+- VenueAdd. The connection materials for one venue that is not in the public release, after that venue is enabled and documented. It is not a right to every later venue.

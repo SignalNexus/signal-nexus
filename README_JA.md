@@ -2,7 +2,7 @@
 
 Signal Nexus は、自分でホストする取引の運用プラットフォームです。TradingView のアラートは発注の計画になり、複数の取引所へ実行できます。記録、監査、分析は、１つのインターフェースで運用が可能となります。
 
-資金は、使っている取引所の口座に残ります。鍵は、自分で動かしている環境に残ります。
+資金は、使っている取引所の口座に残ります。鍵は、自分で動かしている環境に残ります。Signal Nexus は資産を預かりません。
 
 `EXECUTION_MODE` を設定しないあいだは、記録は残り、注文は出ません。この状態が `dry_run` です。`live` で注文を出します。
 
@@ -28,7 +28,7 @@ TradingView がアラートを送ります。Signal Nexus はそれを戦略に�
 - MEXC 先物
 - Arcus
 
-Membership には、今後追加される取引所が含まれます。
+この公開版は、あとから追加される取引所を含みません。
 
 ## 構成
 
@@ -48,7 +48,7 @@ graph LR
 
 TradingView がシグナルを出します。Signal Nexus が受け取り、CEX と DEX へ実行できます。その動きは、一つの運用の画面から見ます。
 
-いまの CEX は MEXC です。いまの DEX は Arcus です。
+いまの公開版の会場アダプターは、MEXC 現物、MEXC 先物、Arcus です。
 
 構成の全体は [Architecture](docs/architecture/ARCHITECTURE_JA.md) にあります。
 
@@ -83,7 +83,7 @@ Webhook のプロセス（`app.main`）が TradingView のアラートを受け�
 - Analytics サービスから届く PostgreSQL
 - Webhook サービスから Analytics API へ、`ANALYTICS_API_URL` で届く接続
 
-Signal Nexus 自体は、Render にも Oracle Cloud にも縛られません。Buildbook が参照するデプロイは、その二つです。いまのデプロイ自動化は、GitHub Actions、`ubuntu` として `/home/ubuntu` へ SSH する Linux ホスト、443 で HTTPS を出す Caddy、localhost の PostgreSQL、`RENDER_HEALTH_URL` による health の確認を前提にします。別のインフラを使うときは、同じ能力が揃っている場合だけです。
+Signal Nexus 自体は、Render にも Oracle Cloud にも縛られません。Buildbook が書くその二つは、参照実装であり、必須の購入先ではありません。いまのデプロイ自動化は、GitHub Actions、`ubuntu` として `/home/ubuntu` へ SSH する Linux ホスト、443 で HTTPS を出す Caddy、localhost の PostgreSQL、`RENDER_HEALTH_URL` による health の確認を前提にします。同じ能力が揃っていれば、同等のインフラを使えます。
 
 ### デプロイの関係
 
@@ -118,7 +118,7 @@ health が示すのは、そのプロセスが応答したことです。
 
 GitHub、Render、Linux のマシン、TradingView、secret の扱いに慣れている場合、上のプロセスと、必要な設定、戦略の設定が、公開されているデプロイの入口です。
 
-何も無い状態からその環境を再現するには、Signal Nexus Buildbook に従います。Starter と Membership に Buildbook が含まれます。Buildbook は、完全な構築の手順書です。
+何も無い状態からその環境を再現するには、Signal Nexus Buildbook に従います。Buildbook は Starter に含まれます。Buildbook は、完全な構築の手順書です。
 
 ## 実行モード
 
@@ -304,7 +304,7 @@ btc_long_example:
 | TradingView をどう繋ぐか | [Strategy Integration Guide](docs/integration/STRATEGY_INTEGRATION_GUIDE_JA.md) |
 | 各画面に何が出るか | [Screen Specification](docs/ui/SCREEN_SPECIFICATION_JA.md) |
 | 画面がどう繋がるか | [Screen Relationship Diagram](docs/ui/SCREEN_RELATIONSHIP_DIAGRAM_JA.md) |
-| 一通りのデプロイをどう再現するか | Signal Nexus Buildbook（Starter または Membership） |
+| 一通りのデプロイをどう再現するか | Signal Nexus Buildbook（Starter） |
 | 文書がどう分かれるか | [Documentation Structure](docs/DOCUMENTATION_STRUCTURE_JA.md) |
 
 ## 法務
