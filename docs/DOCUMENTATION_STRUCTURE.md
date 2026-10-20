@@ -53,7 +53,7 @@ Commercial packaging may evolve over time. The canonical definition of currently
 
 This section records which materials a current product includes. It does not define the product.
 
-Products are independent. Complete is the bundle of Starter and the Volume Pack and Profit Pack of the same date. It is not a higher edition of either pack. VenueAdd is the package for one venue. It is not a right to every later venue, and it does not include the other products.
+Products are independent. Complete is the bundle of Starter and the Volume Pack and Profit Pack of the same date. It is not a higher edition of either pack. VenueAdd is the extension for one venue, including later maintenance of that same venue. It is not a right to every later venue, and it does not include the other products.
 
 | Material | Starter | Volume Pack | Profit Pack | Complete | VenueAdd |
 | --- | --- | --- | --- | --- | --- |
@@ -61,7 +61,7 @@ Products are independent. Complete is the bundle of Starter and the Volume Pack 
 | Research materials | ❌ | ✅ | ✅ | ✅ | ❌ |
 | Venue-expansion materials | ❌ | ❌ | ❌ | ❌ | ✅ |
 
-Complete includes Buildbook because Complete includes Starter. Volume Pack and Profit Pack include separate research materials. Complete includes both of the same date. VenueAdd includes the venue-expansion materials for that one venue.
+Complete includes Buildbook because Complete includes Starter. Volume Pack and Profit Pack include separate research materials. Complete includes both of the same date. VenueAdd includes the venue-expansion materials for that one venue, including later maintenance of the same venue.
 
 ## Product relationship
 

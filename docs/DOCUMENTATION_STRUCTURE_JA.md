@@ -53,7 +53,7 @@ Starter の文書:
 
 この節は、いまの商品がどの資料を含むかを記録します。商品の定義は書きません。
 
-商品は独立しています。Complete は、Starter と、同じ日付の Volume Pack と Profit Pack の束です。どちらのパックの上位版でもありません。VenueAdd は、一つの会場のパッケージです。あとから増えるすべての会場の権利ではなく、他の商品も含みません。
+商品は独立しています。Complete は、Starter と、同じ日付の Volume Pack と Profit Pack の束です。どちらのパックの上位版でもありません。VenueAdd は、一つの会場の拡張です。その会場の後の保守を含みます。あとから増えるすべての会場の権利ではなく、他の商品も含みません。
 
 | 資料 | Starter | Volume Pack | Profit Pack | Complete | VenueAdd |
 | --- | --- | --- | --- | --- | --- |
@@ -61,7 +61,7 @@ Starter の文書:
 | リサーチ資料 | ❌ | ✅ | ✅ | ✅ | ❌ |
 | 取引所を広げる資料 | ❌ | ❌ | ❌ | ❌ | ✅ |
 
-Complete の Buildbook は、Complete が Starter を含むためです。Volume Pack と Profit Pack は、別のリサーチ資料を含みます。Complete は、同じ日付の両方を含みます。VenueAdd は、その一つの会場を広げる資料を含みます。
+Complete の Buildbook は、Complete が Starter を含むためです。Volume Pack と Profit Pack は、別のリサーチ資料を含みます。Complete は、同じ日付の両方を含みます。VenueAdd は、その一つの会場を広げる資料と、その会場の後の保守を含みます。
 
 ## 商品との関係
 

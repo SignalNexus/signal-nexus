@@ -108,7 +108,7 @@ Starter is Buildbook access. That playbook reproduces the reference deployment f
 
 Volume Pack and Profit Pack are separate research packages. Research stays private. Complete is the bundle of Starter and both packages of the same date. It is not a higher edition of either package, and it does not include VenueAdd.
 
-VenueAdd connects one venue that is not in the public release, after that venue is enabled and documented. It is not a right to every later venue.
+VenueAdd connects one venue that is not in the public release, after that venue is enabled and documented. Maintenance of that venue stays in the same extension. It is not a dated research package, and it is not a right to every later venue.
 
 What each product includes is defined in [Product Specification](../product/PRODUCT_SPECIFICATION.md). This section does not set a price.
 

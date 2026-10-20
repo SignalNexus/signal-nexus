@@ -118,4 +118,4 @@ Names only. This document does not set a price.
 - Profit Pack. A research package. The purchase-day snapshot studies net result. Figures are not in this document. Nothing here promises results.
 - Volume Pack. A research package. The purchase-day snapshot studies activity and venue participation. Figures are not in this document. Nothing here promises results.
 - Complete. Starter together with the two purchase-day packs. It does not add a separate support contract. It is not a higher edition of either pack.
-- VenueAdd. The connection materials for one venue that is not in the public release, after that venue is enabled and documented. It is not a right to every later venue.
+- VenueAdd. The extension for one venue that is not in the public release, after that venue is enabled and documented. Maintenance of that venue stays with the purchaser. It is not a dated research edition. It is not a right to every later venue.
