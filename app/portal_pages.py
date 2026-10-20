@@ -10,6 +10,7 @@ from app.portal_model import (
     backtest_view,
     ingest_state,
     latest_alert,
+    moment,
     positions_view,
     strategies_view,
     tickers_view,
@@ -106,6 +107,7 @@ h2 { margin: 0; font-size: 20px; }
 .main { padding: 16px 16px 84px; min-width: 0; }
 .eyebrow { margin: 0 0 10px; color: var(--violet); font-size: 13px; }
 .hint { margin: 8px 0 0; color: var(--muted); font-size: 13px; }
+.hint.stale { color: var(--amber); }
 .eyebrow + .hint { margin: 0 0 10px; font-size: 11px; }
 .block { margin-top: 22px; }
 .today, .panel, .summary div, .health div, .periods div, .position, .card {
@@ -599,6 +601,7 @@ def _health(board: dict | None, now: datetime) -> str:
         alert = "No Activity" if found is None and audits is not None else ("—" if found is None else found.astimezone(portal_zone()).strftime("%Y-%m-%d %H:%M"))
         ingest = ingest_state(board.get("ingest_succeeded_at"), now)
     ingest_class = "down" if ingest == "Unhealthy" else "up"
+    fetched = _fetched_note(board)
     return f"""
     <section class="block" aria-label="System Health">
       <p class="eyebrow">System Health</p>
@@ -609,8 +612,18 @@ def _health(board: dict | None, now: datetime) -> str:
         <div><span>{t("取り込み")}</span><strong class="{ingest_class}">{ingest}</strong></div>
         <div><span>{t("直近のアラート")}</span><strong>{escape(alert)}</strong></div>
       </div>
+      {fetched}
     </section>
     """
+
+
+def _fetched_note(board: dict | None) -> str:
+    if board is None or not board.get("board_fetched_at"):
+        return ""
+    when = moment(board["board_fetched_at"]).astimezone(portal_zone()).strftime("%Y-%m-%d %H:%M")
+    label = t("前回の集計") if board.get("board_stale") else t("集計時刻")
+    css = "hint stale" if board.get("board_stale") else "hint"
+    return f'<p class="{css}">{escape(label)} {escape(when)}</p>'
 
 
 def _pnl(board: dict, now: datetime) -> str:

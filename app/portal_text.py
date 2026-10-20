@@ -19,6 +19,8 @@ _EN = {
     "内訳を開く": "Show breakdown",
     "内訳を閉じる": "Hide breakdown",
     "集計": "Summary",
+    "集計時刻": "As of",
+    "前回の集計": "Previous summary",
     "実績（USD）": "Actual (USD)",
     "今月の出来高": "Monthly Volume",
     "月目標": "Monthly Target",

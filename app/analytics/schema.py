@@ -395,6 +395,18 @@ def load_audits(connection) -> list[tuple]:
     ).fetchall()
 
 
+def load_latest_signal(connection) -> tuple | None:
+    return connection.execute(
+        """
+        SELECT recorded_at, kind, strategy, symbol, reason, discord_status, discord_detail, venue
+        FROM audits
+        WHERE kind = 'signal_received'
+        ORDER BY recorded_at DESC, id DESC
+        LIMIT 1
+        """
+    ).fetchone()
+
+
 def _decimal(value) -> Decimal:
     return value if isinstance(value, Decimal) else Decimal(str(value))
 

@@ -4,6 +4,7 @@ import os
 import time
 from contextvars import ContextVar
 from datetime import datetime, timezone
+from threading import Lock
 
 import httpx
 from fastapi import APIRouter, Form, Request
@@ -20,6 +21,8 @@ router = APIRouter()
 COOKIE = "portal_session"
 MAX_AGE = 30 * 24 * 60 * 60
 _dashboard_summary: ContextVar[bool] = ContextVar("dashboard_summary", default=False)
+_board_cache_lock = Lock()
+_board_cache: dict[bool, dict] = {}
 
 
 @router.get("/portal")
@@ -56,18 +59,19 @@ def trading_page(request: Request, view: str = "positions") -> HTMLResponse:
 def analytics_page(request: Request, view: str = "strategies") -> HTMLResponse:
     if not _session_ok(request):
         return _html(login_page(""))
-    return _html(render_analytics(view, _board(), read_backtests()))
+    token = _dashboard_summary.set(True)
+    try:
+        return _html(render_analytics(view, _board(), read_backtests()))
+    finally:
+        _dashboard_summary.reset(token)
 
 
 @router.get("/portal/operations")
 def operations_page(request: Request, view: str = "schedule") -> HTMLResponse:
     if not _session_ok(request):
         return _html(login_page(""))
-    board = _board() if view == "audit" else None
-    audits = None if board is None else board.get("audits")
-    if view == "audit" and board is not None and "audits" not in board:
-        audits = []
-    return _html(render_operations(view, audits if view == "audit" else None))
+    audits = _audit_rows() if view == "audit" else None
+    return _html(render_operations(view, audits))
 
 
 @router.post("/portal/login")
@@ -93,11 +97,29 @@ def portal_logout() -> RedirectResponse:
     return response
 
 
+def _clear_cached_board() -> None:
+    with _board_cache_lock:
+        _board_cache.clear()
+
+
 def _board() -> dict | None:
+    summary = _dashboard_summary.get()
     try:
-        return _dashboard()
+        fresh = _dashboard()
     except Exception:
-        return None
+        fresh = None
+    with _board_cache_lock:
+        if fresh is not None:
+            fresh["board_fetched_at"] = datetime.now(timezone.utc).isoformat()
+            fresh["board_stale"] = False
+            _board_cache[summary] = fresh
+            return fresh
+        cached = _board_cache.get(summary)
+        if cached is None:
+            return None
+        stale = dict(cached)
+        stale["board_stale"] = True
+        return stale
 
 
 def _session_ok(request: Request) -> bool:
@@ -198,6 +220,22 @@ def _board_response(client: httpx.Client, url: str, headers: dict, *, summary: b
         if response.status_code != 503 or not summary or time.monotonic() >= deadline:
             return response
         time.sleep(0.4)
+
+
+def _audit_rows() -> list | None:
+    try:
+        base = os.environ.get("ANALYTICS_API_URL", "").strip().rstrip("/")
+        secret = os.environ.get("ANALYTICS_API_SECRET", "")
+        if not base or not secret:
+            raise RuntimeError("analytics api is not configured")
+        headers = {"Authorization": f"Bearer {secret}"}
+        with httpx.Client(timeout=8.0) as client:
+            response = client.get(f"{base}/api/audits", headers=headers)
+            response.raise_for_status()
+            rows = response.json().get("audits")
+        return rows if isinstance(rows, list) else None
+    except Exception:
+        return None
 
 
 def _analytics_slice(path: str, key: str) -> dict | None:

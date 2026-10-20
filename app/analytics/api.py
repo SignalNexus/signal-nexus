@@ -35,6 +35,7 @@ from app.analytics.schema import (
     load_audits,
     load_fills,
     load_ingest_succeeded_at,
+    load_latest_signal,
 )
 from app.core.security import analytics_secret_matches
 from app.execution.arcus import ArcusError, apply_configured_leverage, execute_arcus
@@ -469,19 +470,30 @@ def board(summary: bool = False, authorization: str | None = Header(default=None
                 payload = _ensure_board()
             else:
                 raise HTTPException(status_code=503, detail="board is warming")
+        elif not summary and payload.get("board_scope") == "summary":
+            raise HTTPException(status_code=503, detail="board is warming")
     else:
         payload = _build_board()
     if summary:
-        return _summary_board(payload)
-    return payload
+        payload = _summary_board(payload)
+    return _publish_board(payload)
 
 
 def _build_board() -> dict:
-    fills, audit_rows, succeeded_at = _load_board_sources()
+    return _assemble_board(_load_board_sources(), summary=False)
+
+
+def _build_summary_board() -> dict:
+    # 30 秒ごとの再構築は、約定の全行と監査の全行を残さない。
+    return _assemble_board(_load_summary_sources(), summary=True)
+
+
+def _assemble_board(sources: tuple[list[FillView], list | None, datetime | None], *, summary: bool) -> dict:
+    fills, audit_rows, succeeded_at = sources
     closed, opens = reconstruct(fills)
     now = datetime.now(timezone.utc)
     marked = mark_opens(opens, _mark_prices(opens))
-    return {
+    payload = {
         "pnl": _pnl_json(closed, now, forecast=True),
         "pnl_by_venue": {
             venue: _pnl_json([item for item in closed if item.venue == venue], now, forecast=False)
@@ -501,12 +513,15 @@ def _build_board() -> dict:
             "futures": _volume_json(_class_fills(fills, "futures"), now),
         },
         "positions": [_position_json(item) for item in marked],
-        "trades": [_fill_json(fill) for fill in fills],
+        "trades": [] if summary else [_fill_json(fill) for fill in fills],
         "strategies": [_strategy_json(row) for row in attach_volumes(strategy_rows(closed), fills, by="strategy")],
         "tickers": [_ticker_json(row) for row in attach_volumes(ticker_rows(closed), fills, by="ticker")],
         "audits": None if audit_rows is None else [_audit_json(row) for row in audit_rows],
         "ingest_succeeded_at": None if succeeded_at is None else succeeded_at.isoformat(),
     }
+    if summary:
+        payload["board_scope"] = "summary"
+    return payload
 
 
 @app.post("/api/order-links")
@@ -643,13 +658,14 @@ def _ensure_board() -> dict:
         payload = _load_board_snapshot()
         if payload is not None:
             return payload
-        payload = _build_board()
+        payload = _build_summary_board()
         _remember_board(payload)
         return payload
 
 
 def _clear_board_cache() -> None:
-    global _board_snapshot
+    global _board_snapshot, _warm_stamp
+    _warm_stamp = None
     with _board_lock:
         _board_snapshot = None
     try:
@@ -677,10 +693,41 @@ def _summary_board(payload: dict) -> dict:
     return trimmed
 
 
+_warm_stamp: str | None = None
+
+
+def _ingest_stamp() -> str | None:
+    with _connect() as connection:
+        _ensure_schema(connection)
+        stamp = load_ingest_succeeded_at(connection)
+    if stamp is None:
+        return None
+    return stamp.isoformat()
+
+
+def _refresh_summary_board() -> None:
+    global _warm_stamp
+    stamp = _ingest_stamp()
+    if _cached_board() is not None and stamp == _warm_stamp:
+        return
+    with _board_build_lock:
+        if _cached_board() is not None and stamp == _warm_stamp:
+            return
+        payload = _build_summary_board()
+    _remember_board(payload)
+    _warm_stamp = payload.get("ingest_succeeded_at")
+
+
+def _publish_board(payload: dict) -> dict:
+    body = dict(payload)
+    body.pop("board_scope", None)
+    return body
+
+
 def _warm_board_forever() -> None:
     while True:
         try:
-            _remember_board(_build_board())
+            _refresh_summary_board()
         except Exception as exc:
             logger.warning("board was not refreshed: %s", type(exc).__name__)
         time.sleep(30)
@@ -704,6 +751,25 @@ def _load_board_sources() -> tuple[list[FillView], list | None, datetime | None]
             try:
                 with connection.transaction():
                     audits = load_audits(connection)
+            except Exception:
+                audits = None
+    except HTTPException:
+        raise
+    except Exception:
+        raise HTTPException(status_code=500, detail="analytics was not read") from None
+    return fills, audits, succeeded_at
+
+
+def _load_summary_sources() -> tuple[list[FillView], list | None, datetime | None]:
+    try:
+        with _connect() as connection:
+            _ensure_schema(connection)
+            fills = [_fill_view(row) for row in load_fills(connection)]
+            succeeded_at = load_ingest_succeeded_at(connection)
+            try:
+                with connection.transaction():
+                    latest = load_latest_signal(connection)
+                audits = [] if latest is None else [latest]
             except Exception:
                 audits = None
     except HTTPException:
