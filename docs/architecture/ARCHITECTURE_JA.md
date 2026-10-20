@@ -8,7 +8,7 @@
 
 Signal Nexus は、自分でホストするプラットフォームです。複数の取引所を、一つの運用で扱います。リサーチから発注までを、一つの流れにします。
 
-複数の取引所を、一つのワークフローで運用します。自分のリサーチを持ち込むことも、Membership の一式を使うこともできます。資金は取引所に残ります。鍵は、自分で動かしている環境に残ります。
+複数の取引所を、一つのワークフローで運用します。自分のリサーチを持ち込むことも、リサーチのパッケージを使うこともできます。資金は取引所に残ります。鍵は、自分で動かしている環境に残ります。
 
 下の図は、その順で読む物語です。導入手順ではありません。
 
@@ -29,7 +29,7 @@ graph LR
 
 シグナルは TradingView で作ります。Signal Nexus が、複数の取引所へ実行します。その動きは、一つの運用画面から見ます。
 
-いまの CEX は MEXC です。いまの DEX は Arcus です。
+いまの CEX は、MEXC 現物と MEXC 先物です。いまの DEX は Arcus です。
 
 ### 1. ひと目で見る
 
@@ -38,7 +38,6 @@ graph TB
   TradingView --> SignalNexus
   SignalNexus --> MEXC
   SignalNexus --> Arcus
-  SignalNexus --> FutureVenues["これからの取引所"]
   SignalNexus --> Views
   subgraph Views["見る場所"]
     Portal
@@ -49,7 +48,7 @@ graph TB
   end
 ```
 
-いま発注できるのは MEXC と Arcus です。これからの取引所は、まだ発注先ではありません。Portal、Dashboard、Trade、Analytics、Audit は、自分の運用を見る場所です。そこから注文は出せません。
+現在の発注先は、MEXC 現物、MEXC 先物、Arcus です。公開版に無い会場は、この構成の発注先ではありません。Portal、Dashboard、Trade、Analytics、Audit は、自分の運用を見る場所です。そこから注文は出せません。
 
 ### 2. 部品と流れ
 
@@ -78,7 +77,6 @@ graph LR
     TradingView
     MEXC
     Arcus
-    FutureVenues["これからの取引所"]
   end
   subgraph Private["自分の環境"]
     OracleVM["Oracle VM"]
@@ -93,28 +91,32 @@ graph LR
 
 資金は取引所に残ります。鍵は、自分で動かしている環境の秘密に残ります。Signal Nexus は、どちらも預かりません。Your funds, your keys, your infrastructure です。
 
-### 4. Membership の広がり
+### 4. 同じワークフローの広がり
 
 ```mermaid
 graph TD
-  Core["公開プラットフォーム"] --> Starter["Starter: Buildbook"]
-  Starter --> Alpha["Alpha Membership: 取引所を広げる"]
-  Alpha --> Beta["Beta Membership: リサーチを広げる"]
+  Core["公開プラットフォーム"]
+  Core --- Starter["Starter: Buildbook"]
+  Core --- Volume["Volume Pack"]
+  Core --- Profit["Profit Pack"]
+  Core --- VenueAdd["VenueAdd: 一つの会場"]
 ```
 
-Starter には Buildbook が付きます。これは構築の知識です。何も無い状態から Signal Nexus の環境を一通り再現するための、完全な手順書です。必要なサービスに慣れていれば、公開の README で足ります。
+これらは、同じワークフローに付きます。階段ではありません。
 
-Alpha Membership は、運用できる取引所を広げます。Starter を含み、取引所を広げる資料を足します。同じワークフローを、より多くの取引所へ届けるためです。
+Starter は Buildbook です。その手順書は、参照するデプロイを何も無い状態から再現します。必要なサービスに慣れていれば、公開の README で足ります。
 
-Beta Membership は、使えるリサーチを広げます。Alpha Membership を含み、リサーチの公開物、検証の報告、戦略の更新を足します。
+Volume Pack と Profit Pack は、別々のリサーチのパッケージです。リサーチは非公開です。Complete は、Starter と、同じ日付の両方のパッケージの束です。どちらのパッケージの上位版でもなく、VenueAdd も含みません。
 
-Starter は「どう構築するか」に答えます。Alpha は「どこで運用できるか」に答えます。Beta は「どのリサーチを運用できるか」に答えます。ここが説明するのは、できることの広がりだけです。価格は書きません。Starter は Alpha に含まれます。Alpha は Beta に含まれます。
+VenueAdd は、公開版に無い一つの会場を、その会場が有効になり手順が文書になったあとで接続します。あとから増えるすべての会場の権利ではありません。
+
+各商品が何を含むかは [Product Specification](../product/PRODUCT_SPECIFICATION_JA.md) が定義します。この節は価格を定めません。
 
 ## 分かれているもの
 
 Signal Nexus は、リサーチ、発注、運用、インフラを分けています。
 
-自分のリサーチを持ち込むことも、Membership の一式を使うこともできます。一つのワークフローが、複数の取引所に届きます。発注と記録は、自分でホストします。
+自分のリサーチを持ち込むことも、リサーチのパッケージを使うこともできます。一つのワークフローが、複数の取引所に届きます。発注と記録は、自分でホストします。
 
 ## 部品
 

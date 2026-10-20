@@ -13,18 +13,18 @@ English is the canonical text. The Japanese edition is [DOCUMENTATION_STRUCTURE_
 | Document | Access | Purpose | Contains | Does not contain |
 | --- | --- | --- | --- | --- |
 | Architecture | Public | Canonical system layout | Components, data flow, public and private boundary | Install steps, screen fields, product lineup |
-| Buildbook | Starter / Membership | Canonical build procedure | Accounts, the virtual machine, secrets, deploy, validation | Portal screens, strategy rules, research |
+| Buildbook | Starter | Canonical build procedure | Accounts, the virtual machine, secrets, deploy, validation | Portal screens, strategy rules, research |
 | Strategy Integration Guide | Public | Canonical TradingView connection | `strategy_id`, alert payload, webhook contract | Signal logic, indicator design, research |
 | Screen Specification | Public | Canonical screen content | Purpose, what the user can learn, displayed information, navigation of each view | API design, database design, build steps |
 | Screen Relationship Diagram | Public | Canonical screen navigation | The view tree and the jumps between views | Field lists, build steps |
-| Product Specification | Public | Canonical product description | What the operator gets, venues, lineup names | Install steps, screen label definitions, prices |
+| Product Specification | Public | Canonical product definition | What the operator gets, venues, lineup names | Install steps, screen label definitions, prices |
 | README | Public | Public entry and experienced-operator reference | What Signal Nexus is, runtime modes, configuration, the webhook and strategy summary, build and start commands, the three validation checks | The tables in this file, install tutorials, screen specifications |
 | LICENSE | Public | Community Edition license | Permissions, prohibitions, brand, reserved commercial rights | Trading-risk narrative, vulnerability-reporting steps |
 | DISCLAIMER | Public | Offer terms for the Community Edition | Advice boundary, no asset management, no profit guarantee, warranty, liability, third parties | The copyright grant |
 | RISK_DISCLOSURE | Public | Cryptocurrency and perpetual-market risks | Market, leverage, liquidity, liquidation, venue, contract, infrastructure, operation, regulation, how a stored result can differ | A guarantee of profit |
 | SECURITY | Public | Vulnerability-reporting policy | How to report, scope, disclosure, response | A bug bounty |
 
-Buildbook is the only canonical document that is not part of the public documentation set. Buildbook is available through Starter and all Membership tiers.
+Buildbook is the only canonical document that is not part of the public documentation set. Buildbook is included with Starter.
 
 Buildbook is not required to deploy Signal Nexus. Buildbook exists for operators who need a complete, step-by-step guide to the reference deployment. README is the public entry point and the experienced-operator reference. Buildbook is that reference playbook. It does not establish that any other host can run the current deployment automation.
 
@@ -47,76 +47,25 @@ Starter documentation:
 
 - Buildbook
 
-Membership documentation:
+Commercial packaging may evolve over time. The canonical definition of currently available products is maintained in [Product Specification](product/PRODUCT_SPECIFICATION.md).
 
-- Alpha Membership includes the Buildbook and venue-expansion materials.
-- Beta Membership includes everything in Alpha Membership, plus research-expansion materials.
+## Access by product
 
-## Access by tier
+This section records which materials a current product includes. It does not define the product.
 
-Alpha Membership includes Starter. Beta Membership includes Alpha Membership.
+Products are independent. Complete is the bundle of Starter and the Volume Pack and Profit Pack of the same date. It is not a higher edition of either pack. VenueAdd is the package for one venue. It is not a right to every later venue, and it does not include the other products.
 
-| Material | Starter | Alpha Membership | Beta Membership |
-| --- | --- | --- | --- |
-| Buildbook | ✅ | ✅ | ✅ |
-| Research materials | ❌ | ❌ | ✅ |
-| Venue-expansion materials | ❌ | ✅ | ✅ |
+| Material | Starter | Volume Pack | Profit Pack | Complete | VenueAdd |
+| --- | --- | --- | --- | --- | --- |
+| Buildbook | ✅ | ❌ | ❌ | ✅ | ❌ |
+| Research materials | ❌ | ✅ | ✅ | ✅ | ❌ |
+| Venue-expansion materials | ❌ | ❌ | ❌ | ❌ | ✅ |
 
-Research materials are research releases, validation reports, and strategy updates. Venue-expansion materials are venue adapters and venue onboarding materials.
+Complete includes Buildbook because Complete includes Starter. Volume Pack and Profit Pack include separate research materials. Complete includes both of the same date. VenueAdd includes the venue-expansion materials for that one venue.
 
 ## Product relationship
 
-Signal Nexus documentation is available through different access levels.
-
-### Free
-
-Public documentation and the source-available Community Edition.
-
-Includes:
-
-- README
-- Architecture
-- Strategy Integration Guide
-- Screen Specification
-- Screen Relationship Diagram
-- Product Specification
-- LICENSE
-- DISCLAIMER
-- RISK_DISCLOSURE
-- SECURITY
-
-### Starter
-
-Buildbook access.
-
-Includes:
-
-- Buildbook
-
-### Alpha Membership
-
-Includes everything in Starter, plus venue-expansion materials.
-
-Includes:
-
-- Buildbook
-- Venue adapters
-- Venue onboarding materials
-- Membership-specific materials
-
-### Beta Membership
-
-Includes everything in Alpha Membership, plus research-expansion materials.
-
-Includes:
-
-- Buildbook
-- Venue adapters
-- Venue onboarding materials
-- Research releases
-- Validation reports
-- Strategy updates
-- Membership-specific materials
+README is the public entry point. Public documentation does not require Starter. Buildbook is Starter material. The table above maps access for the current products. Product Specification is the canonical product definition.
 
 ## Common reading paths
 
@@ -155,7 +104,7 @@ If you need a complete end-to-end deployment guide, including:
 - deployment validation
 - operational guidance
 
-then Starter or Membership is required.
+then Starter is required.
 
 → Buildbook
 
@@ -196,13 +145,13 @@ DOCUMENTATION_STRUCTURE
 
 README answers what Signal Nexus is.
 
-Product Specification answers why it exists.
+Product Specification answers what the product is.
 
 Architecture answers how it is structured.
 
 Strategy Integration Guide answers how TradingView is connected.
 
-README is the public entry point and the experienced-operator reference. Buildbook answers how the reference deployment is reproduced from an empty start. Access to Buildbook is Starter or Membership.
+README is the public entry point and the experienced-operator reference. Buildbook answers how the reference deployment is reproduced from an empty start. Access to Buildbook is Starter. Complete is the bundle that includes Starter.
 
 Screen Specification answers what the operator sees.
 
@@ -210,7 +159,7 @@ Screen Relationship Diagram answers how the operator navigates.
 
 ```mermaid
 graph TD
-  README["README: What is Signal Nexus?"] --> ProductSpecification["Product Specification: Why does it exist?"]
+  README["README: What is Signal Nexus?"] --> ProductSpecification["Product Specification: What is the product?"]
   ProductSpecification --> Architecture["Architecture: How is it structured?"]
   Architecture --> StrategyIntegrationGuide["Strategy Integration Guide: How is TradingView connected?"]
   StrategyIntegrationGuide --> Buildbook["Buildbook: How is the reference deployment reproduced?"]

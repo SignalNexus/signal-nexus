@@ -8,7 +8,7 @@ This document is the canonical reference for system architecture. The Japanese e
 
 Signal Nexus is a self-hosted platform, a multi-venue trading operations platform, and a research-to-execution path.
 
-You operate more than one venue through one workflow. You can bring your own research, or use the membership set. Your funds stay at the venue. Your keys stay on infrastructure you run.
+You operate more than one venue through one workflow. You can bring your own research, or use a research package. Your funds stay at the venue. Your keys stay on infrastructure you run.
 
 The figures below are that story, in order. They are not an install procedure.
 
@@ -29,7 +29,7 @@ graph LR
 
 Create signals in TradingView. Signal Nexus runs them across more than one venue. You watch that activity from one operational view.
 
-MEXC is the CEX path now. Arcus is the DEX path now.
+MEXC Spot and MEXC Futures are the CEX paths now. Arcus is the DEX path now.
 
 ### 1. Signal Nexus at a glance
 
@@ -38,7 +38,6 @@ graph TB
   TradingView --> SignalNexus
   SignalNexus --> MEXC
   SignalNexus --> Arcus
-  SignalNexus --> FutureVenues["Future venues"]
   SignalNexus --> Views
   subgraph Views["What you look at"]
     Portal
@@ -49,7 +48,7 @@ graph TB
   end
 ```
 
-MEXC and Arcus are order paths now. Future venues are not. Portal, Dashboard, Trade, Analytics, and Audit are views of your own operation. They do not place an order.
+MEXC Spot, MEXC Futures, and Arcus are the current order paths. A venue outside that public release is not an order path in this layout. Portal, Dashboard, Trade, Analytics, and Audit are views of your own operation. They do not place an order.
 
 ### 2. System components
 
@@ -78,7 +77,6 @@ graph LR
     TradingView
     MEXC
     Arcus
-    FutureVenues["Future venues"]
   end
   subgraph Private["Your infrastructure"]
     OracleVM["Oracle VM"]
@@ -93,28 +91,32 @@ graph LR
 
 Your funds stay at the venue. Your keys stay in Secrets on infrastructure you run. Signal Nexus does not hold either. That is: your funds, your keys, your infrastructure.
 
-### 4. Membership expansion
+### 4. How the same workflow extends
 
 ```mermaid
 graph TD
-  Core["Public platform"] --> Starter["Starter: Buildbook"]
-  Starter --> Alpha["Alpha Membership: venue expansion"]
-  Alpha --> Beta["Beta Membership: research expansion"]
+  Core["Public platform"]
+  Core --- Starter["Starter: Buildbook"]
+  Core --- Volume["Volume Pack"]
+  Core --- Profit["Profit Pack"]
+  Core --- VenueAdd["VenueAdd: one venue"]
 ```
 
-Starter provides Buildbook access. That is deployment knowledge: the complete playbook for operators who want to reproduce the full Signal Nexus environment from an empty start. The public README remains enough when you already know the services.
+These attach to the same workflow. They are not a ladder.
 
-Alpha Membership expands where you can operate. It includes Starter and adds venue-expansion materials, so the same workflow can reach a broader set of venues.
+Starter is Buildbook access. That playbook reproduces the reference deployment from an empty start. The public README remains enough when you already know the services.
 
-Beta Membership expands what research you can use. It includes Alpha Membership and adds research-expansion materials: research releases, validation reports, and strategy updates.
+Volume Pack and Profit Pack are separate research packages. Research stays private. Complete is the bundle of Starter and both packages of the same date. It is not a higher edition of either package, and it does not include VenueAdd.
 
-Starter answers how you build it. Alpha answers where you can operate it. Beta answers what research you can operate. This section explains capability expansion only. It does not describe pricing. Starter is inside Alpha. Alpha is inside Beta.
+VenueAdd connects one venue that is not in the public release, after that venue is enabled and documented. It is not a right to every later venue.
+
+What each product includes is defined in [Product Specification](../product/PRODUCT_SPECIFICATION.md). This section does not set a price.
 
 ## How the parts separate
 
 Signal Nexus separates research, execution, operations, and infrastructure.
 
-You can bring your own research, or use the membership set. One workflow reaches more than one venue. You host the execution and the records.
+You can bring your own research, or use a research package. One workflow reaches more than one venue. You host the execution and the records.
 
 ## Components
 

@@ -33,17 +33,11 @@ Funds stay at your exchange. Exchange API keys stay on infrastructure you run. S
 
 ## Supported Venues
 
-Current venues have an order path:
+Current supported execution venues:
 
 - MEXC Spot
 - MEXC Futures
 - Arcus
-
-Planned venues are not an order path yet:
-
-- Hyperliquid
-- Paradex
-- GRVT
 
 ## Portal
 
@@ -120,8 +114,8 @@ Research is Private. How a strategy was found, ranked, or left unpublished is no
 Names only. This document does not set a price.
 
 - Free. The public platform. You deploy it yourself.
-- Starter. The same platform, plus the Buildbook that prepares a new machine, and a place to ask questions. It is not a second program.
-- Profit Pack. A purchase-day set of strategies read for net result. Results are not in this document.
-- Volume Pack. A purchase-day set of strategies read for activity you choose to continue. Results are not in this document.
+- Starter. The same platform, plus the Buildbook that prepares a new machine and the operator guidance in that playbook. It is not a second program. It does not include a support contract.
+- Profit Pack. A research package. The purchase-day snapshot studies net result. Figures are not in this document. Nothing here promises results.
+- Volume Pack. A research package. The purchase-day snapshot studies activity and venue participation. Figures are not in this document. Nothing here promises results.
 - Complete. Starter together with the two purchase-day packs. It does not add a separate support contract. It is not a higher edition of either pack.
 - VenueAdd. The connection materials for one venue that is not in the public release, after that venue is enabled and documented. It is not a right to every later venue.
