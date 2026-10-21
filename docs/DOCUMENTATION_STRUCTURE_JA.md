@@ -17,7 +17,8 @@
 | Strategy Integration Guide | Public | TradingView 接続の正本 | `strategy_id`、アラートの本文、Webhook の契約 | シグナルのロジック、インジケーターの設計、リサーチ |
 | Screen Specification | Public | 画面仕様の正本 | 目的、分かること、表示するもの、各画面からの移動 | API 設計、データベース設計、構築手順 |
 | Screen Relationship Diagram | Public | 画面遷移の正本 | 画面のツリーと、画面から画面への移動 | 項目の一覧、構築手順 |
-| Product Specification | Public | 製品定義の正本 | 利用者が得るもの、対応する取引所、製品名 | 導入手順、画面の表示名の定義、価格 |
+| Product Specification | Public | 製品定義の正本 | 利用者が得るもの、対応する取引所、製品名 | 導入手順、画面の表示名の定義、価格、どの販売ページを開くか |
+| Product Catalog | Public | 商品の案内 | 商品の比較、どの課題にどの商品が対応するか、どの地域の販売ページを開くか | 価格、Checkout、決済の手順、製品の定義 |
 | README | Public | 公開の入口と、経験のある運用者向けの参照 | Signal Nexus が何か、実行モード、設定、Webhook と戦略の要約、Build と Start、三つの確認 | このファイルの表、導入の教科書、画面仕様 |
 | LICENSE | Public | Community Edition のライセンス | 許可、禁止、ブランド、留保された商用の権利 | 取引リスクの叙述、脆弱性の報告手順 |
 | DISCLAIMER | Public | Community Edition を提供する条件 | 助言との境界、資産運用をしないこと、利益を保証しないこと、保証、責任、第三者 | 著作権の許諾 |
@@ -38,6 +39,7 @@ Buildbook は Signal Nexus の利用に必須ではありません。Buildbook �
 - Screen Specification
 - Screen Relationship Diagram
 - Product Specification
+- Product Catalog
 - LICENSE
 - DISCLAIMER
 - RISK_DISCLOSURE
@@ -72,6 +74,10 @@ README は、公開の入口です。公開文書に、Starter は要りませ�
 Signal Nexus を検討している。
 
 README → Product Specification → Architecture
+
+どの商品を読むか選ぶ。
+
+README → Product Catalog → Product Specification
 
 プラットフォームを理解したい。
 
@@ -121,6 +127,7 @@ graph TD
   DOCUMENTATION_STRUCTURE --> Buildbook
   DOCUMENTATION_STRUCTURE --> StrategyIntegrationGuide
   DOCUMENTATION_STRUCTURE --> ProductSpecification
+  DOCUMENTATION_STRUCTURE --> ProductCatalog
   DOCUMENTATION_STRUCTURE --> UI
   UI --> ScreenSpecification
   UI --> ScreenRelationshipDiagram
@@ -136,6 +143,7 @@ DOCUMENTATION_STRUCTURE
   +-- Buildbook
   +-- Strategy Integration Guide
   +-- Product Specification
+  +-- Product Catalog
   +-- UI
         +-- Screen Specification
         +-- Screen Relationship Diagram
@@ -146,6 +154,8 @@ DOCUMENTATION_STRUCTURE
 README は、Signal Nexus が何かを答えます。
 
 Product Specification は、製品が何かを答えます。
+
+Product Catalog は、どの商品を読むか、どの地域の販売ページを開くかを答えます。価格は定めず、決済も受けません。
 
 Architecture は、どう組まれているかを答えます。
 

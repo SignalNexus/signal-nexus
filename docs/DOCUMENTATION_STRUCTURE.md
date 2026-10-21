@@ -17,7 +17,8 @@ English is the canonical text. The Japanese edition is [DOCUMENTATION_STRUCTURE_
 | Strategy Integration Guide | Public | Canonical TradingView connection | `strategy_id`, alert payload, webhook contract | Signal logic, indicator design, research |
 | Screen Specification | Public | Canonical screen content | Purpose, what the user can learn, displayed information, navigation of each view | API design, database design, build steps |
 | Screen Relationship Diagram | Public | Canonical screen navigation | The view tree and the jumps between views | Field lists, build steps |
-| Product Specification | Public | Canonical product definition | What the operator gets, venues, lineup names | Install steps, screen label definitions, prices |
+| Product Specification | Public | Canonical product definition | What the operator gets, venues, lineup names | Install steps, screen label definitions, prices, which sales page to open |
+| Product Catalog | Public | Product navigation | Lineup comparison, which problem each product answers, which regional sales page to open | Prices, checkout, payment steps, the product definition |
 | README | Public | Public entry and experienced-operator reference | What Signal Nexus is, runtime modes, configuration, the webhook and strategy summary, build and start commands, the three validation checks | The tables in this file, install tutorials, screen specifications |
 | LICENSE | Public | Community Edition license | Permissions, prohibitions, brand, reserved commercial rights | Trading-risk narrative, vulnerability-reporting steps |
 | DISCLAIMER | Public | Offer terms for the Community Edition | Advice boundary, no asset management, no profit guarantee, warranty, liability, third parties | The copyright grant |
@@ -38,6 +39,7 @@ Public documentation:
 - Screen Specification
 - Screen Relationship Diagram
 - Product Specification
+- Product Catalog
 - LICENSE
 - DISCLAIMER
 - RISK_DISCLOSURE
@@ -72,6 +74,10 @@ README is the public entry point. Public documentation does not require Starter.
 I am evaluating Signal Nexus.
 
 README → Product Specification → Architecture
+
+I am choosing which product to read.
+
+README → Product Catalog → Product Specification
 
 I want to understand the platform.
 
@@ -121,6 +127,7 @@ graph TD
   DOCUMENTATION_STRUCTURE --> Buildbook
   DOCUMENTATION_STRUCTURE --> StrategyIntegrationGuide
   DOCUMENTATION_STRUCTURE --> ProductSpecification
+  DOCUMENTATION_STRUCTURE --> ProductCatalog
   DOCUMENTATION_STRUCTURE --> UI
   UI --> ScreenSpecification
   UI --> ScreenRelationshipDiagram
@@ -136,6 +143,7 @@ DOCUMENTATION_STRUCTURE
   +-- Buildbook
   +-- Strategy Integration Guide
   +-- Product Specification
+  +-- Product Catalog
   +-- UI
         +-- Screen Specification
         +-- Screen Relationship Diagram
@@ -146,6 +154,8 @@ DOCUMENTATION_STRUCTURE
 README answers what Signal Nexus is.
 
 Product Specification answers what the product is.
+
+Product Catalog answers which product to read, and which regional sales page to open. It does not set a price and it does not take payment.
 
 Architecture answers how it is structured.
 

@@ -111,7 +111,7 @@ Research is Private. How a strategy was found, ranked, or left unpublished is no
 
 ## Product Lineup
 
-Names only. This document does not set a price.
+Names only. This document does not set a price. Which product to read, and which regional sales page to open, is [Product Catalog](PRODUCT_CATALOG.md).
 
 - Free. The public platform. You deploy it yourself.
 - Starter. The same platform, plus the Buildbook that prepares a new machine and the operator guidance in that playbook. It is not a second program. It does not include a support contract.
