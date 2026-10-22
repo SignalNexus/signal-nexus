@@ -99,13 +99,20 @@ body .markdown-body,
   color: var(--sn-text) !important;
 }
 
+.markdown-body table tr,
+.markdown-body table tr:nth-child(2n) {
+  background: var(--sn-card) !important;
+  background-color: var(--sn-card) !important;
+}
+
 .markdown-body table th,
 .markdown-body table td {
   padding: 14px 16px !important;
   border: 0 !important;
   border-bottom: 1px solid var(--sn-line) !important;
   color: var(--sn-text) !important;
-  background: transparent !important;
+  background: var(--sn-card) !important;
+  background-color: var(--sn-card) !important;
   vertical-align: top;
   line-height: 1.5;
   min-width: 148px;
