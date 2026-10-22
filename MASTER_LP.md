@@ -1,6 +1,6 @@
 # Signal Nexus
 
-<img src="assets/hero-banner.svg" alt="Signal Nexus. Own your execution. Self-hosted multi-venue trading operations platform." width="960">
+<img src="assets/hero-banner.svg" alt="Signal Nexus. Own your execution. Self-hosted multi-venue trading operations platform." width="1200">
 
 Own your execution.
 
