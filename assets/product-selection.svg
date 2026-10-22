@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 420" role="img">
+  <title>Strategy without infrastructure maps to Starter. Infrastructure without an effective strategy maps to Profit Pack, Volume Pack, or both. Neither maps to Complete.</title>
+  <defs>
+    <linearGradient id="sol" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#00FFA3"/>
+      <stop offset="55%" stop-color="#03E1FF"/>
+      <stop offset="100%" stop-color="#DC1FFF"/>
+    </linearGradient>
+  </defs>
+  <rect width="960" height="420" rx="18" fill="#0B0E14"/>
+  <g font-family="Segoe UI, Helvetica, Arial, sans-serif">
+    <rect x="24" y="24" width="292" height="372" rx="14" fill="#121722"/>
+    <text x="44" y="58" fill="#8B98A8" font-size="12" letter-spacing="1.4">PROBLEM</text>
+    <text x="44" y="96" fill="#F4F7FB" font-size="16">You have a TradingView</text>
+    <text x="44" y="120" fill="#F4F7FB" font-size="16">strategy. Building the</text>
+    <text x="44" y="144" fill="#F4F7FB" font-size="16">infrastructure is difficult.</text>
+    <path d="M160 176 V214" stroke="url(#sol)" stroke-width="1.6"/>
+    <path d="M155 206 L160 216 L165 206 Z" fill="url(#sol)"/>
+    <text x="44" y="252" fill="#8B98A8" font-size="12" letter-spacing="1.4">PRODUCT</text>
+    <text x="44" y="292" fill="url(#sol)" font-size="28" font-weight="700">Starter</text>
+
+    <rect x="334" y="24" width="292" height="372" rx="14" fill="#121722"/>
+    <text x="354" y="58" fill="#8B98A8" font-size="12" letter-spacing="1.4">PROBLEM</text>
+    <text x="354" y="96" fill="#F4F7FB" font-size="16">You can build the</text>
+    <text x="354" y="120" fill="#F4F7FB" font-size="16">infrastructure. You do not</text>
+    <text x="354" y="144" fill="#F4F7FB" font-size="16">have an effective strategy.</text>
+    <path d="M470 176 V214" stroke="url(#sol)" stroke-width="1.6"/>
+    <path d="M465 206 L470 216 L475 206 Z" fill="url(#sol)"/>
+    <text x="354" y="252" fill="#8B98A8" font-size="12" letter-spacing="1.4">PRODUCT</text>
+    <text x="354" y="286" fill="url(#sol)" font-size="22" font-weight="700">Profit Pack,</text>
+    <text x="354" y="318" fill="url(#sol)" font-size="22" font-weight="700">Volume Pack, or both</text>
+
+    <rect x="644" y="24" width="292" height="372" rx="14" fill="#121722"/>
+    <text x="664" y="58" fill="#8B98A8" font-size="12" letter-spacing="1.4">PROBLEM</text>
+    <text x="664" y="96" fill="#F4F7FB" font-size="16">You have neither the</text>
+    <text x="664" y="120" fill="#F4F7FB" font-size="16">infrastructure nor</text>
+    <text x="664" y="144" fill="#F4F7FB" font-size="16">a strategy.</text>
+    <path d="M780 176 V214" stroke="url(#sol)" stroke-width="1.6"/>
+    <path d="M775 206 L780 216 L785 206 Z" fill="url(#sol)"/>
+    <text x="664" y="252" fill="#8B98A8" font-size="12" letter-spacing="1.4">PRODUCT</text>
+    <text x="664" y="292" fill="url(#sol)" font-size="28" font-weight="700">Complete</text>
+  </g>
+</svg>

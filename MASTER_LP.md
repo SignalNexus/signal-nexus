@@ -1,5 +1,7 @@
 # Signal Nexus
 
+<img src="assets/hero-banner.svg" alt="Signal Nexus. Own your execution. Self-hosted multi-venue trading operations platform." width="960">
+
 Own your execution.
 
 Self-hosted multi-venue trading operations platform.
@@ -28,6 +30,8 @@ Read the repository documentation.
 
 [README](README.md)
 
+<img src="assets/section-rule.svg" alt="" width="960">
+
 ## Why Signal Nexus Exists
 
 Signal Nexus is not just a tool that turns TradingView alerts into orders.
@@ -38,6 +42,8 @@ Each added venue otherwise means a separate check of positions, profit and loss,
 
 The value is not automated trading itself. It is executing a rule you already set, and keeping on executing it. Many traders fail not when creating a strategy, but when repeatedly executing it. A stop-loss comes late. Profit-taking comes early. Rules are changed from emotion. Alerts are missed. Signal Nexus does not decide that the stop is the right stop, or that the strategy is the right strategy. It does not promise a result.
 
+<img src="assets/section-rule.svg" alt="" width="960">
+
 ## One Workflow
 
 - One Workflow. The alert, the execution, and the record are one run.
@@ -47,6 +53,8 @@ The value is not automated trading itself. It is executing a rule you already se
 
 Less time comparing venues. More time improving the strategy. These four lines stop there.
 
+<img src="assets/section-rule.svg" alt="" width="960">
+
 ## The Operating Model × Product Mapping
 
 This section shows where each product fits within the Signal Nexus operating model. It is the map of the whole operation. It is not a product comparison. The comparison appears later in Product Catalog.
@@ -54,6 +62,8 @@ This section shows where each product fits within the Signal Nexus operating mod
 Signal Nexus is the operating model. The model is one loop:
 
 Research → Strategy → Build → Execute → Analyze → Improve
+
+<img src="assets/operating-model.svg" alt="The operating model is one loop: Research, Strategy, Build, Execute, Analyze, Improve, and back to Research." width="960">
 
 Free already covers that whole loop. You research, you write the strategy, you build on the public platform, you execute, you read the record, and you decide the next change.
 
@@ -82,6 +92,8 @@ People who already run, or are trying to run, TradingView alerts on their own in
 
 The names only. This list does not compare them. The comparison is Product Catalog.
 
+<img src="assets/product-cards.svg" alt="Starter, launch US$35. Volume Pack, launch US$139. Profit Pack, launch US$139. Complete, launch US$279." width="960">
+
 - Starter. Build the infrastructure.
 - Volume Pack. A strategy set selected for trading volume and venue participation.
 - Profit Pack. A strategy set selected for net result.
@@ -91,6 +103,8 @@ The names only. This list does not compare them. The comparison is Product Catal
 
 Which product fits your problem? This is the choice guide. It maps a problem to a product. It is not a ranking, and it is not the comparison table.
 
+<img src="assets/product-selection.svg" alt="A TradingView strategy without infrastructure maps to Starter. Infrastructure without an effective strategy maps to Profit Pack, Volume Pack, or both. Neither maps to Complete." width="960">
+
 | Problem | Product |
 | --- | --- |
 | You have a TradingView strategy. Building the infrastructure is difficult | Starter |
@@ -98,6 +112,8 @@ Which product fits your problem? This is the choice guide. It maps a problem to 
 | You have neither the infrastructure nor a strategy | Complete |
 
 Profit Pack is selected on net result. Volume Pack is selected on trading volume, venue participation, and point-program opportunity. Neither purchase is a condition of the other.
+
+<img src="assets/section-rule.svg" alt="" width="960">
 
 ## Product Catalog
 
