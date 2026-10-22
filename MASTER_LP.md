@@ -20,6 +20,14 @@ Read the Japanese Master LP on note.
 
 Japanese Master LP (URL not set)
 
+## For Technical Review
+
+Looking for architecture, setup instructions, repository structure, or implementation details?
+
+Read the repository documentation.
+
+[README](README.md)
+
 ## Why Signal Nexus Exists
 
 Signal Nexus is not just a tool that turns TradingView alerts into orders.
