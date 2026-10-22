@@ -28,13 +28,9 @@ body .markdown-body,
   padding-bottom: 64px !important;
 }
 
-.markdown-body h1 {
-  color: var(--sn-primary) !important;
-  font-size: 0.95rem !important;
-  font-weight: 700 !important;
-  letter-spacing: 0.28em;
-  text-transform: uppercase;
-  margin: 0 0 18px !important;
+.markdown-body > h1:first-of-type,
+.markdown-body > h1#signal-nexus {
+  display: none !important;
 }
 
 .markdown-body h2 {
