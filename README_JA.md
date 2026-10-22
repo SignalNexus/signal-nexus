@@ -300,7 +300,6 @@ btc_long_example:
 | 知りたいこと | 文書 |
 | --- | --- |
 | 利用者の手元に何が残るか | [Product Specification](docs/product/PRODUCT_SPECIFICATION_JA.md) |
-| どの商品を読むか | [Product Catalog](docs/product/PRODUCT_CATALOG_JA.md) |
 | システムがどう構成されているか | [Architecture](docs/architecture/ARCHITECTURE_JA.md) |
 | TradingView をどう繋ぐか | [Strategy Integration Guide](docs/integration/STRATEGY_INTEGRATION_GUIDE_JA.md) |
 | 各画面に何が出るか | [Screen Specification](docs/ui/SCREEN_SPECIFICATION_JA.md) |

@@ -300,7 +300,6 @@ A secret mismatch is HTTP 401 and `{"detail":"unauthorized"}`. A rejected alert 
 | Question | Document |
 | --- | --- |
 | What does the operator get? | [Product Specification](docs/product/PRODUCT_SPECIFICATION.md) |
-| Which product do I read? | [Product Catalog](docs/product/PRODUCT_CATALOG.md) |
 | How is the system structured? | [Architecture](docs/architecture/ARCHITECTURE.md) |
 | How is TradingView connected? | [Strategy Integration Guide](docs/integration/STRATEGY_INTEGRATION_GUIDE.md) |
 | What does each screen show? | [Screen Specification](docs/ui/SCREEN_SPECIFICATION.md) |

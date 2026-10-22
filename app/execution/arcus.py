@@ -138,12 +138,16 @@ def execute_arcus(strategy, action: str, client_order_id: str, client: "ArcusCli
     if strategy.symbol not in MARKETS:
         return LiveResult("not_sent", False, "market unavailable")
     venue = arcus_client() if client is None else client
+    held = _lot(strategy.strategy_id)
+    step = _order_step(venue, strategy.symbol)
     if action in ("COVER", "FLAT"):
-        quantity = _lot(strategy.strategy_id)
-        if quantity <= 0:
+        if held <= 0:
             return LiveResult("not_sent", False, "position already flat")
+        quantity = held if step is None else snap_floor(held, step)
+        if quantity <= 0:
+            return LiveResult("not_sent", False, "remainder below order step")
     else:
-        if _lot(strategy.strategy_id) > 0:
+        if held > 0 and (step is None or snap_floor(held, step) > 0):
             return LiveResult("not_sent", False, "position already open")
         quantity = _open_quantity(venue, strategy.symbol, Decimal(str(strategy.size_quote)))
         if quantity <= 0:
@@ -639,6 +643,20 @@ def _store_lot(strategy_id: str, quantity: Decimal) -> None:
         set_quantity("arcus", strategy_id, quantity)
     except Exception:
         logger.warning("arcus lot was not stored")
+
+
+def _order_step(client, symbol: str) -> Decimal | None:
+    market = getattr(client, "_market", None)
+    if not callable(market) or symbol not in MARKETS:
+        return None
+    try:
+        _market_id, name = MARKETS[symbol]
+        step = market(name)["step"]
+    except Exception:
+        return None
+    if not isinstance(step, Decimal) or step <= 0:
+        return None
+    return step
 
 
 def _lot(strategy_id: str) -> Decimal:

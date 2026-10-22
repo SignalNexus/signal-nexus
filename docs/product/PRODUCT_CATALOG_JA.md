@@ -1,8 +1,6 @@
 # Signal Nexus Product Catalog
 
-このページは、商品の案内です。有料の商品を並べ、比べ、地域の販売ページへ誘導します。
-
-販売ページではありません。決済を持ちません。価格を定めません。価格、購入説明、Checkout の正本は、販売ページです。
+このファイルは、比較の正本である。販売ページではなく、決済を持たない。GitHub Pages は、このファイルを独立した段には使わない。Home の [MASTER_LP.md](../../MASTER_LP.md) が、末尾の節として比較を載せる。その Read More は、Gumroad の商品ページを開く。
 
 各商品が何であるかは、[製品仕様](PRODUCT_SPECIFICATION_JA.md) が定義します。英語版 [PRODUCT_CATALOG.md](PRODUCT_CATALOG.md) が原文です。
 

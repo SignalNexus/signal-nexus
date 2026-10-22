@@ -8,6 +8,7 @@ from collections.abc import Callable
 from app.execution.order_executor import (
     base_amount_for_quote,
     combined_average,
+    orderable_base,
     place_limit_order,
     place_market_order,
     public_order_error,
@@ -120,9 +121,21 @@ def _uses_resting_limit(strategy_id: str, action: str) -> bool:
     return action != "STOP" and strategy_id in RESTING_LIMIT_IDS
 
 
+def _below_order_step(exchange, symbol: str, amount: float) -> bool:
+    try:
+        return orderable_base(exchange, symbol, amount) <= 0
+    except Exception:
+        return False
+
+
 def _buy(exchange, strategy: Strategy, exchange_id: str, client_order_id: str, sleeper) -> LiveResult:
     holding = open_holding(strategy.strategy_id)
-    if holding is not None:
+    dust = (
+        holding is not None
+        and holding.symbol == strategy.symbol
+        and _below_order_step(exchange, strategy.symbol, holding.base_qty)
+    )
+    if holding is not None and not dust:
         return LiveResult("not_sent", False, "position already open")
     try:
         free = free_usdt(exchange)
@@ -287,6 +300,8 @@ def _sell(
     if blocked is not None:
         return blocked
     holding = open_holding(strategy.strategy_id)
+    if _below_order_step(exchange, strategy.symbol, holding.base_qty):
+        return LiveResult("not_sent", False, "remainder below order step")
     if _uses_resting_limit(strategy.strategy_id, action):
         posted = _post_sell_limit(exchange, strategy, exchange_id, holding.base_qty)
         if posted is not None:

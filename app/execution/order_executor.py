@@ -63,6 +63,19 @@ def floor_to_step(value: float, step: Decimal) -> str:
     return text or "0"
 
 
+def orderable_base(exchange, symbol: str, amount: float) -> Decimal:
+    if amount <= 0:
+        return Decimal("0")
+    sized = sized_amount(exchange, symbol, amount)
+    try:
+        parsed = Decimal(str(sized))
+    except Exception:
+        return Decimal("0")
+    if parsed < 0:
+        return Decimal("0")
+    return parsed
+
+
 def sized_amount(exchange, symbol: str, amount: float) -> float | str:
     info = _symbol_info(exchange, symbol)
     # baseAssetPrecision can be finer than the order step MEXC accepts.

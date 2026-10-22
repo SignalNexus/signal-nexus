@@ -1,8 +1,6 @@
 # Signal Nexus Product Catalog
 
-This page is product navigation. It lists the paid products, compares them, and points to the sales page for your region.
-
-It is not a sales page. It does not take payment. It does not set a price. The sales page is the record for price, purchase explanation, and checkout.
+This file is the comparison source. It is not a sales page, and it does not take payment. GitHub Pages does not use this file as its own step. The home page [MASTER_LP.md](../../MASTER_LP.md) carries this comparison as its last section. Read More on that page opens the Gumroad product page.
 
 What each product is, is defined in [Product Specification](PRODUCT_SPECIFICATION.md). The Japanese edition of this page is [PRODUCT_CATALOG_JA.md](PRODUCT_CATALOG_JA.md).
 

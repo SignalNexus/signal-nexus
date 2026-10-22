@@ -1,5 +1,6 @@
 import logging
 from datetime import datetime, timedelta, timezone
+from decimal import Decimal, ROUND_FLOOR
 from threading import Lock
 
 logger = logging.getLogger(__name__)
@@ -272,10 +273,44 @@ def _mexc_futures(strategies: dict[str, Strategy]) -> dict[str, Strategy]:
     return selected
 
 
+def _contract_step(exchange, symbol: str) -> Decimal:
+    market = getattr(exchange, "market", None)
+    info = {}
+    if callable(market):
+        try:
+            raw = market(symbol) or {}
+            found = raw.get("info")
+            if isinstance(found, dict):
+                info = found
+        except Exception:
+            info = {}
+    raw_step = info.get("volUnit")
+    try:
+        step = Decimal(str(raw_step))
+    except Exception:
+        step = Decimal("0")
+    if step <= 0:
+        return Decimal("1")
+    return step
+
+
+def _orderable_contracts(exchange, symbol: str, contracts: float) -> float:
+    if contracts <= 0:
+        return 0
+    step = _contract_step(exchange, symbol)
+    amount = (Decimal(str(contracts)) / step).to_integral_value(rounding=ROUND_FLOOR) * step
+    if amount <= 0:
+        return 0
+    if amount == amount.to_integral_value():
+        return int(amount)
+    return float(amount)
+
+
 def _open(
     exchange, strategy: Strategy, symbol: str, exchange_id: str, client_order_id: str, side: str
 ) -> LiveResult:
-    if _lots.get(strategy.strategy_id, 0.0) > 0:
+    current = _lots.get(strategy.strategy_id, 0.0)
+    if current > 0 and _orderable_contracts(exchange, symbol, current) > 0:
         return LiveResult("not_sent", False, "position already open")
     margin = strategy.size_quote / LEVERAGE
     try:
@@ -303,7 +338,10 @@ def _close(
     contracts = _lots.get(strategy.strategy_id, 0.0)
     if contracts <= 0:
         return LiveResult("not_sent", False, "position already flat")
-    status, filled, average = _market(exchange, symbol, side, contracts, exchange_id, reduce_only=True)
+    orderable = _orderable_contracts(exchange, symbol, contracts)
+    if orderable <= 0:
+        return LiveResult("not_sent", False, "remainder below order step")
+    status, filled, average = _market(exchange, symbol, side, orderable, exchange_id, reduce_only=True)
     report_order_link(exchange_id, client_order_id)
     status, filled = _settle_fill(exchange, symbol, exchange_id, status, filled)
     if filled <= 0:
