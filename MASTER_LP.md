@@ -2,6 +2,32 @@
 
 <img src="assets/hero-banner.svg" alt="Signal Nexus. Own your execution. Self-hosted multi-venue trading operations platform. Operate multiple CEXs and DEXs through one workflow." width="1200">
 
+<div class="sn-values">
+
+<section>
+<p class="sn-kicker">One Workflow</p>
+<p>The alert, the execution, and the record are one run.</p>
+</section>
+
+<section>
+<p class="sn-kicker">One Analytics Layer</p>
+<p>That record is read in one place.</p>
+</section>
+
+<section>
+<p class="sn-kicker">One Risk View</p>
+<p>Positions and risk are read from the same record.</p>
+</section>
+
+<section>
+<p class="sn-kicker">One Operational Dashboard</p>
+<p>That view does not send an order, and it does not remove the risk.</p>
+</section>
+
+</div>
+
+Less time comparing venues. More time improving the strategy. These four lines stop there.
+
 Own your execution.
 
 Self-hosted multi-venue trading operations platform.
@@ -41,17 +67,6 @@ It is a self-hosted trading operations platform for running more than one venue 
 Each added venue otherwise means a separate check of positions, profit and loss, risk, orders, and volume. MEXC, Arcus, and other venues are examples of that split. This page does not add a venue. The public release executes on MEXC Spot, MEXC Futures, and Arcus.
 
 The value is not automated trading itself. It is executing a rule you already set, and keeping on executing it. Many traders fail not when creating a strategy, but when repeatedly executing it. A stop-loss comes late. Profit-taking comes early. Rules are changed from emotion. Alerts are missed. Signal Nexus does not decide that the stop is the right stop, or that the strategy is the right strategy. It does not promise a result.
-
-<img src="assets/section-rule.svg" alt="" width="960">
-
-## One Workflow
-
-- One Workflow. The alert, the execution, and the record are one run.
-- One Analytics Layer. That record is read in one place.
-- One Risk View. Positions and risk are read from the same record.
-- One Operational Dashboard. That view does not send an order, and it does not remove the risk.
-
-Less time comparing venues. More time improving the strategy. These four lines stop there.
 
 <img src="assets/section-rule.svg" alt="" width="960">
 
