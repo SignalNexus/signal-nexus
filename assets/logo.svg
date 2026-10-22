@@ -1,19 +1,22 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 280 48" role="img">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80" role="img">
   <title>Signal Nexus</title>
   <defs>
     <linearGradient id="sol" x1="0" y1="1" x2="1" y2="0">
       <stop offset="0%" stop-color="#00FFA3"/>
-      <stop offset="52%" stop-color="#03E1FF"/>
+      <stop offset="50%" stop-color="#03E1FF"/>
       <stop offset="100%" stop-color="#DC1FFF"/>
     </linearGradient>
   </defs>
-  <rect width="48" height="48" rx="12" fill="#0B0E14"/>
-  <circle cx="24" cy="24" r="14" fill="none" stroke="url(#sol)" stroke-width="2.4"/>
-  <circle cx="24" cy="10" r="2.3" fill="#00FFA3"/>
-  <circle cx="36.1" cy="17" r="2.3" fill="#03E1FF"/>
-  <circle cx="36.1" cy="31" r="2.3" fill="#DC1FFF"/>
-  <circle cx="24" cy="38" r="2.3" fill="#03E1FF"/>
-  <circle cx="11.9" cy="31" r="2.3" fill="#00FFA3"/>
-  <circle cx="11.9" cy="17" r="2.3" fill="#DC1FFF"/>
-  <text x="64" y="32" fill="url(#sol)" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="18" font-weight="700" letter-spacing="2.4">SIGNAL NEXUS</text>
+  <rect width="80" height="80" rx="18" fill="#050816"/>
+  <circle cx="40" cy="40" r="27" fill="none" stroke="url(#sol)" stroke-width="1.6"/>
+  <g stroke="url(#sol)" stroke-width="3.6" stroke-linecap="round">
+    <line x1="27" y1="22" x2="27" y2="58"/>
+    <line x1="27" y1="22" x2="53" y2="58"/>
+    <line x1="53" y1="22" x2="53" y2="58"/>
+  </g>
+  <circle cx="27" cy="22" r="4.5" fill="#00FFA3"/>
+  <circle cx="53" cy="22" r="4.5" fill="#DC1FFF"/>
+  <circle cx="40" cy="40" r="4" fill="#FFFFFF"/>
+  <circle cx="27" cy="58" r="4.5" fill="#03E1FF"/>
+  <circle cx="53" cy="58" r="4.5" fill="#00FFA3"/>
 </svg>

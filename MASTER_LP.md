@@ -1,6 +1,6 @@
 # Signal Nexus
 
-<img src="assets/hero-banner.svg" alt="Signal Nexus. Own your execution. Self-hosted multi-venue trading operations platform." width="1200">
+<img src="assets/hero-banner.svg" alt="Signal Nexus. Own your execution. Self-hosted multi-venue trading operations platform. Operate multiple CEXs and DEXs through one workflow." width="1200">
 
 Own your execution.
 
@@ -90,28 +90,15 @@ People who already run, or are trying to run, TradingView alerts on their own in
 
 ## Product Family Overview
 
-The names only. This list does not compare them. The comparison is Product Catalog.
+What products exist? The comparison is Product Catalog.
 
-<img src="assets/product-cards.svg" alt="Starter, launch US$35. Volume Pack, launch US$139. Profit Pack, launch US$139. Complete, launch US$279." width="960">
-
-- Starter. Build the infrastructure.
-- Volume Pack. A strategy set selected for trading volume and venue participation.
-- Profit Pack. A strategy set selected for net result.
-- Complete. Starter and both packs together.
+<img src="assets/product-cards.svg" alt="Starter, launch US$35, regular US$69. Volume Pack, launch US$139, regular US$209. Profit Pack, launch US$139, regular US$209. Complete, launch US$279, regular US$419." width="960">
 
 ## The Three Problems
 
-Which product fits your problem? This is the choice guide. It maps a problem to a product. It is not a ranking, and it is not the comparison table.
+Which product fits your problem? This maps a problem to a product. It is not a ranking.
 
 <img src="assets/product-selection.svg" alt="A TradingView strategy without infrastructure maps to Starter. Infrastructure without an effective strategy maps to Profit Pack, Volume Pack, or both. Neither maps to Complete." width="960">
-
-| Problem | Product |
-| --- | --- |
-| You have a TradingView strategy. Building the infrastructure is difficult | Starter |
-| You can build the infrastructure. You do not have an effective strategy | Profit Pack, Volume Pack, or both |
-| You have neither the infrastructure nor a strategy | Complete |
-
-Profit Pack is selected on net result. Volume Pack is selected on trading volume, venue participation, and point-program opportunity. Neither purchase is a condition of the other.
 
 <img src="assets/section-rule.svg" alt="" width="960">
 
