@@ -46,7 +46,7 @@ Looking for the Japanese version?
 
 Read the Japanese Master LP on note.
 
-Japanese Master LP (URL not set)
+<a href="https://note.com/signalnexus/n/n08cc77a0072e" target="_blank" rel="noopener noreferrer">Japanese Master LP</a>
 
 ## For Technical Review
 
