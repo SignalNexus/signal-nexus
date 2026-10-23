@@ -150,7 +150,7 @@ Which product fits your problem? This maps a problem to a product. It is not a r
 
 ## Product Catalog
 
-This section compares the products, including price. The source text for what each product contains is [Product Catalog](docs/product/PRODUCT_CATALOG.md). This page does not send you there as the next click. Read More opens that product's Gumroad page. The Gumroad page is where the purchase is made.
+This section compares the products, including price. The source text for what each product contains is <a href="https://github.com/SignalNexus/signal-nexus/blob/main/docs/product/PRODUCT_CATALOG.md" target="_blank" rel="noopener noreferrer">Product Catalog</a>. This page does not send you there as the next click. Read More opens that product's Gumroad page. The Gumroad page is where the purchase is made.
 
 Launch Price applies through 2026-12-31 JST. Regular Price applies thereafter. Launch Price is not a sale price.
 
@@ -202,7 +202,7 @@ Separate Launch Price total: US$313. Complete Launch Price: US$279.
 
 Read more: Gumroad Complete Product LP (URL not set)
 
-Past results do not guarantee future results. Nothing here is a recommendation to buy, sell, hold, or avoid an asset or a strategy. Trading can lose money. The terms are in [DISCLAIMER](DISCLAIMER.md), [RISK DISCLOSURE](RISK_DISCLOSURE.md), and [LICENSE](LICENSE.md).
+Past results do not guarantee future results. Nothing here is a recommendation to buy, sell, hold, or avoid an asset or a strategy. Trading can lose money. The terms are in <a href="https://github.com/SignalNexus/signal-nexus/blob/main/DISCLAIMER.md" target="_blank" rel="noopener noreferrer">DISCLAIMER</a>, <a href="https://github.com/SignalNexus/signal-nexus/blob/main/RISK_DISCLOSURE.md" target="_blank" rel="noopener noreferrer">RISK DISCLOSURE</a>, and <a href="https://github.com/SignalNexus/signal-nexus/blob/main/LICENSE.md" target="_blank" rel="noopener noreferrer">LICENSE</a>.
 
 ## Before You Start
 
