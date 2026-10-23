@@ -170,7 +170,7 @@ The Buildbook for connecting alerts, execution, and the operational record on in
 
 Launch Price US$35. Regular Price US$69.
 
-Read more: Gumroad Starter Product LP (URL not set)
+Read more: <a href="https://signalnexus.gumroad.com/l/starter" target="_blank" rel="noopener noreferrer">Gumroad Starter Product LP</a>
 
 ### Volume Pack
 
@@ -178,7 +178,7 @@ README, Strategy Catalog, Backtest Results, Sample YAML, TradingView Setup Guide
 
 Launch Price US$139. Regular Price US$209.
 
-Read more: Gumroad Volume Pack Product LP (URL not set)
+Read more: <a href="https://signalnexus.gumroad.com/l/volume-pack-2026-10" target="_blank" rel="noopener noreferrer">Gumroad Volume Pack Product LP</a>
 
 ### Profit Pack
 
@@ -186,7 +186,7 @@ README, Strategy Catalog, Backtest Results, Sample YAML, TradingView Setup Guide
 
 Launch Price US$139. Regular Price US$209.
 
-Read more: Gumroad Profit Pack Product LP (URL not set)
+Read more: <a href="https://signalnexus.gumroad.com/l/profit-pack-2026-10" target="_blank" rel="noopener noreferrer">Gumroad Profit Pack Product LP</a>
 
 ### Complete
 
@@ -200,7 +200,7 @@ It adds no file of its own.
 
 Separate Launch Price total: US$313. Complete Launch Price: US$279.
 
-Read more: Gumroad Complete Product LP (URL not set)
+Read more: <a href="https://signalnexus.gumroad.com/l/complete-2026-10" target="_blank" rel="noopener noreferrer">Gumroad Complete Product LP</a>
 
 Past results do not guarantee future results. Nothing here is a recommendation to buy, sell, hold, or avoid an asset or a strategy. Trading can lose money. The terms are in <a href="https://github.com/SignalNexus/signal-nexus/blob/main/DISCLAIMER.md" target="_blank" rel="noopener noreferrer">DISCLAIMER</a>, <a href="https://github.com/SignalNexus/signal-nexus/blob/main/RISK_DISCLOSURE.md" target="_blank" rel="noopener noreferrer">RISK DISCLOSURE</a>, and <a href="https://github.com/SignalNexus/signal-nexus/blob/main/LICENSE.md" target="_blank" rel="noopener noreferrer">LICENSE</a>.
 
