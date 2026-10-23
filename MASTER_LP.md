@@ -101,6 +101,8 @@ A later date is not included. The rows are not a sequence.
 
 ## Start Free
 
+Start with the public repositories first.
+
 Signal Nexus does not require a paid product to get started.
 
 Even with the public repositories alone, you can:
@@ -147,11 +149,11 @@ Launch Price applies through 2026-12-31 JST. Regular Price applies thereafter. L
 |  | Starter | Volume Pack | Profit Pack | Complete |
 | --- | --- | --- | --- | --- |
 | Problem | Strategy exists. Infrastructure is difficult | Infrastructure exists. An effective strategy does not | Infrastructure exists. An effective strategy does not | Neither infrastructure nor a strategy |
-| Deliverables | Buildbook | README<br>Strategy Catalog<br>Backtest Results<br>Sample YAML<br>TradingView Setup Guide<br>Pine Source<br>+ Arcus strategy set | README<br>Strategy Catalog<br>Backtest Results<br>Sample YAML<br>TradingView Setup Guide<br>Pine Source<br>+ MEXC Spot and MEXC Futures strategy set | Starter Buildbook<br>+ Volume Pack of the same date<br>+ Profit Pack of the same date<br>Separate Launch Price total: US$313 |
+| Deliverables | Buildbook | README<br>Strategy Catalog<br>Backtest Results<br>Sample YAML<br>TradingView Setup Guide<br>Pine Source<br>Curated strategy set focused on volume, participation, and program opportunities. | README<br>Strategy Catalog<br>Backtest Results<br>Sample YAML<br>TradingView Setup Guide<br>Pine Source<br>Curated strategy set focused on net results. | Starter Buildbook<br>+ Volume Pack of the same date<br>+ Profit Pack of the same date<br>Separate Launch Price total: US$313 |
 | Launch Price | US$35 | US$139 | US$139 | US$279 |
 | Regular Price | US$69 | US$209 | US$209 | US$419 |
 
-Backtest Results remain separate from the Strategy Catalog. Volume Pack and Profit Pack use the same document structure. Their contents differ because each pack contains a different strategy set. Volume Pack contains the strategy set in live operation on Arcus. Profit Pack contains the strategy set in live operation on MEXC Spot and MEXC Futures. Complete adds no file of its own.
+Backtest Results remain separate from the Strategy Catalog. Volume Pack and Profit Pack use the same document structure. Their contents differ because each pack contains a different strategy set. Volume Pack contains a curated strategy set focused on volume, participation, and program opportunities. Profit Pack contains a curated strategy set focused on net results. Strategy and venue stay separate. You assign a strategy to a venue in YAML. Complete adds no file of its own.
 
 ### Starter
 
@@ -163,7 +165,7 @@ Read more: Gumroad Starter Product LP (URL not set)
 
 ### Volume Pack
 
-README, Strategy Catalog, Backtest Results, Sample YAML, TradingView Setup Guide, and Pine source, with the strategy set in live operation on Arcus.
+README, Strategy Catalog, Backtest Results, Sample YAML, TradingView Setup Guide, and Pine source, with a curated strategy set focused on volume, participation, and program opportunities.
 
 Launch Price US$139. Regular Price US$209.
 
@@ -171,7 +173,7 @@ Read more: Gumroad Volume Pack Product LP (URL not set)
 
 ### Profit Pack
 
-README, Strategy Catalog, Backtest Results, Sample YAML, TradingView Setup Guide, and Pine source, with the strategy set in live operation on MEXC Spot and MEXC Futures.
+README, Strategy Catalog, Backtest Results, Sample YAML, TradingView Setup Guide, and Pine source, with a curated strategy set focused on net results.
 
 Launch Price US$139. Regular Price US$209.
 
