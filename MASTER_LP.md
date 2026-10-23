@@ -101,8 +101,6 @@ A later date is not included. The rows are not a sequence.
 
 ## Start Free
 
-<div class="sn-callout sn-callout-free" markdown="1">
-
 Signal Nexus does not require a paid product to get started.
 
 Even with the public repositories alone, you can:
@@ -120,9 +118,7 @@ They are designed to fill specific gaps within it.
 
 Start with the public repositories first.
 
-<a class="sn-repo" href="https://github.com/SignalNexus/signal-nexus">GitHub Repository</a>
-
-</div>
+[GitHub Repository](https://github.com/SignalNexus/signal-nexus)
 
 ## Who It's For
 
@@ -199,22 +195,18 @@ Past results do not guarantee future results. Nothing here is a recommendation t
 
 ## Before You Start
 
-<div class="sn-callout sn-callout-info" markdown="1">
-
-Signal Nexus is not a standalone service.
-
 To operate Signal Nexus, you will need:
 
-- A TradingView account
-- A supported exchange account
+- TradingView account
+- Supported exchange account
 - API credentials
 - Infrastructure you manage yourself
 
-### TradingView
+### TradingView Requirements
 
 Signal Nexus relies on TradingView alerts.
 
-**A TradingView subscription is required for practical use.**
+A TradingView subscription is required for practical use.
 
 Available features and alert limits depend on your TradingView plan.
 
@@ -233,5 +225,3 @@ Starter includes a Buildbook that explains how to assemble this infrastructure u
 Signal Nexus does not replace TradingView, exchanges, or infrastructure.
 
 It provides a single operating model across them.
-
-</div>
