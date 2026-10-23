@@ -205,10 +205,6 @@ body .markdown-body,
   border-top: 1px solid var(--sn-line);
 }
 
-.footer,
-.border-gray-light,
-.text-gray {
-  background: var(--sn-bg) !important;
-  color: var(--sn-muted) !important;
-  border-color: var(--sn-line) !important;
+.footer {
+  display: none !important;
 }
