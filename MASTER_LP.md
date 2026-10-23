@@ -54,7 +54,7 @@ Looking for architecture, setup instructions, repository structure, or implement
 
 Read the repository documentation.
 
-[README](README.md)
+<a href="https://github.com/SignalNexus/signal-nexus/blob/main/README.md" target="_blank" rel="noopener noreferrer">README</a>
 
 <img src="assets/section-rule.svg" alt="" width="960">
 
