@@ -130,7 +130,7 @@ Signal Nexus is designed for:
 - Systematic traders
 - TradingView users operating across multiple venues
 - Builders of self-hosted trading infrastructure
-- Traders who want to move from manual operations to repeatable workflows
+- Traders who want to move from manual execution to repeatable workflows
 
 The next sections say which product fits.
 
@@ -157,6 +157,7 @@ Launch Price applies through 2026-12-31 JST. Regular Price applies thereafter. L
 |  | Starter | Volume Pack | Profit Pack | Complete |
 | --- | --- | --- | --- | --- |
 | Problem | Strategy exists. Infrastructure is difficult | Infrastructure exists. An effective strategy does not | Infrastructure exists. An effective strategy does not | Neither infrastructure nor a strategy |
+| Selection Focus | Infrastructure | Volume & Participation | Net Result | Starter + Both Packs |
 | Deliverables | Buildbook | README<br>Strategy Catalog<br>Backtest Results<br>Sample YAML<br>TradingView Setup Guide<br>Pine Source<br>Curated strategy set focused on volume, participation, and program opportunities. | README<br>Strategy Catalog<br>Backtest Results<br>Sample YAML<br>TradingView Setup Guide<br>Pine Source<br>Curated strategy set focused on net results. | Starter Buildbook<br>+ Volume Pack of the same date<br>+ Profit Pack of the same date<br>Separate Launch Price total: US$313 |
 | Launch Price | US$35 | US$139 | US$139 | US$279 |
 | Regular Price | US$69 | US$209 | US$209 | US$419 |
