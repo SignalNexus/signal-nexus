@@ -120,7 +120,7 @@ They are designed to fill specific gaps within it.
 
 Start with the public repositories first.
 
-[GitHub Repository](https://github.com/SignalNexus/signal-nexus)
+<a href="https://github.com/SignalNexus/signal-nexus" target="_blank" rel="noopener noreferrer">GitHub Repository</a>
 
 ## Who It's For
 
@@ -220,7 +220,7 @@ Signal Nexus relies on TradingView alerts.
 
 Available features and alert limits depend on your TradingView plan.
 
-Refer to the [TradingView website](https://jp.tradingview.com/pricing/?share_your_love=Lodriguess) for current plan details.
+Refer to the <a href="https://www.tradingview.com/pricing/?share_your_love=Lodriguess" target="_blank" rel="noopener noreferrer">TradingView website</a> for current plan details.
 
 ### Infrastructure
 
