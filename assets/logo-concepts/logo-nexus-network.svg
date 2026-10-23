@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img">
+  <title>Nexus Network</title>
+  <defs>
+    <linearGradient id="sol" x1="0" y1="1" x2="1" y2="0">
+      <stop offset="0%" stop-color="#00FFA3"/>
+      <stop offset="50%" stop-color="#03E1FF"/>
+      <stop offset="100%" stop-color="#DC1FFF"/>
+    </linearGradient>
+  </defs>
+  <rect width="128" height="128" rx="28" fill="#050816"/>
+  <g stroke="url(#sol)" stroke-width="3" stroke-linecap="round">
+    <line x1="64" y1="64" x2="64" y2="28"/>
+    <line x1="64" y1="64" x2="96" y2="46"/>
+    <line x1="64" y1="64" x2="96" y2="86"/>
+    <line x1="64" y1="64" x2="64" y2="102"/>
+    <line x1="64" y1="64" x2="32" y2="86"/>
+    <line x1="64" y1="64" x2="32" y2="46"/>
+  </g>
+  <circle cx="64" cy="64" r="11" fill="#FFFFFF"/>
+  <circle cx="64" cy="26" r="6" fill="#00FFA3"/>
+  <circle cx="98" cy="44" r="6" fill="#03E1FF"/>
+  <circle cx="98" cy="88" r="6" fill="#DC1FFF"/>
+  <circle cx="64" cy="104" r="6" fill="#00FFA3"/>
+  <circle cx="30" cy="88" r="6" fill="#03E1FF"/>
+  <circle cx="30" cy="44" r="6" fill="#DC1FFF"/>
+</svg>

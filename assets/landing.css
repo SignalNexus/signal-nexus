@@ -205,6 +205,24 @@ body .markdown-body,
   border-top: 1px solid var(--sn-line);
 }
 
+.sn-callout {
+  background: #0b1120;
+  border: 1px solid #1e293b;
+  border-radius: 18px;
+  padding: 28px 28px 8px;
+  margin: 12px 0 36px;
+}
+
+.sn-callout-free {
+  border-color: #00ffa3;
+  box-shadow: inset 4px 0 0 #00ffa3;
+}
+
+.sn-callout p,
+.sn-callout li {
+  color: #ffffff !important;
+}
+
 .footer,
 .border-gray-light,
 .text-gray {

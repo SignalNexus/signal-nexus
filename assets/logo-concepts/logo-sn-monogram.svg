@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img">
+  <title>SN Monogram</title>
+  <defs>
+    <linearGradient id="sol" x1="0" y1="1" x2="1" y2="0">
+      <stop offset="0%" stop-color="#00FFA3"/>
+      <stop offset="50%" stop-color="#03E1FF"/>
+      <stop offset="100%" stop-color="#DC1FFF"/>
+    </linearGradient>
+  </defs>
+  <rect width="128" height="128" rx="28" fill="#050816"/>
+  <g fill="none" stroke="url(#sol)" stroke-width="8" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M62 38 H40 C28 38 28 62 42 62 H58 C72 62 72 88 56 88 H34"/>
+    <path d="M78 40 V88 M78 40 L104 88 M104 40 V88"/>
+  </g>
+</svg>
