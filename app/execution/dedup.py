@@ -3,6 +3,8 @@ from datetime import datetime, timedelta, timezone
 from threading import Lock
 
 _TTL = timedelta(minutes=10)
+# 受信だけが残ったまま処理中が続いたときは、同じアラートを再実行できる。
+_STALE_OPEN = timedelta(seconds=60)
 _lock = Lock()
 
 
@@ -23,7 +25,15 @@ def claim(client_order_id: str, venues: list[str], *, now: datetime | None = Non
         if state is None:
             _seen[client_order_id] = _Signal(current, {venue: "open" for venue in venues})
             return list(venues)
-        return [venue for venue in venues if state.venues.get(venue) == "retry"]
+        runnable = []
+        for venue in venues:
+            status = state.venues.get(venue)
+            abandoned = status == "open" and current - state.seen_at >= _STALE_OPEN
+            if status in ("retry",) or status is None or abandoned:
+                state.venues[venue] = "open"
+                state.seen_at = current
+                runnable.append(venue)
+        return runnable
 
 
 def settle(client_order_id: str, venue: str, *, retry: bool) -> None:

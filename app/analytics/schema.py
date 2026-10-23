@@ -1,9 +1,9 @@
 from datetime import datetime
 from decimal import Decimal
 
-# 画面の種類は受信、拒否、見送り、成功、失敗、再送の破棄。
+# 画面の種類は受信、拒否、見送り、成功、失敗、再送の破棄、受け付け。
 # 保存する kind は発注側が既に送っている監査名。見送りは 2 種類ある。
-# order_planned は発注直前の監査で、6 種類の画面には出さない。
+# order_planned は発注直前の監査で、画面の定番の種類には出さない。
 AUDIT_KIND_LABELS = {
     "signal_received": "受信",
     "validation_rejected": "拒否",
@@ -12,6 +12,7 @@ AUDIT_KIND_LABELS = {
     "order_success": "成功",
     "order_failed": "失敗",
     "duplicate_discarded": "再送の破棄",
+    "order_accepted": "受け付け",
 }
 AUDIT_KINDS = (*AUDIT_KIND_LABELS, "order_planned")
 
@@ -57,6 +58,12 @@ STATEMENTS = (
     """,
     """
     ALTER TABLE audits ADD COLUMN IF NOT EXISTS venue text NOT NULL DEFAULT ''
+    """,
+    """
+    ALTER TABLE audits DROP CONSTRAINT IF EXISTS audits_kind_check
+    """,
+    f"""
+    ALTER TABLE audits ADD CONSTRAINT audits_kind_check CHECK (kind IN ({_KIND_LIST}))
     """,
     """
     CREATE TABLE IF NOT EXISTS order_links (

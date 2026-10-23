@@ -12,6 +12,7 @@ AUDIT_LABELS = {
     "validation_rejected": "REJECTED",
     "order_failed": "FAILED",
     "duplicate_discarded": "DROPPED",
+    "order_accepted": "ACCEPTED",
 }
 
 

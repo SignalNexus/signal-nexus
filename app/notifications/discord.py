@@ -438,6 +438,32 @@ def _pnl_line(value: Decimal, symbol: str) -> str:
     return f"\n\nRealized PnL:\n{text} {quote}"
 
 
+def order_accepted(
+    strategy: str, symbol: str, action: str, *, venue: str | None = None
+) -> AuditMessage:
+    return AuditMessage(
+        (
+            f"{_title('ORDER ACCEPTED')}\n"
+            "Environment:\n"
+            f"{execution_mode()}\n"
+            "\n"
+            f"{_venue_lines(venue)}"
+            "Strategy:\n"
+            f"{strategy}\n"
+            "\n"
+            "Symbol:\n"
+            f"{symbol}\n"
+            "\n"
+            "Action:\n"
+            f"{action}"
+        ),
+        kind="order_accepted",
+        strategy=strategy,
+        symbol=symbol,
+        venue=venue or "",
+    )
+
+
 def order_failed(strategy: str, reason: str, *, venue: str | None = None) -> AuditMessage:
     return AuditMessage(
         (

@@ -24,6 +24,7 @@ from app.execution.router import (
 from app.notifications.discord import (
     AuditMessage,
     duplicate_discarded,
+    order_accepted,
     order_failed,
     order_not_sent,
     order_planned,
@@ -240,8 +241,23 @@ def _run_deployment(
         _notify(tasks, order_failed(payload.strategy_id, public_order_error(exc), venue=venue))
         return {"venue": deployment.venue, "status": "order_failed"}
     if result.follow_up is not None:
-        settle(payload.client_order_id, deployment.venue, retry=False)
-        _start_follow_up(result.follow_up)
+        _notify(
+            None,
+            order_accepted(payload.strategy_id, payload.symbol, payload.action, venue=venue),
+        )
+        follow_up = result.follow_up
+        client_order_id = payload.client_order_id
+        strategy_id = payload.strategy_id
+
+        def watched() -> None:
+            try:
+                follow_up()
+            except Exception as exc:
+                send_audit(order_failed(strategy_id, public_order_error(exc), venue=venue))
+            finally:
+                settle(client_order_id, venue, retry=False)
+
+        _start_follow_up(watched)
         return {"venue": deployment.venue, "status": "accepted"}
     if result.resend_skipped:
         settle(payload.client_order_id, deployment.venue, retry=True)
@@ -289,15 +305,6 @@ def _run_deployment(
         ),
     )
     return {"venue": deployment.venue, "status": result.status}
-
-
-def _run_live(
-    payload: WebhookPayload,
-    strategy: Strategy,
-    chosen: list[Deployment],
-) -> None:
-    for deployment in chosen:
-        _run_deployment(None, payload, strategy, deployment)
 
 
 def _accepted(targets: tuple[Deployment, ...], chosen: list[Deployment]) -> dict[str, object]:
@@ -352,12 +359,12 @@ async def receive_webhook(request: Request, tasks: BackgroundTasks) -> dict[str,
             ),
         )
         return {"status": "duplicate"}
-    if execution_mode() != "live" or kill_switch_enabled():
-        rows = [
-            _run_deployment(tasks, payload, strategy, deployment) for deployment in chosen
-        ]
-        if len(targets) == 1:
-            return {"status": rows[0]["status"]}
-        return {"status": _overall(rows), "venues": rows}
-    tasks.add_task(_run_live, payload, strategy, chosen)
-    return _accepted(targets, chosen)
+    # 結果の監査が残るまで受付完了を返さない。止まっても受信だけが残らない。
+    rows = [_run_deployment(None, payload, strategy, deployment) for deployment in chosen]
+    if len(targets) == 1:
+        if execution_mode() == "live" and not kill_switch_enabled():
+            return {"status": "accepted"}
+        return {"status": rows[0]["status"]}
+    if execution_mode() == "live" and not kill_switch_enabled():
+        return _accepted(targets, chosen)
+    return {"status": _overall(rows), "venues": rows}
