@@ -27,8 +27,10 @@
     <path d="M470 176 V214" stroke="url(#sol)" stroke-width="1.6"/>
     <path d="M465 206 L470 216 L475 206 Z" fill="url(#sol)"/>
     <text x="354" y="252" fill="#8B98A8" font-size="12" letter-spacing="1.4">PRODUCT</text>
-    <text x="354" y="286" fill="url(#sol)" font-size="22" font-weight="700">Profit Pack,</text>
-    <text x="354" y="318" fill="url(#sol)" font-size="22" font-weight="700">Volume Pack, or both</text>
+    <text x="354" y="286" fill="#03E1FF" font-size="22" font-weight="700">Volume Pack</text>
+    <text x="354" y="314" fill="#8B98A8" font-size="14">or</text>
+    <text x="354" y="342" fill="#DC1FFF" font-size="22" font-weight="700">Profit Pack</text>
+    <text x="354" y="370" fill="#8B98A8" font-size="14">or both</text>
 
     <rect x="644" y="24" width="292" height="372" rx="14" fill="#0B1120"/>
     <text x="664" y="58" fill="#8B98A8" font-size="12" letter-spacing="1.4">PROBLEM</text>
