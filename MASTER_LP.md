@@ -124,7 +124,15 @@ Start with the public repositories first.
 
 ## Who It's For
 
-People who already run, or are trying to run, TradingView alerts on their own infrastructure. The next sections say which product fits.
+Signal Nexus is designed for:
+
+- Self-directed traders
+- Systematic traders
+- TradingView users operating across multiple venues
+- Builders of self-hosted trading infrastructure
+- Traders who want to move from manual operations to repeatable workflows
+
+The next sections say which product fits.
 
 ## Product Family Overview
 
@@ -208,7 +216,7 @@ To operate Signal Nexus, you will need:
 
 Signal Nexus relies on TradingView alerts.
 
-A TradingView subscription is required for practical use.
+**A TradingView subscription is required for practical use.**
 
 Available features and alert limits depend on your TradingView plan.
 

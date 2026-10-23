@@ -21,7 +21,8 @@
       <rect x="612" y="28" width="560" height="370" rx="18" fill="#0B1120" stroke="#1E293B" stroke-width="1.5"/>
       <rect x="612" y="28" width="560" height="6" fill="url(#sol)"/>
       <text x="640" y="110" fill="#03E1FF" font-size="18" font-weight="700" letter-spacing="3">VOLUME PACK</text>
-      <text x="640" y="168" fill="#FFFFFF" font-size="34" font-weight="700">Volume &amp; Participation</text>
+      <text x="640" y="168" fill="#FFFFFF" font-size="32" font-weight="700">Volume &amp; Participation</text>
+      <text x="640" y="210" fill="#FFFFFF" font-size="32" font-weight="700">Strategies</text>
       <text x="640" y="280" fill="#03E1FF" font-size="28" font-weight="700">Launch US$139</text>
       <text x="640" y="328" fill="#C5D0DC" font-size="22">Regular US$209</text>
     </g>
@@ -29,7 +30,8 @@
       <rect x="28" y="422" width="560" height="370" rx="18" fill="#0B1120" stroke="#1E293B" stroke-width="1.5"/>
       <rect x="28" y="422" width="560" height="6" fill="url(#sol)"/>
       <text x="56" y="504" fill="#DC1FFF" font-size="18" font-weight="700" letter-spacing="3">PROFIT PACK</text>
-      <text x="56" y="562" fill="#FFFFFF" font-size="34" font-weight="700">Net Result</text>
+      <text x="56" y="562" fill="#FFFFFF" font-size="32" font-weight="700">Net Result</text>
+      <text x="56" y="604" fill="#FFFFFF" font-size="32" font-weight="700">Strategies</text>
       <text x="56" y="674" fill="#DC1FFF" font-size="28" font-weight="700">Launch US$139</text>
       <text x="56" y="722" fill="#C5D0DC" font-size="22">Regular US$209</text>
     </g>
