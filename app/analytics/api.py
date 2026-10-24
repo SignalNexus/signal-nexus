@@ -666,6 +666,7 @@ def _ensure_board() -> dict:
 def _clear_board_cache() -> None:
     global _board_snapshot, _warm_stamp
     _warm_stamp = None
+    _clear_mark_cache()
     with _board_lock:
         _board_snapshot = None
     try:
@@ -779,12 +780,35 @@ def _load_summary_sources() -> tuple[list[FillView], list | None, datetime | Non
     return fills, audits, succeeded_at
 
 
+_mark_lock = Lock()
+_last_marks: dict[tuple[str, str], Decimal] = {}
+
+
+def _clear_mark_cache() -> None:
+    with _mark_lock:
+        _last_marks.clear()
+
+
+def _keep_marks(wanted: set[tuple[str, str]], fresh: dict[tuple[str, str], Decimal]) -> dict:
+    with _mark_lock:
+        kept: dict[tuple[str, str], Decimal] = {}
+        for pair in wanted:
+            if pair in fresh:
+                _last_marks[pair] = fresh[pair]
+                kept[pair] = fresh[pair]
+            elif pair in _last_marks:
+                kept[pair] = _last_marks[pair]
+        for pair in [key for key in _last_marks if key not in wanted]:
+            del _last_marks[pair]
+        return kept
+
+
 def _mark_prices(opens) -> dict:
     # ccxt の銘柄一覧は現物と先物を毎回まとめて取る。建玉の数だけ足すとタブが10秒になる。
     if not opens:
-        return {}
+        return _keep_marks(set(), {})
     wanted = {(position.symbol, position.venue) for position in opens}
-    prices: dict = {}
+    fresh: dict[tuple[str, str], Decimal] = {}
 
     def read(pair: tuple[str, str]) -> tuple[tuple[str, str], Decimal | None]:
         symbol, venue = pair
@@ -817,8 +841,8 @@ def _mark_prices(opens) -> dict:
     with ThreadPoolExecutor(max_workers=8) as pool:
         for pair, last in pool.map(read, wanted):
             if last is not None:
-                prices[pair] = last
-    return prices
+                fresh[pair] = last
+    return _keep_marks(wanted, fresh)
 
 
 def _public_last(body, venue: str) -> Decimal | None:
