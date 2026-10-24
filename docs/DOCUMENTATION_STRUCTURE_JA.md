@@ -19,7 +19,7 @@
 | Screen Relationship Diagram | Public | 画面遷移の正本 | 画面のツリーと、画面から画面への移動 | 項目の一覧、構築手順 |
 | Product Specification | Public | 製品定義の正本 | 利用者が得るもの、対応する取引所、製品名 | 導入手順、画面の表示名の定義、価格、どの販売ページを開くか |
 | Product Catalog | Public | 比較の正本 | 商品の比較、どの課題にどの商品が対応するか | 価格、Checkout、GitHub Pages の Home、製品の定義 |
-| MASTER_LP | Public | 日本以外の読者向け GitHub Pages の Home | Signal Nexus がなぜ存在するか、三つの課題、一つの運用、比較の節 | Checkout、Buildbook の手順、デプロイ命令 |
+| index.md | Public | GitHub Pages の Home | Signal Nexus がなぜ存在するか、三つの課題、一つの運用、比較の節 | Checkout、Buildbook の手順、デプロイ命令 |
 | README | Public | ソースを動かす人向けのリポジトリ文書 | Signal Nexus が何か、実行モード、設定、Webhook と戦略の要約、Build と Start、三つの確認 | 販売ページ、商品目録、Checkout |
 | LICENSE | Public | Community Edition のライセンス | 許可、禁止、ブランド、留保された商用の権利 | 取引リスクの叙述、脆弱性の報告手順 |
 | DISCLAIMER | Public | Community Edition を提供する条件 | 助言との境界、資産運用をしないこと、利益を保証しないこと、保証、責任、第三者 | 著作権の許諾 |

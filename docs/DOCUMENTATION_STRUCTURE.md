@@ -19,7 +19,7 @@ English is the canonical text. The Japanese edition is [DOCUMENTATION_STRUCTURE_
 | Screen Relationship Diagram | Public | Canonical screen navigation | The view tree and the jumps between views | Field lists, build steps |
 | Product Specification | Public | Canonical product definition | What the operator gets, venues, lineup names | Install steps, screen label definitions, prices, which sales page to open |
 | Product Catalog | Public | Comparison source | Lineup comparison, which problem each product answers | Prices, checkout, the GitHub Pages home, the product definition |
-| MASTER_LP | Public | GitHub Pages home for readers outside Japan | Why Signal Nexus exists, the three problems, one workflow, the comparison section | Checkout, Buildbook steps, deployment commands |
+| index.md | Public | GitHub Pages home | Why Signal Nexus exists, the three problems, one workflow, the comparison section | Checkout, Buildbook steps, deployment commands |
 | README | Public | Repository documentation for people who run the source | What Signal Nexus is, runtime modes, configuration, the webhook and strategy summary, build and start commands, the three validation checks | A sales page, a product catalog, checkout |
 | LICENSE | Public | Community Edition license | Permissions, prohibitions, brand, reserved commercial rights | Trading-risk narrative, vulnerability-reporting steps |
 | DISCLAIMER | Public | Offer terms for the Community Edition | Advice boundary, no asset management, no profit guarantee, warranty, liability, third parties | The copyright grant |
