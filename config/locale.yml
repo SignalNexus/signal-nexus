@@ -1,0 +1,5 @@
+# language is japanese or english. When language is absent, the portal is English.
+# timezone is an IANA time zone, for example Asia/Tokyo, America/New_York, or Europe/London.
+# When timezone is absent or unknown, the portal uses Asia/Tokyo.
+language: english
+timezone: Asia/Tokyo
