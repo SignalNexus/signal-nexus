@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 820" role="img">
+  <title>Starter, launch US$35, regular US$69. Volume Pack, launch US$139, regular US$209. Profit Pack, launch US$139, regular US$209. Complete, launch US$279, regular US$419.</title>
+  <defs>
+    <linearGradient id="sol" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#00FFA3"/>
+      <stop offset="50%" stop-color="#03E1FF"/>
+      <stop offset="100%" stop-color="#DC1FFF"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="820" rx="28" fill="#050816"/>
+  <g font-family="Segoe UI, Helvetica, Arial, sans-serif">
+    <g>
+      <rect x="28" y="28" width="560" height="370" rx="18" fill="#0B1120" stroke="#1E293B" stroke-width="1.5"/>
+      <rect x="28" y="28" width="560" height="6" fill="url(#sol)"/>
+      <text x="56" y="110" fill="#00FFA3" font-size="18" font-weight="700" letter-spacing="3">STARTER</text>
+      <text x="56" y="168" fill="#FFFFFF" font-size="34" font-weight="700">Build Infrastructure</text>
+      <text x="56" y="280" fill="#00FFA3" font-size="28" font-weight="700">Launch US$35</text>
+      <text x="56" y="328" fill="#C5D0DC" font-size="22">Regular US$69</text>
+    </g>
+    <g>
+      <rect x="612" y="28" width="560" height="370" rx="18" fill="#0B1120" stroke="#1E293B" stroke-width="1.5"/>
+      <rect x="612" y="28" width="560" height="6" fill="url(#sol)"/>
+      <text x="640" y="110" fill="#03E1FF" font-size="18" font-weight="700" letter-spacing="3">VOLUME PACK</text>
+      <text x="640" y="168" fill="#FFFFFF" font-size="34" font-weight="700">
+        <tspan x="640" dy="0">Strategies Focused on</tspan>
+        <tspan x="640" dy="46">Volume &amp; Participation</tspan>
+      </text>
+      <text x="640" y="280" fill="#03E1FF" font-size="28" font-weight="700">Launch US$139</text>
+      <text x="640" y="328" fill="#C5D0DC" font-size="22">Regular US$209</text>
+    </g>
+    <g>
+      <rect x="28" y="422" width="560" height="370" rx="18" fill="#0B1120" stroke="#1E293B" stroke-width="1.5"/>
+      <rect x="28" y="422" width="560" height="6" fill="url(#sol)"/>
+      <text x="56" y="504" fill="#DC1FFF" font-size="18" font-weight="700" letter-spacing="3">PROFIT PACK</text>
+      <text x="56" y="562" fill="#FFFFFF" font-size="34" font-weight="700">
+        <tspan x="56" dy="0">Strategies Focused on</tspan>
+        <tspan x="56" dy="46">Net Result</tspan>
+      </text>
+      <text x="56" y="674" fill="#DC1FFF" font-size="28" font-weight="700">Launch US$139</text>
+      <text x="56" y="722" fill="#C5D0DC" font-size="22">Regular US$209</text>
+    </g>
+    <g>
+      <rect x="612" y="422" width="560" height="370" rx="18" fill="#0B1120" stroke="url(#sol)" stroke-width="1.8"/>
+      <rect x="612" y="422" width="560" height="6" fill="url(#sol)"/>
+      <text x="640" y="504" fill="#00FFA3" font-size="18" font-weight="700" letter-spacing="3">COMPLETE</text>
+      <text x="640" y="562" fill="#FFFFFF" font-size="34" font-weight="700">Starter + Both Packs</text>
+      <text x="640" y="674" fill="#00FFA3" font-size="28" font-weight="700">Launch US$279</text>
+      <text x="640" y="722" fill="#C5D0DC" font-size="22">Regular US$419</text>
+    </g>
+  </g>
+</svg>

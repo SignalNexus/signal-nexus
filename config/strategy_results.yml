@@ -1,0 +1,8 @@
+strategies: {}
+# strategies:
+#   btc_long_example:
+#     trades: 10
+#     wins: 6
+#     pnl_usdt: "1.00"
+#     start_date: "2024-01-01"
+#     end_date: "2024-06-01"

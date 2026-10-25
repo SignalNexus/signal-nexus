@@ -1,0 +1,210 @@
+:root {
+  color-scheme: dark;
+  --sn-bg: #050816;
+  --sn-card: #0b1120;
+  --sn-text: #ffffff;
+  --sn-muted: #c5d0dc;
+  --sn-primary: #00ffa3;
+  --sn-secondary: #03e1ff;
+  --sn-accent: #dc1fff;
+  --sn-line: #1e293b;
+}
+
+html,
+body {
+  background: var(--sn-bg) !important;
+  color: var(--sn-text) !important;
+}
+
+body .markdown-body,
+.container-lg.markdown-body {
+  background: var(--sn-bg) !important;
+  color: var(--sn-text) !important;
+  max-width: 1120px !important;
+  font-family: "Segoe UI", Helvetica, Arial, sans-serif;
+  font-size: 17px;
+  line-height: 1.7;
+  padding-top: 28px !important;
+  padding-bottom: 64px !important;
+}
+
+.markdown-body > h1:first-of-type,
+.markdown-body > h1#signal-nexus {
+  display: none !important;
+}
+
+.markdown-body h2 {
+  color: var(--sn-text) !important;
+  font-size: 1.85rem !important;
+  font-weight: 700 !important;
+  line-height: 1.25;
+  letter-spacing: -0.02em;
+  border-left: 4px solid var(--sn-primary);
+  padding-left: 14px;
+  margin-top: 2.6rem !important;
+}
+
+.markdown-body h3 {
+  color: var(--sn-text) !important;
+  font-size: 1.35rem !important;
+  margin-top: 1.8rem !important;
+}
+
+.markdown-body p,
+.markdown-body li {
+  color: var(--sn-text) !important;
+}
+
+.markdown-body a {
+  color: var(--sn-secondary) !important;
+  text-decoration-thickness: 1px;
+}
+
+.markdown-body a:hover {
+  color: var(--sn-primary) !important;
+}
+
+.markdown-body strong {
+  color: var(--sn-text) !important;
+}
+
+.markdown-body img {
+  max-width: 100%;
+  height: auto;
+  border: 0;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.sn-values {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+  margin: 8px 0 28px;
+}
+
+.sn-values section {
+  background: #0b1120;
+  border: 1px solid #1e293b;
+  border-top: 4px solid #00ffa3;
+  border-radius: 18px;
+  padding: 22px 18px 18px;
+}
+
+.sn-values section:nth-child(2) {
+  border-top-color: #03e1ff;
+}
+
+.sn-values section:nth-child(3) {
+  border-top-color: #dc1fff;
+}
+
+.sn-values section:nth-child(4) {
+  border-top-color: #00ffa3;
+}
+
+.sn-values .sn-kicker {
+  margin: 0 0 12px;
+  color: #00ffa3 !important;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.sn-values section:nth-child(2) .sn-kicker {
+  color: #03e1ff !important;
+}
+
+.sn-values section:nth-child(3) .sn-kicker {
+  color: #dc1fff !important;
+}
+
+.sn-values section:nth-child(4) .sn-kicker {
+  color: #00ffa3 !important;
+}
+
+.sn-values section p:last-child {
+  margin: 0;
+  color: #ffffff !important;
+  font-size: 16px;
+  line-height: 1.45;
+}
+
+@media (max-width: 900px) {
+  .sn-values {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.markdown-body img[alt*="Own your execution"] {
+  width: 100% !important;
+  margin: 0 0 28px;
+  filter: drop-shadow(0 0 28px rgba(0, 255, 163, 0.16));
+}
+
+.markdown-body table {
+  display: block;
+  width: 100%;
+  overflow-x: auto;
+  border-collapse: separate !important;
+  border-spacing: 0;
+  margin: 1.4rem 0 1.8rem !important;
+  background: var(--sn-card) !important;
+  border: 1px solid var(--sn-line) !important;
+  border-radius: 16px;
+  color: var(--sn-text) !important;
+}
+
+.markdown-body table tr,
+.markdown-body table tr:nth-child(2n) {
+  background: var(--sn-card) !important;
+  background-color: var(--sn-card) !important;
+}
+
+.markdown-body table th,
+.markdown-body table td {
+  padding: 14px 16px !important;
+  border: 0 !important;
+  border-bottom: 1px solid var(--sn-line) !important;
+  color: var(--sn-text) !important;
+  background: var(--sn-card) !important;
+  background-color: var(--sn-card) !important;
+  vertical-align: top;
+  line-height: 1.5;
+  min-width: 148px;
+  font-size: 15px;
+}
+
+.markdown-body table tr:last-child td,
+.markdown-body table tr:last-child th {
+  border-bottom: 0 !important;
+}
+
+.markdown-body table thead th {
+  color: var(--sn-primary) !important;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  background: #10192c !important;
+  position: sticky;
+  top: 0;
+}
+
+.markdown-body table tbody td:first-child,
+.markdown-body table tbody th:first-child {
+  color: var(--sn-secondary) !important;
+  font-weight: 700;
+  white-space: nowrap;
+  background: #10192c !important;
+  position: sticky;
+  left: 0;
+}
+
+.markdown-body hr {
+  border: 0;
+  border-top: 1px solid var(--sn-line);
+}
+
+.footer {
+  display: none !important;
+}

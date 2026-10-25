@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 760" role="img">
+  <title>Research, Strategy, Build, Execute, Analyze, and Improve form one loop.</title>
+  <defs>
+    <linearGradient id="sol" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#00FFA3"/>
+      <stop offset="50%" stop-color="#03E1FF"/>
+      <stop offset="100%" stop-color="#DC1FFF"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="760" rx="28" fill="#050816"/>
+  <circle cx="600" cy="370" r="228" fill="none" stroke="url(#sol)" stroke-width="3"/>
+  <g font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="20" font-weight="700" fill="#FFFFFF" text-anchor="middle">
+    <rect x="522" y="106" width="156" height="72" rx="16" fill="#0B1120" stroke="#00FFA3" stroke-width="1.6"/>
+    <text x="600" y="150">Research</text>
+    <rect x="719" y="220" width="156" height="72" rx="16" fill="#0B1120" stroke="#03E1FF" stroke-width="1.6"/>
+    <text x="797" y="264">Strategy</text>
+    <rect x="719" y="448" width="156" height="72" rx="16" fill="#0B1120" stroke="#DC1FFF" stroke-width="1.6"/>
+    <text x="797" y="492">Build</text>
+    <rect x="522" y="562" width="156" height="72" rx="16" fill="#0B1120" stroke="#00FFA3" stroke-width="1.6"/>
+    <text x="600" y="606">Execute</text>
+    <rect x="325" y="448" width="156" height="72" rx="16" fill="#0B1120" stroke="#03E1FF" stroke-width="1.6"/>
+    <text x="403" y="492">Analyze</text>
+    <rect x="325" y="220" width="156" height="72" rx="16" fill="#0B1120" stroke="#DC1FFF" stroke-width="1.6"/>
+    <text x="403" y="264">Improve</text>
+  </g>
+  <text x="600" y="356" fill="#00FFA3" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="18" font-weight="700" letter-spacing="4" text-anchor="middle">ONE LOOP</text>
+  <text x="600" y="392" fill="#FFFFFF" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="16" text-anchor="middle">Research to Improve</text>
+</svg>

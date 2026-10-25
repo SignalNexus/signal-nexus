@@ -1,0 +1,173 @@
+# main への push で、Analytics の取り込みと API を Oracle VM に載せる。
+# MEXC と Arcus の発注も、この API から東京へ出す。
+# 下の paths-ignore だけの push では走らない。workflow_dispatch は残る。
+
+name: analytics-vm
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - "docs/**"
+      - "config/strategy_results.yml"
+      - "pine/**"
+      - "research/**"
+      - "tests/**"
+      - ".github/**"
+      - "README.md"
+      - "README_JA.md"
+      - ".gitignore"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: analytics-vm
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: github.repository == 'SoriRodriguez/signal-nexus-dev'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      ANALYTICS_SSH_HOST: ${{ secrets.ANALYTICS_SSH_HOST }}
+      ANALYTICS_SSH_HOST_FINGERPRINT: ${{ secrets.ANALYTICS_SSH_HOST_FINGERPRINT }}
+      RENDER_HEALTH_URL: ${{ secrets.RENDER_HEALTH_URL }}
+      CADDY_SITE_ADDRESS: ${{ secrets.CADDY_SITE_ADDRESS }}
+    steps:
+      - name: Require the operator endpoints
+        run: |
+          missing=0
+          for name in ANALYTICS_SSH_HOST ANALYTICS_SSH_HOST_FINGERPRINT RENDER_HEALTH_URL CADDY_SITE_ADDRESS; do
+            if [[ -z "${!name}" ]]; then
+              echo "$name is unset" >&2
+              missing=1
+            fi
+          done
+          test "$missing" = 0
+
+      - uses: actions/checkout@v4
+
+      - name: Confirm Render health
+        run: |
+          ready=0
+          for _ in $(seq 1 12); do
+            if curl -fsS "$RENDER_HEALTH_URL" | grep -q '"status":"ok"'; then
+              ready=1
+              break
+            fi
+            sleep 15
+          done
+          test "$ready" = 1
+
+      - name: Confirm the VM host key
+        run: |
+          mkdir -p "$RUNNER_TEMP/ssh"
+          ssh-keyscan -T 10 -t ed25519 "$ANALYTICS_SSH_HOST" | awk '$1 !~ /^#/' > "$RUNNER_TEMP/ssh/known_hosts"
+          if ! ssh-keygen -lf "$RUNNER_TEMP/ssh/known_hosts" | awk '{print $2}' | grep -qx "$ANALYTICS_SSH_HOST_FINGERPRINT"; then
+            echo "ssh host fingerprint mismatch" >&2
+            ssh-keygen -lf "$RUNNER_TEMP/ssh/known_hosts" >&2 || true
+            exit 1
+          fi
+
+      - name: Write the VM env file
+        env:
+          ANALYTICS_API_SECRET: ${{ secrets.ANALYTICS_API_SECRET }}
+          ANALYTICS_DB_PASSWORD: ${{ secrets.ANALYTICS_DB_PASSWORD }}
+          ANALYTICS_MEXC_API_KEY: ${{ secrets.ANALYTICS_MEXC_API_KEY }}
+          ANALYTICS_MEXC_API_SECRET: ${{ secrets.ANALYTICS_MEXC_API_SECRET }}
+          ANALYTICS_MEXC_FUTURES_API_KEY: ${{ secrets.ANALYTICS_MEXC_FUTURES_API_KEY }}
+          ANALYTICS_MEXC_FUTURES_API_SECRET: ${{ secrets.ANALYTICS_MEXC_FUTURES_API_SECRET }}
+          ANALYTICS_ARCUS_ADDRESS: ${{ secrets.ANALYTICS_ARCUS_ADDRESS }}
+          ARCUS_ADDRESS: ${{ secrets.ARCUS_ADDRESS }}
+          ARCUS_SIGNING_KEY: ${{ secrets.ARCUS_SIGNING_KEY }}
+          MEXC_API_KEY: ${{ secrets.MEXC_API_KEY }}
+          MEXC_API_SECRET: ${{ secrets.MEXC_API_SECRET }}
+          MEXC_FUTURES_API_KEY: ${{ secrets.MEXC_FUTURES_API_KEY }}
+          MEXC_FUTURES_API_SECRET: ${{ secrets.MEXC_FUTURES_API_SECRET }}
+        run: |
+          python3 -m deploy.write_env "$RUNNER_TEMP/analytics.env"
+          python3 -m deploy.write_arcus_env "$RUNNER_TEMP/arcus.env"
+          python3 -m deploy.write_mexc_env "$RUNNER_TEMP/mexc.env"
+          python3 - <<'PY'
+          import os
+          from pathlib import Path
+
+          path = Path(os.environ["RUNNER_TEMP"]) / "site.env"
+          lines = (
+              "RENDER_HEALTH_URL=" + os.environ["RENDER_HEALTH_URL"],
+              "CADDY_SITE_ADDRESS=" + os.environ["CADDY_SITE_ADDRESS"],
+          )
+          path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+          path.chmod(0o600)
+          PY
+
+      - name: Install the key
+        env:
+          ANALYTICS_SSH_PRIVATE_KEY: ${{ secrets.ANALYTICS_SSH_PRIVATE_KEY }}
+        run: |
+          install -m 700 -d "$RUNNER_TEMP/ssh"
+          printf '%s\n' "$ANALYTICS_SSH_PRIVATE_KEY" > "$RUNNER_TEMP/ssh/id"
+          chmod 600 "$RUNNER_TEMP/ssh/id"
+
+      - name: Copy the repository and env file
+        run: |
+          ssh_opts="-i $RUNNER_TEMP/ssh/id -o IdentitiesOnly=yes -o ServerAliveInterval=30 -o ServerAliveCountMax=20 -o UserKnownHostsFile=$RUNNER_TEMP/ssh/known_hosts"
+          ssh $ssh_opts "ubuntu@$ANALYTICS_SSH_HOST" "mkdir -p /home/ubuntu/signal-nexus"
+          rsync -az --delete \
+            --exclude .git \
+            --exclude .venv \
+            --exclude .env \
+            --exclude __pycache__ \
+            --exclude .pytest_cache \
+            --exclude research/data \
+            -e "ssh $ssh_opts" \
+            ./ "ubuntu@$ANALYTICS_SSH_HOST:/home/ubuntu/signal-nexus/"
+          scp $ssh_opts "$RUNNER_TEMP/analytics.env" "ubuntu@$ANALYTICS_SSH_HOST:/home/ubuntu/analytics.env"
+          if [[ -f "$RUNNER_TEMP/arcus.env" ]]; then
+            scp $ssh_opts "$RUNNER_TEMP/arcus.env" "ubuntu@$ANALYTICS_SSH_HOST:/home/ubuntu/arcus.env"
+          fi
+          if [[ -f "$RUNNER_TEMP/mexc.env" ]]; then
+            scp $ssh_opts "$RUNNER_TEMP/mexc.env" "ubuntu@$ANALYTICS_SSH_HOST:/home/ubuntu/mexc.env"
+          fi
+          scp $ssh_opts "$RUNNER_TEMP/site.env" "ubuntu@$ANALYTICS_SSH_HOST:/home/ubuntu/site.env"
+          ssh $ssh_opts "ubuntu@$ANALYTICS_SSH_HOST" "chmod 600 /home/ubuntu/analytics.env /home/ubuntu/site.env && if [[ -f /home/ubuntu/arcus.env ]]; then chmod 600 /home/ubuntu/arcus.env; fi && if [[ -f /home/ubuntu/mexc.env ]]; then chmod 600 /home/ubuntu/mexc.env; fi && echo preflight && systemctl is-active caddy || true && systemctl is-active signal-nexus-analytics-api || true && systemctl is-active signal-nexus-analytics-importer || true && ps -ef | grep -E 'apt-get|dpkg|analytics-vm.sh' | grep -v grep || true && if ! systemctl is-active --quiet caddy; then echo 'caddy is down; restarting the current unit'; sudo -n systemctl restart caddy || true; systemctl is-active caddy || true; sudo -n journalctl -u caddy -n 40 --no-pager || true; fi && bash /home/ubuntu/signal-nexus/deploy/analytics-vm.sh"
+
+      - name: Confirm the VM reads Arcus fills
+        run: |
+          ssh_opts="-i $RUNNER_TEMP/ssh/id -o IdentitiesOnly=yes -o ServerAliveInterval=30 -o ServerAliveCountMax=20 -o UserKnownHostsFile=$RUNNER_TEMP/ssh/known_hosts"
+          ssh $ssh_opts "ubuntu@$ANALYTICS_SSH_HOST" "cd /home/ubuntu/signal-nexus && python3 -m deploy.confirm_arcus_address /home/ubuntu/analytics.env"
+          ready=0
+          for _ in $(seq 1 24); do
+            if ssh $ssh_opts "ubuntu@$ANALYTICS_SSH_HOST" "sudo -n journalctl -u signal-nexus-analytics-importer --since '20 min ago' --no-pager -o cat" | grep -q 'arcus fills '; then
+              ready=1
+              break
+            fi
+            sleep 15
+          done
+          test "$ready" = 1
+          ssh $ssh_opts "ubuntu@$ANALYTICS_SSH_HOST" "sudo -n journalctl -u signal-nexus-analytics-importer --since '20 min ago' --no-pager -o cat | grep 'futures ' || true"
+
+      - name: Confirm Arcus leverage from the VM
+        run: |
+          ssh_opts="-i $RUNNER_TEMP/ssh/id -o IdentitiesOnly=yes -o ServerAliveInterval=30 -o ServerAliveCountMax=20 -o UserKnownHostsFile=$RUNNER_TEMP/ssh/known_hosts"
+          ssh $ssh_opts "ubuntu@$ANALYTICS_SSH_HOST" "cd /home/ubuntu/signal-nexus && python3 -m deploy.confirm_arcus_leverage /home/ubuntu/analytics.env /home/ubuntu/arcus.env"
+
+      - name: Confirm MEXC order keys on the VM
+        run: |
+          ssh_opts="-i $RUNNER_TEMP/ssh/id -o IdentitiesOnly=yes -o ServerAliveInterval=30 -o ServerAliveCountMax=20 -o UserKnownHostsFile=$RUNNER_TEMP/ssh/known_hosts"
+          ssh $ssh_opts "ubuntu@$ANALYTICS_SSH_HOST" "cd /home/ubuntu/signal-nexus && python3 -m deploy.confirm_mexc_env /home/ubuntu/mexc.env"
+
+      - name: Confirm Render health again
+        run: |
+          ready=0
+          for _ in $(seq 1 12); do
+            if curl -fsS "$RENDER_HEALTH_URL" | grep -q '"status":"ok"'; then
+              ready=1
+              break
+            fi
+            sleep 15
+          done
+          test "$ready" = 1
