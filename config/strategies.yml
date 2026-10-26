@@ -1,6 +1,8 @@
 # btc_long_example:
 #   symbol: BTC/USDT
 #   size_quote: 10
-#   side: long
-#   venue: mexc_spot
+#   side: long/short
+#   venue: mexc_spot/mexc-futures/arcus
+#   leverage: 1
+#   enabled: true
 {}
