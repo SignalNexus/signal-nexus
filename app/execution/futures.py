@@ -19,8 +19,6 @@ from app.execution.positions import (
 from app.execution.router import Strategy, load_strategies
 from app.notifications.analytics import report_order_link
 
-# S3 set every symbol in this book to 5x. Margin is notional / leverage.
-LEVERAGE = 5
 CONTRACT_SIZE = {
     "ETH/USDT:USDT": 0.01,
     "SOL/USDT:USDT": 0.1,
@@ -312,7 +310,7 @@ def _open(
     current = _lots.get(strategy.strategy_id, 0.0)
     if current > 0 and _orderable_contracts(exchange, symbol, current) > 0:
         return LiveResult("not_sent", False, "position already open")
-    margin = strategy.size_quote / LEVERAGE
+    margin = strategy.size_quote / _leverage(strategy)
     try:
         free = free_usdt(exchange)
     except Exception:
@@ -322,8 +320,10 @@ def _open(
     contracts = _contracts(exchange, symbol, strategy.size_quote)
     if contracts < 1:
         return LiveResult("not_sent", False, "quantity below minimum")
-    _arm(exchange, symbol, side)
-    status, filled, average = _market(exchange, symbol, side, contracts, exchange_id, reduce_only=False)
+    _arm(exchange, symbol, side, _leverage(strategy))
+    status, filled, average = _market(
+        exchange, symbol, side, contracts, exchange_id, reduce_only=False, leverage=_leverage(strategy)
+    )
     report_order_link(exchange_id, client_order_id)
     status, filled = _settle_fill(exchange, symbol, exchange_id, status, filled)
     if filled <= 0:
@@ -404,7 +404,13 @@ def _contract_size(exchange, symbol: str) -> float:
     return CONTRACT_SIZE.get(symbol, 0.0)
 
 
-def _arm(exchange, symbol: str, side: str) -> None:
+def _leverage(strategy: Strategy) -> int:
+    if strategy.leverage is None:
+        raise RuntimeError("leverage is required")
+    return strategy.leverage
+
+
+def _arm(exchange, symbol: str, side: str, leverage: int) -> None:
     # ccxt の MEXC は、証拠金モードと倍率を同じ changeLeverage に載せる。倍率がないと注文の前で止まる。
     short = side == "sell"
     _call(
@@ -412,12 +418,12 @@ def _arm(exchange, symbol: str, side: str) -> None:
         "set_margin_mode",
         "isolated",
         symbol,
-        {"leverage": LEVERAGE, "direction": "short" if short else "long"},
+        {"leverage": leverage, "direction": "short" if short else "long"},
     )
     _call(
         exchange,
         "set_leverage",
-        LEVERAGE,
+        leverage,
         symbol,
         {"openType": 1, "positionType": 2 if short else 1},
     )
@@ -461,14 +467,23 @@ def _recovered_fill(exchange, symbol: str, exchange_id: str) -> float:
     return seen
 
 
-def _market(exchange, symbol: str, side: str, contracts: float, exchange_id: str, *, reduce_only: bool):
+def _market(
+    exchange,
+    symbol: str,
+    side: str,
+    contracts: float,
+    exchange_id: str,
+    *,
+    reduce_only: bool,
+    leverage: int | None = None,
+):
     params = {
         "reduceOnly": reduce_only,
         "clientOrderId": exchange_id,
         "newClientOrderId": exchange_id,
     }
     if not reduce_only:
-        params["leverage"] = LEVERAGE
+        params["leverage"] = leverage
         params["openType"] = 1
     created = exchange.create_order(symbol, "market", side, contracts, None, params)
     order_id = created.get("id")

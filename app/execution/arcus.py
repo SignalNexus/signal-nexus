@@ -22,11 +22,6 @@ MARKETS = {
     "HYPE/USDT": (6, "HYPE-USD"),
     "BNB/USDT": (62, "BNB-USD"),
 }
-LEVERAGE = (
-    ("HYPE/USDT", 8),
-    ("ETH/USDT", 6),
-    ("BNB/USDT", 7),
-)
 SIDES = {"BUY": 0, "SELL": 1}
 TIF = {"GTT": 0, "FOK": 1, "IOC": 2, "ALO": 3}
 
@@ -125,11 +120,15 @@ def arcus_client() -> "ArcusClient":
 
 
 def apply_configured_leverage() -> None:
+    from app.execution.router import leverage_book
     from app.venues import enabled_venues
 
     if "arcus" not in enabled_venues():
         return
-    arcus_client().apply_leverage()
+    book = leverage_book("arcus")
+    if not book:
+        return
+    arcus_client().apply_leverage(book)
 
 
 def execute_arcus(strategy, action: str, client_order_id: str, client: "ArcusClient | None" = None) -> LiveResult:
@@ -236,10 +235,12 @@ class ArcusClient:
             follow()
         return prepared["holder"]["result"]
 
-    def apply_leverage(self) -> None:
-        for symbol, leverage in LEVERAGE:
+    def apply_leverage(self, book: dict[str, int]) -> None:
+        for symbol in sorted(book):
+            if symbol not in MARKETS:
+                raise ArcusError("market unavailable")
             market_id, _name = MARKETS[symbol]
-            self._set_leverage(market_id, leverage)
+            self._set_leverage(market_id, book[symbol])
 
     def prepare(self, action: str, symbol: str, quantity: Decimal, client_order_id: str, strategy_id: str) -> dict:
         if action not in _ACTIONS:

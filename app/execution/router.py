@@ -20,6 +20,7 @@ class Deployment:
     venue: str
     size_quote: float
     enabled: bool = True
+    leverage: int | None = None
 
 
 @dataclass(frozen=True)
@@ -30,16 +31,18 @@ class Strategy:
     venue: str = "mexc_spot"
     side: str = ""
     deployments: tuple[Deployment, ...] = ()
+    leverage: int | None = None
 
     def __post_init__(self) -> None:
         deployments = self.deployments
         if not deployments:
-            deployments = (Deployment(self.venue, float(self.size_quote), True),)
+            deployments = (Deployment(self.venue, float(self.size_quote), True, self.leverage),)
         object.__setattr__(self, "deployments", tuple(deployments))
         enabled = [item for item in self.deployments if item.enabled]
         primary = enabled[0] if enabled else self.deployments[0]
         object.__setattr__(self, "venue", primary.venue)
         object.__setattr__(self, "size_quote", float(primary.size_quote))
+        object.__setattr__(self, "leverage", primary.leverage)
         if self.side == "":
             object.__setattr__(self, "side", _default_side(self.deployments))
 
@@ -51,6 +54,7 @@ class Strategy:
             deployment.venue,
             self.side,
             (deployment,),
+            deployment.leverage,
         )
 
 
@@ -66,7 +70,18 @@ def load_strategies(path: Path | None = None) -> dict[str, Strategy]:
             raise RegistryRejection("strategy registry is invalid")
         strategies[strategy_id] = _strategy(strategy_id, raw)
     _reject_mixed_directions(strategies)
+    _reject_leverage(strategies)
     return strategies
+
+
+def leverage_book(venue: str) -> dict[str, int]:
+    book: dict[str, int] = {}
+    for strategy in load_strategies().values():
+        for deployment in strategy.deployments:
+            if deployment.venue != venue or not deployment.enabled or deployment.leverage is None:
+                continue
+            book[strategy.symbol] = deployment.leverage
+    return book
 
 
 def route(strategy_id: str, symbol: str) -> Strategy:
@@ -143,6 +158,12 @@ def _deployment(raw: object) -> Deployment:
     venue = raw.get("venue", "mexc_spot")
     size_quote = raw.get("size_quote")
     enabled = raw.get("enabled", True)
+    if "leverage" not in raw and isinstance(venue, str) and asset_class_of(venue) != "futures":
+        leverage = 1
+    elif "leverage" in raw:
+        leverage = _leverage_value(raw.get("leverage"))
+    else:
+        leverage = None
     if (
         not isinstance(venue, str)
         or venue not in enabled_venues()
@@ -152,7 +173,13 @@ def _deployment(raw: object) -> Deployment:
         or not isinstance(enabled, bool)
     ):
         raise RegistryRejection("strategy registry is invalid")
-    return Deployment(venue, float(size_quote), enabled)
+    return Deployment(venue, float(size_quote), enabled, leverage)
+
+
+def _leverage_value(value: object) -> int:
+    if isinstance(value, bool) or not isinstance(value, int) or value < 1:
+        raise RegistryRejection("leverage is invalid")
+    return value
 
 
 def _default_side(deployments: tuple[Deployment, ...]) -> str:
@@ -181,3 +208,20 @@ def _reject_mixed_directions(strategies: dict[str, Strategy]) -> None:
             if previous is not None and previous != strategy.side:
                 raise RegistryRejection(f"{strategy.symbol} on {deployment.venue} cannot mix long and short")
             sides[key] = strategy.side
+
+
+def _reject_leverage(strategies: dict[str, Strategy]) -> None:
+    found: dict[tuple[str, str], int] = {}
+    for strategy in strategies.values():
+        for deployment in strategy.deployments:
+            key = (deployment.venue, strategy.symbol)
+            if asset_class_of(deployment.venue) != "futures":
+                if deployment.leverage != 1:
+                    raise RegistryRejection(f"leverage for {strategy.symbol} on {deployment.venue} is 1")
+                continue
+            if deployment.leverage is None:
+                raise RegistryRejection(f"leverage is required for {strategy.symbol} on {deployment.venue}")
+            previous = found.get(key)
+            if previous is not None and previous != deployment.leverage:
+                raise RegistryRejection(f"{strategy.symbol} on {deployment.venue} has more than one leverage")
+            found[key] = deployment.leverage
