@@ -1,6 +1,6 @@
 # Signal Nexus Product Catalog
 
-This file is the comparison source. It is not a sales page, and it does not take payment. GitHub Pages does not use this file as its own step. The home page [index.md](../../index.md) carries this comparison as its last section. Read More on that page opens the Gumroad product page.
+This file is the comparison source. It is not a sales page, and it does not take payment. GitHub Pages does not use this file as its own step. The home page [index.md](../../index.md) carries this comparison as its last section. Read More on that page opens the product page. The product page states the price and opens Stripe Checkout.
 
 What each product is, is defined in [Product Specification](PRODUCT_SPECIFICATION.md). The Japanese edition of this page is [PRODUCT_CATALOG_JA.md](PRODUCT_CATALOG_JA.md).
 
@@ -30,7 +30,7 @@ Nothing on this page promises profit, points, an airdrop, or a trading result.
 | Problem | You have a TradingView strategy. Building the infrastructure is difficult | You can build the infrastructure. You do not have an effective strategy | You can build the infrastructure. You do not have an effective strategy | You have neither the infrastructure nor a strategy |
 | Purpose | Reach TradingView, execution, and analytics on infrastructure you run | Run one date's strategies, selected for trading volume, venue participation, and point-program opportunity | Run one date's strategies, selected for net result | Run both strategy sets of the same date, with the Buildbook |
 | Complexity | Run the public platform with the reference deployment playbook | Run that date's strategy set. No Buildbook | Run that date's strategy set. No Buildbook | Run both strategy sets of the same date, with the playbook |
-| Included assets | Buildbook | That date's strategy set. A later date is not included | That date's strategy set. A later date is not included | Buildbook, plus both strategy sets of the same date |
+| Included assets | Buildbook | That date's strategy set, including sizing-and-capital-planning, sample yml, and pine-runtime-spec. A later date is not included | That date's strategy set, including profit-analysis.md, sample yml, and pine-runtime-spec. A later date is not included | Buildbook, plus both strategy sets of the same date |
 | GitHub access | Read access to the Starter repository | Read access to that edition's repository | Read access to that edition's repository | Read access to the Starter repository and to both pack repositories of the same date. No Complete repository |
 | Buildbook scope | The reference deployment, from an empty start | Not included | Not included | Included, because Complete includes Starter. Same playbook |
 | Community access | Purchaser role on Discord | Purchaser role on Discord | Purchaser role on Discord | Purchaser role on Discord |
@@ -61,21 +61,14 @@ Complete is Starter together with the Volume Pack and the Profit Pack of the sam
 
 ## Purchase
 
-This page does not take payment. Open the sales page for your region. The sales page states the price, the purchase explanation, and checkout.
+This page does not take payment. The product page states the price, the purchase explanation, and Stripe Checkout. The payment is one-time.
 
-### Japanese Users
+- [Starter](../../starter/)
+- [Volume Pack](../../volume-pack/)
+- [Profit Pack](../../profit-pack/)
+- [Complete](../../complete/)
 
-Purchase via note.
-
-note is the sales page for Japan. This catalog does not publish the note address.
-
-### Global Users
-
-Purchase via Gumroad.
-
-Gumroad is the sales page for users outside Japan. This catalog does not publish the Gumroad address.
-
-A sales page may also be opened directly. This catalog does not send Japanese buyers to Gumroad, or global buyers to note, as the way to purchase.
+The Japanese explanation of Signal Nexus remains the note Master LP linked from the home page. Checkout for these products is the product page.
 
 ## FAQ
 

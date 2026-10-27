@@ -28,7 +28,6 @@ body .markdown-body,
   padding-bottom: 64px !important;
 }
 
-.markdown-body > h1:first-of-type,
 .markdown-body > h1#signal-nexus {
   display: none !important;
 }
@@ -62,6 +61,13 @@ body .markdown-body,
 
 .markdown-body a:hover {
   color: var(--sn-primary) !important;
+}
+
+.markdown-body code {
+  color: var(--sn-secondary) !important;
+  background: #10192c;
+  padding: 0.1em 0.35em;
+  border-radius: 4px;
 }
 
 .markdown-body strong {
@@ -207,4 +213,161 @@ body .markdown-body,
 
 .footer {
   display: none !important;
+}
+
+body > main.markdown-body {
+  width: 100%;
+  max-width: 1120px !important;
+  margin: 0 auto;
+  padding: 28px 24px 64px !important;
+  box-sizing: border-box;
+}
+
+body > main .sn-values {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.markdown-body h1 {
+  color: var(--sn-text) !important;
+  font-size: 2.5rem;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.15;
+  margin: 0 0 12px;
+}
+
+.sn-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+  margin: 0 0 24px;
+  font-size: 15px;
+}
+
+.markdown-body img.sn-mark {
+  display: block;
+  width: 200px;
+  height: auto;
+  margin: 0 0 16px;
+}
+
+.sn-hero .sn-kicker,
+.sn-panel .sn-kicker {
+  margin: 0 0 8px;
+  color: var(--sn-primary) !important;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.sn-lead {
+  font-size: 1.2rem;
+  line-height: 1.45;
+}
+
+.sn-panel {
+  background: var(--sn-card);
+  border: 1px solid var(--sn-line);
+  border-top: 4px solid var(--sn-primary);
+  border-radius: 18px;
+  padding: 22px 18px 18px;
+  margin: 1.2rem 0 1.6rem;
+}
+
+.sn-panel-checkout {
+  border-top-color: var(--sn-secondary);
+}
+
+.sn-price-list {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+}
+
+.sn-price-list div {
+  display: grid;
+  grid-template-columns: minmax(148px, 200px) 1fr;
+  gap: 4px 16px;
+  margin: 0;
+}
+
+.sn-price-list dt {
+  margin: 0;
+  color: var(--sn-secondary) !important;
+  font-weight: 700;
+}
+
+.sn-price-list dd {
+  margin: 0;
+  color: var(--sn-text) !important;
+}
+
+.markdown-body .sn-checkout-status,
+.markdown-body .sn-quiet {
+  color: var(--sn-muted) !important;
+}
+
+.sn-checkout stripe-buy-button {
+  display: block;
+  margin-top: 14px;
+}
+
+.markdown-body a.sn-buy {
+  display: inline-block;
+  margin-top: 8px;
+  padding: 12px 18px;
+  border-radius: 999px;
+  background: var(--sn-primary);
+  color: var(--sn-bg) !important;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.markdown-body a.sn-buy:hover {
+  background: var(--sn-secondary);
+  color: var(--sn-bg) !important;
+}
+
+.markdown-body img.sn-cover {
+  display: block;
+  width: 100%;
+  height: auto;
+  margin: 0 0 1.2rem;
+  border-radius: 18px;
+}
+
+.sn-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.sn-callout {
+  border: 1px solid var(--sn-line);
+  border-left: 4px solid var(--sn-accent);
+  border-radius: 16px;
+  background: var(--sn-card);
+  padding: 16px 18px;
+  margin: 1.2rem 0 1.6rem;
+}
+
+@media (max-width: 640px) {
+  .markdown-body h1 {
+    font-size: 2rem;
+  }
+
+  .sn-price-list div {
+    grid-template-columns: 1fr;
+  }
+
+  .sn-values,
+  body > main .sn-values {
+    grid-template-columns: 1fr;
+  }
 }

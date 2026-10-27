@@ -20,6 +20,10 @@ English is the canonical text. The Japanese edition is [DOCUMENTATION_STRUCTURE_
 | Product Specification | Public | Canonical product definition | What the operator gets, venues, lineup names | Install steps, screen label definitions, prices, which sales page to open |
 | Product Catalog | Public | Comparison source | Lineup comparison, which problem each product answers | Prices, checkout, the GitHub Pages home, the product definition |
 | index.md | Public | GitHub Pages home | Why Signal Nexus exists, the three problems, one workflow, the comparison section | Checkout, Buildbook steps, deployment commands |
+| starter/index.html | Public | Starter product page | What Starter is, the published price, Stripe Checkout | A lineup comparison, Buildbook steps |
+| volume-pack/index.html | Public | Volume Pack product page | What that purchase date contains, the published price, Stripe Checkout | A lineup comparison, the strategy source |
+| profit-pack/index.html | Public | Profit Pack product page | What that purchase date contains, the published price, Stripe Checkout | A lineup comparison, the strategy source |
+| complete/index.html | Public | Complete product page | The bundle of one date, the published price, Stripe Checkout | A lineup comparison, a Complete repository |
 | README | Public | Repository documentation for people who run the source | What Signal Nexus is, runtime modes, configuration, the webhook and strategy summary, build and start commands, the three validation checks | A sales page, a product catalog, checkout |
 | LICENSE | Public | Community Edition license | Permissions, prohibitions, brand, reserved commercial rights | Trading-risk narrative, vulnerability-reporting steps |
 | DISCLAIMER | Public | Offer terms for the Community Edition | Advice boundary, no asset management, no profit guarantee, warranty, liability, third parties | The copyright grant |
@@ -41,6 +45,10 @@ Public documentation:
 - Screen Relationship Diagram
 - Product Specification
 - Product Catalog
+- Starter product page
+- Volume Pack product page
+- Profit Pack product page
+- Complete product page
 - LICENSE
 - DISCLAIMER
 - RISK_DISCLOSURE
@@ -156,7 +164,7 @@ README answers what Signal Nexus is.
 
 Product Specification answers what the product is.
 
-Product Catalog answers which product to read, and which regional sales page to open. It does not set a price and it does not take payment.
+Product Catalog answers which product to read, and which product page to open. It does not set a price and it does not take payment. The product page states the published price and opens Stripe Checkout. The home page does not take payment.
 
 Architecture answers how it is structured.
 

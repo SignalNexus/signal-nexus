@@ -3,7 +3,7 @@ layout: default
 title: Signal Nexus
 ---
 
-<link rel="stylesheet" href="assets/landing.css?v=9">
+<link rel="stylesheet" href="assets/landing.css?v=13">
 
 # Signal Nexus
 
@@ -157,7 +157,7 @@ Which product fits your problem? This maps a problem to a product. It is not a r
 
 ## Product Catalog
 
-This section compares the products, including price. The source text for what each product contains is <a href="https://github.com/SignalNexus/signal-nexus/blob/main/docs/product/PRODUCT_CATALOG.md" target="_blank" rel="noopener noreferrer">Product Catalog</a>. This page does not send you there as the next click. Read More opens that product's Gumroad page. The Gumroad page is where the purchase is made.
+This section compares the products, including price. The source text for what each product contains is <a href="https://github.com/SignalNexus/signal-nexus/blob/main/docs/product/PRODUCT_CATALOG.md" target="_blank" rel="noopener noreferrer">Product Catalog</a>. This page does not send you there as the next click. Read More opens that product's page. That page states the price again and opens Stripe Checkout. This page does not take payment.
 
 Launch Price applies through 2026-12-31 JST. Regular Price applies thereafter. Launch Price is not a sale price.
 
@@ -165,11 +165,11 @@ Launch Price applies through 2026-12-31 JST. Regular Price applies thereafter. L
 | --- | --- | --- | --- | --- |
 | Problem | Strategy exists. Infrastructure is difficult | Infrastructure exists. An effective strategy does not | Infrastructure exists. An effective strategy does not | Neither infrastructure nor a strategy |
 | Selection Focus | Infrastructure | Volume & Participation | Net Result | Starter + Both Packs |
-| Deliverables | Buildbook | README<br>Strategy Catalog<br>Backtest Results<br>Sample YAML<br>TradingView Setup Guide<br>Pine Source<br>Curated strategy set focused on volume, participation, and program opportunities. | README<br>Strategy Catalog<br>Backtest Results<br>Sample YAML<br>TradingView Setup Guide<br>Pine Source<br>Curated strategy set focused on net results. | Starter Buildbook<br>+ Volume Pack of the same date<br>+ Profit Pack of the same date<br>Separate Launch Price total: US$313 |
+| Deliverables | Buildbook | README<br>Strategy Catalog<br>sizing-and-capital-planning<br>Sample yml<br>TradingView Setup Guide<br>Pine Source<br>pine-runtime-spec<br>Curated strategy set focused on volume, participation, and program opportunities. | README<br>Strategy Catalog<br>profit-analysis.md<br>Sample yml<br>TradingView Setup Guide<br>Pine Source<br>pine-runtime-spec<br>Curated strategy set focused on net results. | Starter Buildbook<br>+ Volume Pack of the same date<br>+ Profit Pack of the same date<br>Separate Launch Price total: US$313 |
 | Launch Price | US$35 | US$139 | US$139 | US$279 |
 | Regular Price | US$69 | US$209 | US$209 | US$419 |
 
-Backtest Results remain separate from the Strategy Catalog. Volume Pack and Profit Pack use the same document structure. Their contents differ because each pack contains a different strategy set. Volume Pack contains a curated strategy set focused on volume, participation, and program opportunities. Profit Pack contains a curated strategy set focused on net results. Strategy and venue stay separate. You assign a strategy to a venue in YAML. Complete adds no file of its own.
+sizing-and-capital-planning stays separate from the Strategy Catalog in Volume Pack. profit-analysis.md stays separate from the Strategy Catalog in Profit Pack. Both packs include pine-runtime-spec and a sample yml. Volume Pack and Profit Pack use the same document structure. Their contents differ because each pack contains a different strategy set. Volume Pack contains a curated strategy set focused on volume, participation, and program opportunities. Profit Pack contains a curated strategy set focused on net results. Strategy and venue stay separate. You assign a strategy to a venue in the sample yml. Complete adds no file of its own.
 
 ### Starter
 
@@ -177,23 +177,23 @@ The Buildbook for connecting alerts, execution, and the operational record on in
 
 Launch Price US$35. Regular Price US$69.
 
-Read more: <a href="https://signalnexus.gumroad.com/l/starter" target="_blank" rel="noopener noreferrer">Gumroad Starter Product LP</a>
+Read more: <a href="starter/">Starter</a>
 
 ### Volume Pack
 
-README, Strategy Catalog, Backtest Results, Sample YAML, TradingView Setup Guide, and Pine source, with a curated strategy set focused on volume, participation, and program opportunities.
+README, Strategy Catalog, sizing-and-capital-planning, Sample yml, TradingView Setup Guide, Pine source, and pine-runtime-spec, with a curated strategy set focused on volume, participation, and program opportunities.
 
 Launch Price US$139. Regular Price US$209.
 
-Read more: <a href="https://signalnexus.gumroad.com/l/volume-pack-2026-10" target="_blank" rel="noopener noreferrer">Gumroad Volume Pack Product LP</a>
+Read more: <a href="volume-pack/">Volume Pack</a>
 
 ### Profit Pack
 
-README, Strategy Catalog, Backtest Results, Sample YAML, TradingView Setup Guide, and Pine source, with a curated strategy set focused on net results.
+README, Strategy Catalog, profit-analysis.md, Sample yml, TradingView Setup Guide, Pine source, and pine-runtime-spec, with a curated strategy set focused on net results.
 
 Launch Price US$139. Regular Price US$209.
 
-Read more: <a href="https://signalnexus.gumroad.com/l/profit-pack-2026-10" target="_blank" rel="noopener noreferrer">Gumroad Profit Pack Product LP</a>
+Read more: <a href="profit-pack/">Profit Pack</a>
 
 ### Complete
 
@@ -207,7 +207,7 @@ It adds no file of its own.
 
 Separate Launch Price total: US$313. Complete Launch Price: US$279.
 
-Read more: <a href="https://signalnexus.gumroad.com/l/complete-2026-10" target="_blank" rel="noopener noreferrer">Gumroad Complete Product LP</a>
+Read more: <a href="complete/">Complete</a>
 
 Past results do not guarantee future results. Nothing here is a recommendation to buy, sell, hold, or avoid an asset or a strategy. Trading can lose money. The terms are in <a href="https://github.com/SignalNexus/signal-nexus/blob/main/DISCLAIMER.md" target="_blank" rel="noopener noreferrer">DISCLAIMER</a>, <a href="https://github.com/SignalNexus/signal-nexus/blob/main/RISK_DISCLOSURE.md" target="_blank" rel="noopener noreferrer">RISK DISCLOSURE</a>, and <a href="https://github.com/SignalNexus/signal-nexus/blob/main/LICENSE.md" target="_blank" rel="noopener noreferrer">LICENSE</a>.
 

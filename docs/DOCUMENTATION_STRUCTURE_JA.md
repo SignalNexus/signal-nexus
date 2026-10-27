@@ -20,6 +20,10 @@
 | Product Specification | Public | 製品定義の正本 | 利用者が得るもの、対応する取引所、製品名 | 導入手順、画面の表示名の定義、価格、どの販売ページを開くか |
 | Product Catalog | Public | 比較の正本 | 商品の比較、どの課題にどの商品が対応するか | 価格、Checkout、GitHub Pages の Home、製品の定義 |
 | index.md | Public | GitHub Pages の Home | Signal Nexus がなぜ存在するか、三つの課題、一つの運用、比較の節 | Checkout、Buildbook の手順、デプロイ命令 |
+| starter/index.html | Public | Starter の商品ページ | Starter が何か、公開済みの価格、Stripe Checkout | ラインナップ比較、Buildbook の手順 |
+| volume-pack/index.html | Public | Volume Pack の商品ページ | その購入日に含まれるもの、公開済みの価格、Stripe Checkout | ラインナップ比較、戦略のソース |
+| profit-pack/index.html | Public | Profit Pack の商品ページ | その購入日に含まれるもの、公開済みの価格、Stripe Checkout | ラインナップ比較、戦略のソース |
+| complete/index.html | Public | Complete の商品ページ | 一つの日付の束、公開済みの価格、Stripe Checkout | ラインナップ比較、Complete のリポジトリ |
 | README | Public | ソースを動かす人向けのリポジトリ文書 | Signal Nexus が何か、実行モード、設定、Webhook と戦略の要約、Build と Start、三つの確認 | 販売ページ、商品目録、Checkout |
 | LICENSE | Public | Community Edition のライセンス | 許可、禁止、ブランド、留保された商用の権利 | 取引リスクの叙述、脆弱性の報告手順 |
 | DISCLAIMER | Public | Community Edition を提供する条件 | 助言との境界、資産運用をしないこと、利益を保証しないこと、保証、責任、第三者 | 著作権の許諾 |
@@ -41,6 +45,10 @@ Buildbook は Signal Nexus の利用に必須ではありません。Buildbook �
 - Screen Relationship Diagram
 - Product Specification
 - Product Catalog
+- Starter の商品ページ
+- Volume Pack の商品ページ
+- Profit Pack の商品ページ
+- Complete の商品ページ
 - LICENSE
 - DISCLAIMER
 - RISK_DISCLOSURE
@@ -156,7 +164,7 @@ README は、Signal Nexus が何かを答えます。
 
 Product Specification は、製品が何かを答えます。
 
-Product Catalog は、どの商品を読むか、どの地域の販売ページを開くかを答えます。価格は定めず、決済も受けません。
+Product Catalog は、どの商品を読むか、どの商品ページを開くかを答えます。価格は定めず、決済も受けません。商品ページが、公開済みの価格を書き、Stripe Checkout を開きます。Home は決済を受けません。
 
 Architecture は、どう組まれているかを答えます。
 

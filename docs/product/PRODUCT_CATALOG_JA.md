@@ -1,6 +1,6 @@
 # Signal Nexus Product Catalog
 
-このファイルは、比較の正本である。販売ページではなく、決済を持たない。GitHub Pages は、このファイルを独立した段には使わない。Home の [index.md](../../index.md) が、末尾の節として比較を載せる。その Read More は、Gumroad の商品ページを開く。
+このファイルは、比較の正本である。販売ページではなく、決済を持たない。GitHub Pages は、このファイルを独立した段には使わない。Home の [index.md](../../index.md) が、末尾の節として比較を載せる。その Read More は、商品ページを開く。商品ページが価格を書き、Stripe Checkout を開く。
 
 各商品が何であるかは、[製品仕様](PRODUCT_SPECIFICATION_JA.md) が定義します。英語版 [PRODUCT_CATALOG.md](PRODUCT_CATALOG.md) が原文です。
 
@@ -30,7 +30,7 @@ VenueAdd は、この公開版に無い一つの会場の拡張です。下の�
 | 課題 | TradingView の戦略はある。インフラの構築が難しい | インフラは組める。有効な戦略が無い | インフラは組める。有効な戦略が無い | インフラも戦略も無い |
 | 目的 | 自分のインフラで、TradingView、執行、Analytics まで通す | 一つの日付の戦略を動かす。選定の軸は、取引量、会場への参加、ポイントプログラムの機会 | 一つの日付の戦略を動かす。選定の軸は純損益 | 同じ日の二つの戦略群を動かし、Buildbook を使う |
 | 扱う範囲 | 参照するデプロイの手順書で、公開プラットフォームを動かす | その日付の戦略群を動かす。Buildbook は無い | その日付の戦略群を動かす。Buildbook は無い | 同じ日の二つの戦略群を、手順書とともに動かす |
-| 含まれるもの | Buildbook | その日付の戦略群。あとからの日付は含まない | その日付の戦略群。あとからの日付は含まない | Buildbook と、同じ日の二つの戦略群 |
+| 含まれるもの | Buildbook | その日付の戦略群。sizing-and-capital-planning、sample yml、pine-runtime-spec を含む。あとからの日付は含まない | その日付の戦略群。profit-analysis.md、sample yml、pine-runtime-spec を含む。あとからの日付は含まない | Buildbook と、同じ日の二つの戦略群 |
 | GitHub のアクセス | Starter リポジトリの読み取り | その版のリポジトリの読み取り | その版のリポジトリの読み取り | Starter リポジトリと、同じ日の二つのパックのリポジトリの読み取り。Complete のリポジトリは無い |
 | Buildbook の範囲 | 何も無い状態からの、参照するデプロイ | 含まない | 含まない | 含む。Complete が Starter を含むため。手順書は同じ |
 | コミュニティ | Discord の購入者ロール | Discord の購入者ロール | Discord の購入者ロール | Discord の購入者ロール |
@@ -61,21 +61,14 @@ Complete は、Starter と、同じ日の Volume Pack および Profit Pack を�
 
 ## Purchase
 
-このページは決済を受けません。自分の地域の販売ページを開きます。販売ページが、価格、購入説明、Checkout を書きます。
+このページは決済を受けません。商品ページが、価格、購入説明、Stripe Checkout を書きます。支払いは一回です。
 
-### Japanese Users
+- [Starter](../../starter/)
+- [Volume Pack](../../volume-pack/)
+- [Profit Pack](../../profit-pack/)
+- [Complete](../../complete/)
 
-日本の購入者は、note で購入します。
-
-note は、日本向けの販売ページです。この案内は、note のアドレスを出しません。
-
-### Global Users
-
-日本以外の購入者は、Gumroad で購入します。
-
-Gumroad は、日本以外向けの販売ページです。この案内は、Gumroad のアドレスを出しません。
-
-販売ページは、この案内を経ずに直接開くこともできます。この案内は、日本の購入者を Gumroad へ、日本以外の購入者を note へ送って購入させません。
+Signal Nexus の日本語の説明は、Home から開く note の Master LP のままです。これらの商品の Checkout は、商品ページです。
 
 ## FAQ
 
