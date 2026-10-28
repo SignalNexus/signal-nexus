@@ -1,0 +1,19 @@
+# Default for a strategy row that omits protective_exit. The runtime rows set the same values.
+# loss_pct is the stop. profit_pct is the take profit. Both are percent from the entry fill.
+protective_exit:
+  enabled: true
+  loss_pct: 5
+  profit_pct: 20
+venues:
+  mexc_spot:
+    enabled: true
+    loss_pct: 5
+    profit_pct: 20
+  mexc_futures:
+    enabled: true
+    loss_pct: 5
+    profit_pct: 20
+  arcus:
+    enabled: true
+    loss_pct: 5
+    profit_pct: 20
