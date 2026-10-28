@@ -5,4 +5,8 @@
 #   venue: mexc_spot/mexc-futures/arcus
 #   leverage: 1
 #   enabled: true
+#   protective_exit:
+#     enabled: true
+#     loss_pct: 5
+#     profit_pct: 20
 {}
