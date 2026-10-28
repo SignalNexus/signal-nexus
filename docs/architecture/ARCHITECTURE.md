@@ -167,6 +167,8 @@ Arcus is a current order path. Fills are read with `ANALYTICS_ARCUS_ADDRESS` and
 5. In `live`, the order goes out through the Analytics API on the virtual machine to MEXC or Arcus.
 6. The audit row is stored in Postgres. Render can deliver a copy to Discord.
 
+A protective exit is an added function that covers sharp price changes between bars, because a TradingView alert is evaluated only when a bar closes. Signal Nexus keeps one stop price and one take-profit price for each strategy. Those prices are set by applying `loss_pct` and `profit_pct` to that strategy's latest entry fill. Every five seconds, the virtual machine reads a fresh public price and closes that strategy's entire remaining quantity with a market order at the first level the price crosses. It does not replace the alert. It limits an unexpected loss, or secures a profit, until the next bar's alert arrives. The prices are not stored per fill, and they are not taken from average cost. It is not a stop or take-profit order at MEXC or Arcus. The exit writes one of the existing audit events and forwards that copy to Render, which delivers Discord. The Dashboard latest-alert time reads `SIGNAL RECEIVED` only, so this exit does not move it. A failed forward leaves the audit row in Postgres.
+
 `GET /health` on Render and `GET /health` on the Analytics API each prove only that the process answered.
 
 ## Public vs private boundary

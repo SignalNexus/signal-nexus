@@ -101,6 +101,8 @@ When `DISCORD_WEBHOOK_URL` is set on Render, Discord receives a copy of these au
 
 An audit trail exists for each alert when the virtual machine is connected. The portal shows it as the Audit Log, under Operations. Discord can deliver a copy when `DISCORD_WEBHOOK_URL` is set. A missed delivery does not remove the trail.
 
+A protective exit is an added function that covers sharp price changes between bars, because a TradingView alert is evaluated only when a bar closes. Signal Nexus keeps one stop price and one take-profit price for each strategy. Those prices are set by applying `loss_pct` and `profit_pct` to that strategy's latest entry fill. Every five seconds, the virtual machine reads a fresh public price and closes that strategy's entire remaining quantity with a market order at the first level the price crosses. It does not replace the alert. It limits an unexpected loss, or secures a profit, until the next bar's alert arrives. The exit does not create a `SIGNAL RECEIVED` record. It reuses the existing audit events and remains visible in the Audit Log. Discord receives the same exit copy when Render delivers it.
+
 What the Audit Log screen labels are, and which notices appear there, is defined in the Screen Specification.
 
 ## Public vs Private

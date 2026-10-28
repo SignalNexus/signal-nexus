@@ -257,6 +257,32 @@ btc_long_example:
 
 `size_quote` is the order amount in USDT. `side` is `long` or `short`. `venue` is `mexc_spot`, `mexc_futures`, or `arcus`. A short row cannot use a spot venue.
 
+### Protective exit
+
+A protective exit is an added function that covers sharp price changes between bars, because a TradingView alert is evaluated only when a bar closes. Signal Nexus keeps one stop price and one take-profit price for each strategy. Those prices are set by applying `loss_pct` and `profit_pct` to that strategy's latest entry fill. Every five seconds, the virtual machine reads a fresh public price and closes that strategy's entire remaining quantity with a market order at the first level the price crosses. It does not replace the alert. It limits an unexpected loss, or secures a profit, until the next bar's alert arrives.
+
+`config/protective_exit.yml` is optional. When the file is absent, no strategy has a protective exit. A `protective_exit` map on a strategy row replaces the venue map in that file, and the venue map replaces the global map. The winning map is used as a whole.
+
+```yaml
+protective_exit:
+  enabled: false
+  loss_pct: 5
+  profit_pct: 20
+venues:
+  arcus:
+    enabled: true
+    loss_pct: 5
+    profit_pct: 20
+```
+
+`enabled: false` at the winning level stores no exit. The strategy's own `enabled` field still decides whether an alert can send an order. When `enabled` is true, at least one of `loss_pct` and `profit_pct` is required. Each is a percent from the entry fill, greater than zero and less than 100. For a long, the stop price is the entry fill times `(100 - loss_pct) / 100`, and the take-profit price is the entry fill times `(100 + profit_pct) / 100`. For a short, the stop price is the entry fill times `(100 + loss_pct) / 100`, and the take-profit price is the entry fill times `(100 - profit_pct) / 100`.
+
+One strategy has one remaining quantity, one protective stop, and one take-profit target. They belong to the strategy, not to individual fills. When a new entry increases an existing position, Signal Nexus re-arms both prices from the latest entry fill and the resolved percents. The exit is not calculated from average position cost. The first level a fresh mark crosses closes the entire remaining strategy quantity. There is no partial take profit, partial stop, or second level. For a long, the stop crosses when the mark is at or below the stop, and the target crosses when the mark is at or above it. For a short, those comparisons are reversed. When one mark crosses both, the stop is the one that closes.
+
+A protective exit is an internal exit on the virtual machine. It is not a TradingView alert. Arming creates no audit record and sends no Discord notification. The exit attempt uses the existing audit events `ACCEPTED`, `SUCCESS`, `FAILED`, and `SKIPPED`. It does not create `SIGNAL RECEIVED`, and Dashboard Latest Alert does not move. A stop writes `protective_exit stop=<stop_price> mark=<trigger_price>`. A take profit writes `protective_exit take_profit=<take_profit_price> mark=<trigger_price>`. `FAILED` and `SKIPPED` append the venue or system cause. The virtual machine writes the audit row and forwards the copy to Render when `AUDIT_COPY_URL` is set. Render delivers Discord. The Discord title is `ORDER ACCEPTED`, `ORDER SUCCESS`, `ORDER FAILED`, or `ORDER NOT SENT`. If the forward is unavailable, the audit row remains and the copy status is Not configured.
+
+The alert body does not carry `protective_exit`, `loss_pct`, or `profit_pct`. The Analytics API on the virtual machine also reads `KILL_SWITCH`. `true` stops a protective exit as well as a webhook order.
+
 ## Webhook Payload
 
 `POST /webhook` accepts a JSON body. The secret travels in `secret`. There is no authentication header.

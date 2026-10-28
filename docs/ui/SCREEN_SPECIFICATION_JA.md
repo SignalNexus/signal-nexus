@@ -119,7 +119,7 @@ Performance は五つ目の画面ではありません。Dashboard で運用を�
 表示するもの.
 
 - Schedule. 作業の数、直近の数、期限超過の数、次の期限。各行は、作業名、開始日、期限、状態、残日数です。状態は、直近、期限超過、進行中、未着手です。
-- Audit Log. イベントの数、成功の数、失敗の数、直近の失敗の時刻。各行は、イベント種別、理由、発生時刻、戦略、銘柄、通知の文面です。この画面の表示は、受信、拒否、見送り、成功、失敗、破棄の六つです。計画は、この六つの中にありません。
+- Audit Log. イベントの数、成功の数、失敗の数、直近の失敗の時刻。各行は、イベント種別、理由、発生時刻、戦略、銘柄、通知の文面です。この画面の表示は、受信、拒否、見送り、成功、失敗、破棄の六つです。計画は、この六つの中にありません。保護決済に受信の行はありません。Latest Alert は変わりません。理由は `protective_exit stop=<stop_price> mark=<trigger_price>` または `protective_exit take_profit=<take_profit_price> mark=<trigger_price>` です。写しは、今の Sent、Not configured、429 paused のままです。
 
 Audit Log は、時刻順の履歴です。Analytics は運用の集計です。この一覧の代わりにはなりません。
 

@@ -257,6 +257,32 @@ btc_long_example:
 
 `size_quote` は USDT 建ての注文額です。`side` は `long` または `short` です。`venue` は `mexc_spot`、`mexc_futures`、`arcus` です。`short` の行は、現物には置けません。
 
+### 保護決済
+
+保護決済は、TradingView のアラートが足の確定時にだけ評価されるため、その間の急な価格変化への対応を補うための付加機能です。Signal Nexus は、戦略ごとにストップ 価格1 つと利食い価格 1 つを持ちます。価格は、その戦略の最新エントリー約定に loss_pct と profit_pct を掛けて決めます。仮想マシンが 5 秒ごとに新しい公開価格を見て、先に割れた方で、その戦略の残数量全体を成行で閉じます。アラートの代わりではなく、次の足のアラートが来るまでに想定外の損失を防ぐ、もしくは利益の確保を行うための保護です。
+
+`config/protective_exit.yml` は任意です。ファイルが無いとき、どの戦略も保護決済を持ちません。戦略行の `protective_exit` は、そのファイルの会場の設定をまとめて上書きします。会場の設定は、全体の設定をまとめて上書きします。
+
+```yaml
+protective_exit:
+  enabled: false
+  loss_pct: 5
+  profit_pct: 20
+venues:
+  arcus:
+    enabled: true
+    loss_pct: 5
+    profit_pct: 20
+```
+
+勝った階層の `enabled: false` は、決済水準を保存しません。戦略自身の `enabled` は、これまでどおり、アラートが注文を出せるかを決めます。`enabled` が true のときは、`loss_pct` と `profit_pct` の少なくとも一方が必要です。どちらも、エントリー約定からの割合で、0 より大きく 100 より小さい数です。ロングのストップ価格は、エントリー約定に `(100 - loss_pct) / 100` を掛けた値です。利食い価格は `(100 + profit_pct) / 100` を掛けた値です。ショートのストップ価格は `(100 + loss_pct) / 100`、利食い価格は `(100 - profit_pct) / 100` です。
+
+1 つの戦略は、残数量 1 つ、保護ストップ 1 つ、利食い 1 つを持ちます。これらは戦略に属し、個々の約定には属しません。新しいエントリーが既存の建玉を増やすとき、Signal Nexus は最新のエントリー約定と、その時点の割合で、両方の価格を再アームします。平均建値からは計算しません。新しい公開価格が先に割った方で、残数量全体を閉じます。部分利食い、部分損切り、2 段目はありません。ロングは、価格がストップ以下で損切り、利食い以上で利食いです。ショートはその逆です。1 つの価格が両方を割ったときは、ストップの方で閉じます。
+
+保護決済は、仮想マシン上の内部決済です。TradingView のアラートではありません。アームでは監査行も Discord も作りません。決済の試みは、既存の `ACCEPTED`、`SUCCESS`、`FAILED`、`SKIPPED` だけを使います。`SIGNAL RECEIVED` は作らず、Dashboard の Latest Alert も動きません。損切りの理由は `protective_exit stop=<stop_price> mark=<trigger_price>` です。利食いの理由は `protective_exit take_profit=<take_profit_price> mark=<trigger_price>` です。`FAILED` と `SKIPPED` には会場またはシステムの原因を続けます。仮想マシンが監査行を書き、`AUDIT_COPY_URL` があるときは写しを Render へ渡します。Discord の送信は Render が行います。タイトルは `ORDER ACCEPTED`、`ORDER SUCCESS`、`ORDER FAILED`、`ORDER NOT SENT` です。転送できないときは監査行が残り、写しは Not configured になります。
+
+アラートの本文に `protective_exit`、`loss_pct`、`profit_pct` は入れません。仮想マシン上の Analytics API も `KILL_SWITCH` を読みます。`true` は、Webhook の注文と同じく、保護決済も止めます。
+
 ## Webhook の本文
 
 `POST /webhook` は JSON を受けます。秘密は `secret` に載せます。認証ヘッダはありません。

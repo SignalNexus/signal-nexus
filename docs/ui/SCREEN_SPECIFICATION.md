@@ -119,7 +119,7 @@ The switch starts on Schedule.
 Displayed information.
 
 - Schedule. Count of tasks, how many are upcoming, how many are overdue, and the next due date. Each row: task name, start date, due date, state, and days remaining. States are upcoming, overdue, active, and pending.
-- Audit Log. Count of events, count of successes, count of failures, and the time of the latest failure. Each row: event type, reason, time, strategy, symbol, and the text of the notice. The labels on this screen are received, rejected, skipped, success, failed, and dropped. A planned order is not one of those labels.
+- Audit Log. Count of events, count of successes, count of failures, and the time of the latest failure. Each row: event type, reason, time, strategy, symbol, and the text of the notice. The labels on this screen are received, rejected, skipped, success, failed, and dropped. A planned order is not one of those labels. A protective exit has no received row. Latest Alert does not change. The reason shows `protective_exit stop=<stop_price> mark=<trigger_price>` or `protective_exit take_profit=<take_profit_price> mark=<trigger_price>`. The copy column keeps the existing Sent, Not configured, and 429 paused results.
 
 The Audit Log is the time-ordered trail. Analytics summarizes the run. It does not replace this list.
 

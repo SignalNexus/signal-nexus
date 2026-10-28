@@ -12,7 +12,7 @@ Cryptocurrency prices can move sharply, in either direction, at any hour, includ
 
 A price can gap. A market can become one-sided. An asset can lose most or all of its value. A quoted price on one venue can differ from the price on another.
 
-A workflow that worked in a quiet market can lose money in a volatile one. Automation can send the next order into that move before you intervene.
+A workflow that worked in a quiet market can lose money in a volatile one. Automation can send the next order into that move before you intervene. A protective exit closes with a market order when either the loss level or the profit level is crossed. The fill can be worse than that level, and a cycle with no fresh price does not send the order.
 
 ## Leverage Risk
 

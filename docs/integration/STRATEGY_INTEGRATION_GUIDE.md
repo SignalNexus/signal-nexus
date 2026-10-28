@@ -96,6 +96,8 @@ Do not send `size` or `size_quote`. The request is rejected with HTTP 422. The a
 
 Any other action for that row is rejected. One symbol on one venue cannot have both a long row and a short row.
 
+A protective exit is an added function that covers sharp price changes between bars, because a TradingView alert is evaluated only when a bar closes. Signal Nexus keeps one stop price and one take-profit price for each strategy. Those prices are set by applying `loss_pct` and `profit_pct` to that strategy's latest entry fill. Every five seconds, the virtual machine reads a fresh public price and closes that strategy's entire remaining quantity with a market order at the first level the price crosses. It does not replace the alert. It limits an unexpected loss, or secures a profit, until the next bar's alert arrives. The setting is optional in `config/protective_exit.yml` and on the strategy row. The alert does not carry it. `STOP` remains the spot exit action. It does not set a stop price or a take-profit price. A protective exit creates no `SIGNAL RECEIVED` record. A later TradingView exit is still a separate alert.
+
 ## 4. How the secret is used
 
 ### `WEBHOOK_SECRET`
