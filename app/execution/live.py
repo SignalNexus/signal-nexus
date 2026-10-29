@@ -8,11 +8,13 @@ from collections.abc import Callable
 from app.execution.order_executor import (
     base_amount_for_quote,
     combined_average,
+    market_quote,
     orderable_base,
     place_limit_order,
     place_market_order,
     public_order_error,
     settle_limit,
+    sized_price,
     top_of_book,
 )
 from app.execution.positions import (
@@ -253,18 +255,24 @@ def _finish_buy(exchange, strategy, client_order_id, exchange_id, order_id, amou
                 remainder_id = exchange_client_order_id(
                     strategy.strategy_id, client_order_id, "BUY", "remainder", strategy.venue
                 )
-                status, extra, market_average, market_gross = place_market_order(
+                quoted = market_quote(
                     exchange,
                     strategy.symbol,
-                    "BUY",
-                    remaining * price,
-                    client_order_id=remainder_id,
+                    Decimal(str(remaining)) * Decimal(str(sized_price(exchange, strategy.symbol, price))),
                 )
-                report_order_link(remainder_id, client_order_id)
-                fills.append((market_gross, market_average))
-                if extra > 0:
-                    _add_buy(strategy, extra, remainder_id)
-                    net += extra
+                if quoted is not None:
+                    status, extra, market_average, market_gross = place_market_order(
+                        exchange,
+                        strategy.symbol,
+                        "BUY",
+                        quoted,
+                        client_order_id=remainder_id,
+                    )
+                    report_order_link(remainder_id, client_order_id)
+                    fills.append((market_gross, market_average))
+                    if extra > 0:
+                        _add_buy(strategy, extra, remainder_id)
+                        net += extra
             if net <= 0:
                 invalidate()
                 send_audit(order_failed(strategy.strategy_id, "filled base missing", venue=strategy.venue))

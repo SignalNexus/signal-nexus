@@ -95,24 +95,67 @@ def sized_price(exchange, symbol: str, price: float) -> float | str:
     return floor_to_places(price, places)
 
 
+def _quote_places(info: dict) -> int | None:
+    found = [
+        places
+        for key in ("quoteAssetPrecision", "quotePrecision")
+        if (places := _decimal_places(info, key)) is not None
+    ]
+    if not found:
+        return None
+    return min(found)
+
+
+def _minimum_market_quote(info: dict) -> Decimal | None:
+    raw = info.get("quoteAmountPrecisionMarket")
+    if isinstance(raw, bool) or raw in (None, ""):
+        return None
+    try:
+        amount = Decimal(str(raw).strip())
+    except Exception:
+        return None
+    if amount <= 0:
+        return None
+    return amount
+
+
+def market_quote(exchange, symbol: str, quote: Decimal) -> str | None:
+    if quote <= 0:
+        return None
+    info = _symbol_info(exchange, symbol)
+    places = _quote_places(info)
+    if places is not None:
+        quote = quote.quantize(Decimal(1).scaleb(-places), rounding=ROUND_DOWN)
+    minimum = _minimum_market_quote(info)
+    if quote <= 0 or (minimum is not None and quote < minimum):
+        return None
+    text = format(quote, "f")
+    if "." in text:
+        text = text.rstrip("0").rstrip(".")
+    return text or None
+
+
 def place_market_order(
     exchange,
     symbol: str,
     action: str,
-    size_quote: float,
+    size_quote: float | str | Decimal,
     *,
     client_order_id: str,
     base_amount: float | None = None,
 ) -> tuple[str, float, float | None, float]:
     exchange_id = {"clientOrderId": client_order_id, "newClientOrderId": client_order_id}
     if action == "BUY":
+        quote = market_quote(exchange, symbol, Decimal(str(size_quote)))
+        if quote is None:
+            raise RuntimeError("quote below market minimum")
         created = exchange.create_order(
             symbol,
             "market",
             "buy",
             None,
             None,
-            {"cost": size_quote, "quoteOrderQty": size_quote, **exchange_id},
+            {"cost": quote, **exchange_id},
         )
     elif action == "SELL":
         if base_amount is None or base_amount <= 0:
