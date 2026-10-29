@@ -142,7 +142,7 @@ The analytics record is written when `ANALYTICS_API_URL` and `ANALYTICS_API_SECR
 
 ### Kill Switch
 
-`KILL_SWITCH=true` prevents new order placement.
+`KILL_SWITCH=true` prevents new order placement. Render and the virtual machine each read their own value. Render stops a webhook order. The virtual machine stops `/api/mexc/order`, `/api/arcus/order`, and a protective exit. Set both to `true`, then run the deploy again, before treating the switch as fully closed. `dry_run` stays on Render. The virtual machine remains the live executor.
 
 ## Required Configuration
 
@@ -152,12 +152,12 @@ These are the runtime names. This section does not say how to create the values.
 
 The webhook process holds these. They authenticate alerts, reach the Analytics API, open the portal, and decide whether an order is sent.
 
-- `WEBHOOK_SECRET` — `POST /webhook` compares this with the JSON field `secret`.
+- `WEBHOOK_SECRET` — `POST /webhook` compares this with the JSON field `secret`. A configured value shorter than 24 characters stops this process from starting. The same length rule applies to `PORTAL_PASSWORD` and `ANALYTICS_API_SECRET` on the process that holds them. An unset value stays closed at the request.
 - `ANALYTICS_API_URL` — Where the webhook reaches the Analytics API. The URL carries no secret.
 - `ANALYTICS_API_SECRET` — Shared secret for that call. The same value is set on the Analytics service. It is not `WEBHOOK_SECRET`.
 - `PORTAL_PASSWORD` — Password for the portal served by the webhook process.
 - `DISCORD_WEBHOOK_URL` — Where an audit copy is delivered. The audit row stays in Postgres.
-- `KILL_SWITCH` — `true` stops new orders. `false` leaves the order path open.
+- `KILL_SWITCH` — `true` stops new webhook orders. `false` leaves that path open. The same name on the virtual machine stops the order API.
 - `EXECUTION_MODE` — Unset means `dry_run`. `live` sends orders.
 
 ### Analytics Service
@@ -281,7 +281,7 @@ One strategy has one remaining quantity, one protective stop, and one take-profi
 
 A protective exit is an internal exit on the virtual machine. It is not a TradingView alert. Arming creates no audit record and sends no Discord notification. The exit attempt uses the existing audit events `ACCEPTED`, `SUCCESS`, `FAILED`, and `SKIPPED`. It does not create `SIGNAL RECEIVED`, and Dashboard Latest Alert does not move. A stop writes `protective_exit stop=<stop_price> mark=<trigger_price>`. A take profit writes `protective_exit take_profit=<take_profit_price> mark=<trigger_price>`. `FAILED` and `SKIPPED` append the venue or system cause. The virtual machine writes the audit row and forwards the copy to Render when `AUDIT_COPY_URL` is set. Render delivers Discord. The Discord title is `ORDER ACCEPTED`, `ORDER SUCCESS`, `ORDER FAILED`, or `ORDER NOT SENT`. If the forward is unavailable, the audit row remains and the copy status is Not configured.
 
-The alert body does not carry `protective_exit`, `loss_pct`, or `profit_pct`. The Analytics API on the virtual machine also reads `KILL_SWITCH`. `true` stops a protective exit as well as a webhook order.
+The alert body does not carry `protective_exit`, `loss_pct`, or `profit_pct`. The Analytics API reads `KILL_SWITCH` from the virtual machine. `true` there stops a protective exit and refuses `/api/mexc/order` and `/api/arcus/order`. The order API also applies the same `side` and action rules as the webhook. A refusal is HTTP 403 and an audit row (`order_not_sent` for the kill switch, `validation_rejected` for a direction mismatch). The audit is skipped if Postgres is down. The order is still refused.
 
 ## Webhook Payload
 
@@ -304,7 +304,7 @@ The alert body does not carry `protective_exit`, `loss_pct`, or `profit_pct`. Th
 | `strategy_id` | The key in `config/strategies.yml` |
 | `symbol` | The `symbol` on that row |
 | `action` | An action that row accepts |
-| `bar_time` | ISO-8601 time, such as `2026-10-16T00:00:00Z` |
+| `bar_time` | ISO-8601 time within `MAX_BAR_AGE_SECONDS` of the server clock, before or after. The default is 300. An older or further-future value is HTTP 422 |
 | `client_order_id` | An id for this attempt. A repeat for that venue is discarded |
 
 `exit_bar_close` is optional, and only with `SELL` or `STOP`. It is an ISO-8601 time.

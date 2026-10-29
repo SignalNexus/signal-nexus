@@ -7,8 +7,9 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator, model_validator
 
 from app.analytics.schema import AUDIT_KINDS
-from app.core.config import execution_mode, kill_switch_enabled
+from app.core.config import bar_time_within_window, execution_mode, kill_switch_enabled
 from app.core.security import analytics_secret_matches, webhook_secret_matches
+from app.execution.admission import order_block_reason
 from app.execution.dedup import claim, settle
 from app.execution.dispatch import execute_order
 from app.execution.order_executor import public_order_error
@@ -17,7 +18,6 @@ from app.execution.router import (
     RegistryRejection,
     Strategy,
     load_strategies,
-    rejection_reason,
     route,
     targets_for,
 )
@@ -343,13 +343,20 @@ async def receive_webhook(request: Request, tasks: BackgroundTasks) -> dict[str,
         payload = WebhookPayload.model_validate(body)
     except ValidationError as exc:
         return _reject(tasks, body, _validation_reason(exc), _public_validation_errors(exc))
+    if not bar_time_within_window(_parse_time(payload.bar_time, "bar_time")):
+        return _reject(
+            tasks,
+            body,
+            "bar_time is outside the accepted window",
+            "bar_time is outside the accepted window",
+        )
     try:
         strategy = route(payload.strategy_id, payload.symbol)
     except RegistryRejection as exc:
         return _reject(tasks, body, exc.reason, exc.reason)
-    mismatch = rejection_reason(strategy, payload.action)
-    if mismatch is not None:
-        return _reject(tasks, body, mismatch, mismatch)
+    blocked = order_block_reason(strategy, payload.action)
+    if blocked not in (None, "KILL_SWITCH"):
+        return _reject(tasks, body, blocked, blocked)
     targets = targets_for(strategy, payload.action)
     runnable = claim(payload.client_order_id, [deployment.venue for deployment in targets])
     chosen = [deployment for deployment in targets if deployment.venue in runnable]

@@ -79,7 +79,7 @@ payload(action) =>
 | `strategy_id` | `config/strategies.yml` のキー |
 | `symbol` | その行の `symbol`。例は `BTC/USDT` |
 | `action` | 次の節のアクション |
-| `bar_time` | ISO-8601 の時刻。例は `2026-10-16T00:00:00Z` |
+| `bar_time` | サーバ時刻との差が `MAX_BAR_AGE_SECONDS` 以内の ISO-8601。既定は 300 秒で、現在より前も後も同じです |
 | `client_order_id` | その一回の id。同じ id の再送は破棄される |
 
 `exit_bar_close` は任意で、`SELL` または `STOP` のときだけです。こちらも ISO-8601 の時刻です。

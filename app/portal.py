@@ -85,6 +85,7 @@ def portal_login(password: str = Form(default="")) -> Response:
         max_age=MAX_AGE,
         httponly=True,
         samesite="lax",
+        secure=True,
         path="/",
     )
     return response
@@ -93,7 +94,7 @@ def portal_login(password: str = Form(default="")) -> Response:
 @router.post("/portal/logout")
 def portal_logout() -> RedirectResponse:
     response = RedirectResponse("/portal", status_code=303)
-    response.delete_cookie(COOKIE, path="/")
+    response.delete_cookie(COOKIE, path="/", secure=True, httponly=True, samesite="lax")
     return response
 
 

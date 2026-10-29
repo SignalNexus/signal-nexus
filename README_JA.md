@@ -142,7 +142,7 @@ Analytics の記録は、`ANALYTICS_API_URL` と `ANALYTICS_API_SECRET` があ�
 
 ### Kill Switch
 
-`KILL_SWITCH=true` は、新しい注文を止めます。
+`KILL_SWITCH=true` は、新しい注文を止めます。Render と仮想マシンは、それぞれ自分の値を読みます。Render は Webhook の注文を止めます。仮想マシンは `/api/mexc/order`、`/api/arcus/order`、保護決済を止めます。両方を `true` にしてから、もう一度デプロイして、スイッチが閉じたと扱います。`dry_run` は Render に残します。仮想マシンは、注文を出す側のままです。
 
 ## 必要な設定
 
@@ -152,12 +152,12 @@ Analytics の記録は、`ANALYTICS_API_URL` と `ANALYTICS_API_SECRET` があ�
 
 Webhook のプロセスが持ちます。アラートの確認、Analytics API への到達、ポータルを開くこと、注文を出すかどうかが、ここにあります。
 
-- `WEBHOOK_SECRET` — `POST /webhook` が、JSON の `secret` とこの値を比べます。
+- `WEBHOOK_SECRET` — `POST /webhook` が、JSON の `secret` とこの値を比べます。設定した値が 24 文字より短いと、このプロセスは起動しません。`PORTAL_PASSWORD` と `ANALYTICS_API_SECRET` も、それを持つプロセスでは同じ長さです。未設定の値は、リクエストの時点で閉じたままです。
 - `ANALYTICS_API_URL` — Webhook が Analytics API に届く先です。URL に秘密は入れません。
 - `ANALYTICS_API_SECRET` — その呼び出しの共有の秘密です。同じ値を Analytics サービスにも置きます。`WEBHOOK_SECRET` とは別です。
 - `PORTAL_PASSWORD` — Webhook のプロセスが出すポータルのパスワードです。
 - `DISCORD_WEBHOOK_URL` — 監査の写しの届け先です。監査の行は Postgres に残ります。
-- `KILL_SWITCH` — `true` で新しい注文を止めます。`false` では発注の経路を開いたままにします。
+- `KILL_SWITCH` — `true` で新しい Webhook の注文を止めます。`false` ではその経路を開いたままにします。仮想マシン上の同じ名前は、発注 API を止めます。
 - `EXECUTION_MODE` — 未設定は `dry_run` です。`live` で注文を出します。
 
 ### Analytics サービス
@@ -281,7 +281,7 @@ venues:
 
 保護決済は、仮想マシン上の内部決済です。TradingView のアラートではありません。アームでは監査行も Discord も作りません。決済の試みは、既存の `ACCEPTED`、`SUCCESS`、`FAILED`、`SKIPPED` だけを使います。`SIGNAL RECEIVED` は作らず、Dashboard の Latest Alert も動きません。損切りの理由は `protective_exit stop=<stop_price> mark=<trigger_price>` です。利食いの理由は `protective_exit take_profit=<take_profit_price> mark=<trigger_price>` です。`FAILED` と `SKIPPED` には会場またはシステムの原因を続けます。仮想マシンが監査行を書き、`AUDIT_COPY_URL` があるときは写しを Render へ渡します。Discord の送信は Render が行います。タイトルは `ORDER ACCEPTED`、`ORDER SUCCESS`、`ORDER FAILED`、`ORDER NOT SENT` です。転送できないときは監査行が残り、写しは Not configured になります。
 
-アラートの本文に `protective_exit`、`loss_pct`、`profit_pct` は入れません。仮想マシン上の Analytics API も `KILL_SWITCH` を読みます。`true` は、Webhook の注文と同じく、保護決済も止めます。
+アラートの本文に `protective_exit`、`loss_pct`、`profit_pct` は入れません。Analytics API は仮想マシンの `KILL_SWITCH` を読みます。そこが `true` のとき、保護決済を止め、`/api/mexc/order` と `/api/arcus/order` を拒否します。発注 API は、Webhook と同じ `side` と action の規則も適用します。拒否は HTTP 403 で、監査行を残します。キルスイッチは `order_not_sent`、方向の不一致は `validation_rejected` です。Postgres が落ちているときは監査行をスキップします。注文はそれでも拒否します。
 
 ## Webhook の本文
 
@@ -304,7 +304,7 @@ venues:
 | `strategy_id` | `config/strategies.yml` のキー |
 | `symbol` | その行の `symbol` |
 | `action` | その行が受け付けるアクション |
-| `bar_time` | ISO-8601 の時刻。例は `2026-10-16T00:00:00Z` |
+| `bar_time` | サーバ時刻との差が `MAX_BAR_AGE_SECONDS` 以内の ISO-8601。前後とも同じです。既定は 300 秒です。それより古い、または先の時刻は HTTP 422 です |
 | `client_order_id` | その一回の id。同じ venue での再送は破棄される |
 
 `exit_bar_close` は任意で、`SELL` または `STOP` のときだけです。こちらも ISO-8601 の時刻です。

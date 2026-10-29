@@ -8,7 +8,7 @@ from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 
 from app.api.webhook import router as webhook_router
 from app.portal import router as portal_router
-from app.core.config import execution_mode
+from app.core.config import execution_mode, fastapi_doc_kwargs, max_bar_age_seconds, require_secret_strength
 from app.execution.arcus import ArcusError
 from app.execution.arcus_remote import apply_remote_leverage
 
@@ -26,12 +26,14 @@ def preload_positions() -> None:
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
+    require_secret_strength("WEBHOOK_SECRET", "PORTAL_PASSWORD", "ANALYTICS_API_SECRET")
+    max_bar_age_seconds()
     if execution_mode() == "live":
         Thread(target=preload_positions, daemon=True).start()
     yield
 
 
-app = FastAPI(title="Signal Nexus", lifespan=lifespan)
+app = FastAPI(title="Signal Nexus", lifespan=lifespan, **fastapi_doc_kwargs())
 app.include_router(webhook_router)
 app.include_router(portal_router)
 

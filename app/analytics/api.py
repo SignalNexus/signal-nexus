@@ -37,7 +37,9 @@ from app.analytics.schema import (
     load_ingest_succeeded_at,
     load_latest_signal,
 )
+from app.core.config import analytics_bind_host, fastapi_doc_kwargs, require_secret_strength
 from app.core.security import analytics_secret_matches
+from app.execution.admission import order_block_reason
 from app.execution.arcus import ArcusError, apply_configured_leverage, execute_arcus
 from app.execution.futures import execute_futures
 from app.execution.live import execute_live
@@ -48,7 +50,7 @@ from app.portal_data import read_month_target
 
 logger = logging.getLogger(__name__)
 
-app = FastAPI(title="Signal Nexus Analytics")
+app = FastAPI(title="Signal Nexus Analytics", **fastapi_doc_kwargs())
 
 # 画面の取得は集計の計算を待たない。計算は裏で回し、直前の結果を返す。
 # 再起動直後も空にしないよう、直前の結果はディスクにも残す。
@@ -188,6 +190,7 @@ def arcus_order(
         raise HTTPException(status_code=404, detail="strategy is unavailable") from None
     if strategy.venue != "arcus":
         raise HTTPException(status_code=404, detail="strategy is unavailable")
+    _refuse_blocked_order(strategy, body.action)
     try:
         result = execute_arcus(strategy, body.action, body.client_order_id)
     except ArcusError as exc:
@@ -230,6 +233,9 @@ def mexc_order(
         strategy = load_strategies()[body.strategy_id]
     except KeyError:
         raise HTTPException(status_code=404, detail="strategy is unavailable") from None
+    if strategy.venue not in ("mexc_spot", "mexc_futures"):
+        raise HTTPException(status_code=404, detail="strategy is unavailable")
+    _refuse_blocked_order(strategy, body.action)
     try:
         if strategy.venue == "mexc_spot":
             from app.execution.exchange import mexc_client
@@ -242,7 +248,7 @@ def mexc_order(
                 load_strategies(),
                 body.exit_bar_close_ms,
             )
-        elif strategy.venue == "mexc_futures":
+        else:
             from app.execution.exchange import futures_client
 
             result = execute_futures(
@@ -252,8 +258,6 @@ def mexc_order(
                 body.client_order_id,
                 load_strategies(),
             )
-        else:
-            raise HTTPException(status_code=404, detail="strategy is unavailable")
     except HTTPException:
         raise
     except Exception as exc:
@@ -270,6 +274,26 @@ def mexc_order(
         "average": result.average,
         "realized": None if result.realized is None else str(result.realized),
     }
+
+
+def _refuse_blocked_order(strategy, action: str) -> None:
+    reason = order_block_reason(strategy, action)
+    if reason is None:
+        return
+    kind = "order_not_sent" if reason == "KILL_SWITCH" else "validation_rejected"
+    try:
+        _store_audit(
+            AuditIn(
+                kind=kind,
+                strategy=strategy.strategy_id,
+                symbol=strategy.symbol,
+                reason=reason,
+                venue=strategy.venue,
+            )
+        )
+    except Exception:
+        logger.warning("order rejection was not stored")
+    raise HTTPException(status_code=403, detail=reason)
 
 
 def _deferred_response(result) -> dict[str, object] | None:
@@ -328,6 +352,7 @@ def _preload_mexc() -> None:
 
 @asynccontextmanager
 async def _lifespan(_app):
+    require_secret_strength("ANALYTICS_API_SECRET")
     Thread(target=_preload_mexc, daemon=True).start()
     if os.environ.get("ANALYTICS_DATABASE_URL", "").strip():
         Thread(target=_sync_lots_forever, daemon=True).start()
@@ -1091,7 +1116,7 @@ def main() -> None:
     import uvicorn
 
     port = int(os.environ.get("ANALYTICS_API_PORT", "8080"))
-    uvicorn.run(app, host="0.0.0.0", port=port)
+    uvicorn.run(app, host=analytics_bind_host(), port=port)
 
 
 if __name__ == "__main__":

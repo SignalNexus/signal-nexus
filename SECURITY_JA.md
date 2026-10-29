@@ -4,6 +4,18 @@ Signal Nexus Community Edition
 
 この文書は英語版の写しです。正本は [SECURITY.md](SECURITY.md) です。英語が優先します。この政策は、Community Edition の脆弱性をどう報告するかを説明します。自分の所有しないシステムを試す許可は与えません。ソフトウェアの利用は、引き続き [LICENSE.md](LICENSE.md) に従います。日本語の写しは [LICENSE_JA.md](LICENSE_JA.md) です。
 
+## この版の制御
+
+この版は、自分のホストを一人で動かすためのものです。ロール、テナント、承認板は足しません。
+
+- Render の `KILL_SWITCH=true` は Webhook の注文を止めます。仮想マシン上の同じ値は、`/api/mexc/order`、`/api/arcus/order`、保護決済を止めます。`dry_run` は Render のゲートのままです。仮想マシンは、注文を出す側です。
+- 発注 API は、Webhook と同じ戦略の `side` と action の規則を使います。拒否は HTTP 403 です。監査行には `KILL_SWITCH` または方向の理由が残ります。Postgres が落ちていても、注文は通しません。
+- `bar_time` は、サーバ時刻から `MAX_BAR_AGE_SECONDS` 以内です。既定は 300 秒です。古いアラート本文で新しい建玉を開くことを止めます。永続的な注文 ID の代わりにはなりません。
+- `WEBHOOK_SECRET`、`PORTAL_PASSWORD`、`ANALYTICS_API_SECRET` は、設定されているとき 24 文字未満だと、そのプロセスは起動しません。未設定の秘密は、リクエストの時点で閉じたままです。
+- ポータルのセッション Cookie は `HttpOnly`、`SameSite=lax`、`Secure` です。
+- Analytics API は、`ANALYTICS_BIND_HOST` が別を示すまで `127.0.0.1` で待ちます。公開は Caddy が行います。プロセス起動時に `ENABLE_API_DOCS=true` でない限り、`/docs` と `/openapi.json` は出ません。
+- MEXC の鍵は、仮想マシンのアドレスに限るのが妥当です。IP 欄が空だと、取引の鍵はどのネットワークからでも使えます。出金はオフのままです。これは取引所の設定であり、このプロセスの中の検査ではありません。
+
 ## 脆弱性の報告
 
 脆弱性は、非公開で報告します。公式リポジトリの GitHub 非公開脆弱性報告を使います。

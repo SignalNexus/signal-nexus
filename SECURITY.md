@@ -4,6 +4,18 @@ Signal Nexus Community Edition
 
 English is the canonical text. The Japanese edition is [SECURITY_JA.md](SECURITY_JA.md). This policy explains how to report a vulnerability in the Community Edition. It does not grant permission to test systems you do not own. Use of the software remains subject to [LICENSE.md](LICENSE.md).
 
+## Controls in this edition
+
+This edition is for one person running their own host. It does not add roles, tenants, or an approval board.
+
+- `KILL_SWITCH=true` on Render stops a webhook order. The same value on the virtual machine stops `/api/mexc/order`, `/api/arcus/order`, and a protective exit. `dry_run` remains a Render gate. The virtual machine is the live executor.
+- The order API uses the same strategy `side` and action rules as the webhook. A refusal is HTTP 403. The audit row records `KILL_SWITCH` or the direction reason. Postgres being down does not let the order through.
+- `bar_time` must fall within `MAX_BAR_AGE_SECONDS` of the server clock. The default is 300. This stops an old alert body from opening a new position. It does not replace a durable order id.
+- `WEBHOOK_SECRET`, `PORTAL_PASSWORD`, and `ANALYTICS_API_SECRET`, when set, must be at least 24 characters or that process does not start. An unset secret stays closed at the request.
+- The portal session cookie is `HttpOnly`, `SameSite=lax`, and `Secure`.
+- The Analytics API listens on `127.0.0.1` unless `ANALYTICS_BIND_HOST` says otherwise. Caddy publishes it. `/docs` and `/openapi.json` stay off unless `ENABLE_API_DOCS=true` at process start.
+- MEXC keys should be limited to the virtual machine address. An empty IP field leaves a trade key usable from any network. Withdrawal stays off. That is an exchange setting, not a check inside this process.
+
 ## Reporting a Vulnerability
 
 Report a vulnerability in private. Use GitHub private vulnerability reporting on the official repository:

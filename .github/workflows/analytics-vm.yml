@@ -75,6 +75,7 @@ jobs:
       - name: Write the VM env file
         env:
           ANALYTICS_API_SECRET: ${{ secrets.ANALYTICS_API_SECRET }}
+          KILL_SWITCH: ${{ secrets.KILL_SWITCH }}
           ANALYTICS_DB_PASSWORD: ${{ secrets.ANALYTICS_DB_PASSWORD }}
           ANALYTICS_MEXC_API_KEY: ${{ secrets.ANALYTICS_MEXC_API_KEY }}
           ANALYTICS_MEXC_API_SECRET: ${{ secrets.ANALYTICS_MEXC_API_SECRET }}
