@@ -110,6 +110,8 @@ Volume Pack and Profit Pack are separate research packages. Research stays priva
 
 VenueAdd connects one venue that is not in the public release, after that venue is enabled and documented. Maintenance of that venue stays in the same extension. It is not a dated research package, and it is not a right to every later venue.
 
+One strategy can name more than one venue. One alert goes to each enabled deployment that accepts the action. That is one strategy to many venues, and an added venue uses the same path. The public process loads an added venue from `SIGNAL_NEXUS_VENUEADD` and calls six methods: `execute`, `mark`, `sync_lots`, `open_orders`, `balance`, and `apply_leverage`. An empty setting leaves MEXC Spot, MEXC Futures, and Arcus as they are. Those three ids are reserved. A package that returns one of them, a repeated id, or a port version other than 1 stops that process during startup. The connector for a paid venue stays outside this tree.
+
 What each product includes is defined in [Product Specification](../product/PRODUCT_SPECIFICATION.md). This section does not set a price.
 
 ## How the parts separate

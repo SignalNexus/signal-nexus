@@ -279,6 +279,11 @@ def _balances():
         }
         if "arcus" in payload:
             restored["arcus"] = _arcus_balance(payload.get("arcus"))
+        for key, value in payload.items():
+            if key in ("fetched_at", "usdt", "coins", "count", "futures", "arcus", "spot"):
+                continue
+            if isinstance(value, dict):
+                restored[key] = _arcus_balance(value)
         return restored, fetched_at
     except Exception:
         return None, None

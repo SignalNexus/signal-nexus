@@ -142,7 +142,11 @@ The analytics record is written when `ANALYTICS_API_URL` and `ANALYTICS_API_SECR
 
 ### Kill Switch
 
-`KILL_SWITCH=true` prevents new order placement. Render and the virtual machine each read their own value. Render stops a webhook order. The virtual machine stops `/api/mexc/order`, `/api/arcus/order`, and a protective exit. Set both to `true`, then run the deploy again, before treating the switch as fully closed. `dry_run` stays on Render. The virtual machine remains the live executor.
+`KILL_SWITCH=true` prevents new order placement. Render and the virtual machine each read their own value. Render stops a webhook order. The virtual machine stops `/api/mexc/order`, `/api/arcus/order`, `/api/venue/order`, and a protective exit. Set both to `true`, then run the deploy again, before treating the switch as fully closed. `dry_run` stays on Render. The virtual machine remains the live executor.
+
+## Additional venues
+
+`SIGNAL_NEXUS_VENUEADD` names optional venue packages, separated by commas. An empty value leaves MEXC Spot, MEXC Futures, and Arcus unchanged. The module name comes from the setup guide of a venue you installed. The same value is read when that process starts. A reserved id, a repeated id, or a port version other than 1 stops the process instead of skipping the package. One strategy can still list more than one venue.
 
 ## Required Configuration
 
@@ -281,7 +285,7 @@ One strategy has one remaining quantity, one protective stop, and one take-profi
 
 A protective exit is an internal exit on the virtual machine. It is not a TradingView alert. Arming creates no audit record and sends no Discord notification. The exit attempt uses the existing audit events `ACCEPTED`, `SUCCESS`, `FAILED`, and `SKIPPED`. It does not create `SIGNAL RECEIVED`, and Dashboard Latest Alert does not move. A stop writes `protective_exit stop=<stop_price> mark=<trigger_price>`. A take profit writes `protective_exit take_profit=<take_profit_price> mark=<trigger_price>`. `FAILED` and `SKIPPED` append the venue or system cause. The virtual machine writes the audit row and forwards the copy to Render when `AUDIT_COPY_URL` is set. Render delivers Discord. The Discord title is `ORDER ACCEPTED`, `ORDER SUCCESS`, `ORDER FAILED`, or `ORDER NOT SENT`. If the forward is unavailable, the audit row remains and the copy status is Not configured.
 
-The alert body does not carry `protective_exit`, `loss_pct`, or `profit_pct`. The Analytics API reads `KILL_SWITCH` from the virtual machine. `true` there stops a protective exit and refuses `/api/mexc/order` and `/api/arcus/order`. The order API also applies the same `side` and action rules as the webhook. A refusal is HTTP 403 and an audit row (`order_not_sent` for the kill switch, `validation_rejected` for a direction mismatch). The audit is skipped if Postgres is down. The order is still refused.
+The alert body does not carry `protective_exit`, `loss_pct`, or `profit_pct`. The Analytics API reads `KILL_SWITCH` from the virtual machine. `true` there stops a protective exit and refuses `/api/mexc/order`, `/api/arcus/order`, and `/api/venue/order`. The order API also applies the same `side` and action rules as the webhook. A refusal is HTTP 403 and an audit row (`order_not_sent` for the kill switch, `validation_rejected` for a direction mismatch). The audit is skipped if Postgres is down. The order is still refused.
 
 ## Webhook Payload
 

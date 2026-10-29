@@ -38,7 +38,7 @@ btc_long_example:
   venue: mexc_spot
 ```
 
-`size_quote` は USDT 建ての注文額です。`side` は `long` または `short` です。`venue` は `mexc_spot`、`mexc_futures`、`arcus` です。`short` の行は、現物には置けません。
+`size_quote` は USDT 建ての注文額です。`side` は `long` または `short` です。`venue` は `mexc_spot`、`mexc_futures`、`arcus` です。`short` の行は、現物には置けません。一つの戦略は、`deployments` に複数の会場を並べられます。一つのアラートは、そのアクションを受け付ける有効な deployment のすべてへ進みます。それ以外の `venue` は、その会場のパッケージが入っているときだけ届きます。その ID の正本は、そのパッケージの手順です。
 
 ## 2. Pine Script
 

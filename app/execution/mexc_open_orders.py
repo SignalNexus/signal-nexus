@@ -17,12 +17,14 @@ def open_orders_payload(now: datetime | None = None) -> dict:
         spot = spot_call.result()
         futures = futures_call.result()
         arcus = arcus_call.result()
-    return {
+    payload = {
         "fetched_at": fetched_at.isoformat(),
         "spot": _json_view(spot),
         "futures": _json_view(futures),
         "arcus": _json_view(arcus),
     }
+    payload.update(_added_open_orders(fetched_at))
+    return payload
 
 
 def restore_open_orders(payload: dict) -> tuple[dict | None, datetime | None]:
@@ -31,12 +33,28 @@ def restore_open_orders(payload: dict) -> tuple[dict | None, datetime | None]:
         fetched_at = fetched_at.replace(tzinfo=timezone.utc)
     spot = _restore_view(payload.get("spot"))
     futures = _restore_view(payload.get("futures"))
-    if spot is None and futures is None and "arcus" not in payload:
-        return None, None
     restored = {"spot": spot, "futures": futures}
     if "arcus" in payload:
         restored["arcus"] = _restore_view(payload.get("arcus"))
+    for key, value in payload.items():
+        if key in ("fetched_at", "spot", "futures", "arcus"):
+            continue
+        restored[key] = _restore_view(value)
+    if spot is None and futures is None and "arcus" not in payload and len(restored) == 2:
+        return None, None
     return restored, fetched_at
+
+
+def _added_open_orders(fetched_at: datetime) -> dict:
+    from app.execution.venue_port import ports
+
+    added = {}
+    for venue_id, port in ports().items():
+        try:
+            added[venue_id] = _json_view(port.open_orders(fetched_at))
+        except Exception:
+            added[venue_id] = None
+    return added
 
 
 def _arcus_open_orders(fetched_at: datetime):

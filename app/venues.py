@@ -13,6 +13,7 @@ class Venue:
     id: str
     asset_class: str
     enabled: bool
+    quote: str | None = None
 
 
 def load_venues(path: Path | None = None) -> dict[str, Venue]:
@@ -29,15 +30,17 @@ def load_venues(path: Path | None = None) -> dict[str, Venue]:
         venue_id = raw.get("id")
         asset_class = raw.get("asset_class")
         enabled = raw.get("enabled")
+        quote = raw.get("quote")
         if (
             not isinstance(venue_id, str)
             or not venue_id
             or venue_id in venues
             or asset_class not in ("spot", "futures")
             or not isinstance(enabled, bool)
+            or (quote is not None and (not isinstance(quote, str) or not quote))
         ):
             raise ValueError("venue registry is invalid")
-        venues[venue_id] = Venue(venue_id, asset_class, enabled)
+        venues[venue_id] = Venue(venue_id, asset_class, enabled, quote)
     return venues
 
 
@@ -59,6 +62,13 @@ def is_futures(venue: str | None) -> bool:
 
 
 def quote_currency(venue: str | None) -> str:
+    if venue:
+        try:
+            found = load_venues().get(venue)
+        except (OSError, ValueError):
+            found = None
+        if found is not None and found.quote:
+            return found.quote
     if venue == "arcus":
         return "USD"
     return "USDT"

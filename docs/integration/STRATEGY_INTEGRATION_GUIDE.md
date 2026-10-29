@@ -38,7 +38,7 @@ btc_long_example:
   venue: mexc_spot
 ```
 
-`size_quote` is the order amount in USDT. `side` is `long` or `short`. `venue` is `mexc_spot`, `mexc_futures`, or `arcus`. A short row cannot use a spot venue.
+`size_quote` is the order amount in USDT. `side` is `long` or `short`. `venue` is `mexc_spot`, `mexc_futures`, or `arcus`. A short row cannot use a spot venue. One strategy can list more than one venue under `deployments`, and one alert is sent to each enabled deployment that accepts the action. Any other venue id is reached only when that venue's package is installed. The package's setup guide is the source for that id.
 
 ## 2. Pine Script
 

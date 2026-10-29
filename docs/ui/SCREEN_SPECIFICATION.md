@@ -72,7 +72,7 @@ Displayed information.
 
 - Positions. Count of open positions and unrealized result. Each row is one strategy and symbol: unrealized result, hold time, remaining quantity, venue, open time, and last price. Rows with no price sit at the end.
 - Trades. Fills already booked: time, strategy, venue, symbol, side, quote received, quote spent, and quantity. The summary counts today's fills and unclassified rows.
-- Open Orders. Orders still open when the screen was opened: remaining quantity, age, strategy, symbol, side, price, order type, and original quantity. The screen says the list is not stored. Spot counts buys and sells. Futures counts shorts and covers. Arcus counts longs and shorts.
+- Open Orders. Orders still open when the screen was opened: remaining quantity, age, strategy, symbol, side, price, order type, and original quantity. The screen says the list is not stored. Spot counts buys and sells. Futures counts shorts and covers. Arcus counts longs and shorts. An added venue appears in the same grid and is counted by the asset class in `venues.yml`.
 - Balances. For each currency: total, available, and amount locked in orders. The summary reads the USDT total, what is available, what is in orders, and how many coins are listed.
 
 A venue the screen cannot read shows that the read failed. The screen does not invent a zero.

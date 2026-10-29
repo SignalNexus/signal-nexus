@@ -770,6 +770,7 @@ def _orders(view: dict | None, fetched_at: datetime | None) -> str:
         accounts = {"mexc_spot": view.get("spot"), "mexc_futures": view.get("futures")}
         if "arcus" in view:
             accounts["arcus"] = view.get("arcus")
+        accounts.update(_extra_accounts(view, ("spot", "futures", "arcus", "fetched_at", "rows")))
     return _account_grid(
         accounts,
         lambda _label, venue_id, account: _order_body(account, fetched_at, venue_id),
@@ -843,12 +844,48 @@ def _balances(view: dict | None, fetched_at: datetime | None) -> str:
         accounts = {"mexc_spot": view.get("spot"), "mexc_futures": view.get("futures")}
         if "arcus" in view:
             accounts["arcus"] = view.get("arcus")
+        accounts.update(_extra_accounts(view, ("spot", "futures", "arcus", "usdt", "coins", "count")))
     return _account_grid(
         accounts,
         lambda _label, venue_id, account: (
-            _arcus_balance_body(account, fetched_at) if venue_id == "arcus" else _balance_body(account, fetched_at)
+            _arcus_balance_body(account, fetched_at)
+            if venue_id == "arcus"
+            else _equity_balance_body(account, fetched_at, venue_id)
+            if _equity_view(account)
+            else _balance_body(account, fetched_at)
         ),
     )
+
+
+def _extra_accounts(view: dict, reserved: tuple[str, ...]) -> dict:
+    return {
+        key: value
+        for key, value in view.items()
+        if key not in reserved and isinstance(value, dict)
+    }
+
+
+def _equity_view(view: dict | None) -> bool:
+    return isinstance(view, dict) and "equity" in view
+
+
+def _equity_balance_body(view: dict | None, fetched_at: datetime | None, venue_id: str) -> str:
+    if view is None:
+        return '<p class="empty">Unable to retrieve</p>'
+    unit = quote_currency(venue_id)
+    cards = _summary(
+        (
+            (t("評価額"), f"{_num(view.get('equity'))} {unit}", ""),
+            (t("使える"), f"{_num(view.get('free'))} {unit}", ""),
+            (t("証拠金"), f"{_num(view.get('margin'))} {unit}", ""),
+            (t("建玉数"), str(view.get("positions") or 0), ""),
+        ),
+        "cols-4",
+        {0: "focus-violet"},
+    )
+    when = "" if fetched_at is None else escape(fetched_at.astimezone(portal_zone()).strftime("%Y-%m-%d %H:%M"))
+    rule = f'<p class="rule">{escape(when)}</p>' if when else ""
+    return f"{cards}{rule}"
 
 
 def _arcus_balance_body(view: dict | None, fetched_at: datetime | None) -> str:

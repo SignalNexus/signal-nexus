@@ -207,6 +207,58 @@ def arcus_order(
     }
 
 
+class VenueOrderIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    strategy_id: str
+    venue: str
+    action: str
+    client_order_id: str
+
+    @field_validator("strategy_id", "venue", "action", "client_order_id")
+    @classmethod
+    def present(cls, value: str) -> str:
+        if not value.strip():
+            raise ValueError("field is required")
+        return value
+
+
+@app.post("/api/venue/order")
+def venue_order(
+    body: VenueOrderIn,
+    authorization: str | None = Header(default=None),
+) -> dict[str, object]:
+    from app.execution.venue_port import port_for
+
+    _require_secret(authorization)
+    try:
+        strategy = load_strategies()[body.strategy_id]
+    except KeyError:
+        raise HTTPException(status_code=404, detail="strategy is unavailable") from None
+    matched = [item for item in strategy.deployments if item.enabled and item.venue == body.venue]
+    if len(matched) != 1:
+        raise HTTPException(status_code=404, detail="strategy is unavailable")
+    strategy = strategy.bound(matched[0])
+    port = port_for(body.venue)
+    if port is None:
+        raise HTTPException(status_code=404, detail="strategy is unavailable")
+    _refuse_blocked_order(strategy, body.action)
+    try:
+        result = port.execute(strategy, body.action, body.client_order_id)
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=public_order_error(exc)) from None
+    deferred = _deferred_response(result)
+    if deferred is not None:
+        return deferred
+    return {
+        "status": result.status,
+        "sent": result.sent,
+        "deferred": False,
+        "reason": result.reason,
+        "realized": None if result.realized is None else str(result.realized),
+    }
+
+
 class MexcOrderIn(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -350,9 +402,22 @@ def _preload_mexc() -> None:
         logger.warning("strategy lots were not synced")
 
 
+def _apply_added_leverage() -> None:
+    from app.execution.venue_port import ports
+
+    for venue_id, port in ports().items():
+        try:
+            port.apply_leverage()
+        except Exception:
+            logger.warning("venue leverage was not applied: %s", venue_id)
+
+
 @asynccontextmanager
 async def _lifespan(_app):
+    from app.execution.venue_port import load_ports
+
     require_secret_strength("ANALYTICS_API_SECRET")
+    load_ports()
     Thread(target=_preload_mexc, daemon=True).start()
     if os.environ.get("ANALYTICS_DATABASE_URL", "").strip():
         Thread(target=_sync_lots_forever, daemon=True).start()
@@ -378,6 +443,7 @@ async def _lifespan(_app):
                 logger.warning("arcus leverage was not applied")
 
         Thread(target=quiet, daemon=True).start()
+    Thread(target=_apply_added_leverage, daemon=True).start()
     yield
 
 
@@ -408,6 +474,7 @@ def balance(authorization: str | None = Header(default=None)) -> dict:
         **_balance_json(view),
         "futures": None if futures_view is None else _balance_json(futures_view),
         "arcus": _arcus_balance_json(arcus_view),
+        **_added_balances(),
     }
 
 
@@ -861,7 +928,12 @@ def _mark_prices(opens) -> dict:
                     timeout=2.5,
                 )
             else:
-                return pair, None
+                from app.execution.venue_port import port_for
+
+                port = port_for(venue)
+                if port is None:
+                    return pair, None
+                return pair, port.mark(symbol)
             response.raise_for_status()
             return pair, _public_last(response.json(), venue)
         except Exception:
@@ -1056,6 +1128,18 @@ def _arcus_balance() -> dict | None:
         return arcus_balance()
     except Exception:
         return None
+
+
+def _added_balances() -> dict:
+    from app.execution.venue_port import ports
+
+    added = {}
+    for venue_id, port in ports().items():
+        try:
+            added[venue_id] = _arcus_balance_json(port.balance())
+        except Exception:
+            added[venue_id] = None
+    return added
 
 
 def _arcus_balance_json(view: dict | None) -> dict | None:

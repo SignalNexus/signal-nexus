@@ -233,6 +233,17 @@ def sync_configured_venues() -> None:
     _sync_spot()
     _sync_futures()
     _sync_arcus()
+    _sync_added()
+
+
+def _sync_added() -> None:
+    from app.execution.venue_port import ports
+
+    for venue_id, port in ports().items():
+        try:
+            port.sync_lots()
+        except Exception:
+            logger.warning("venue lots were not synced: %s", venue_id)
 
 
 def _sync_spot() -> None:

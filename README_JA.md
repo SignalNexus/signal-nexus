@@ -142,7 +142,11 @@ Analytics の記録は、`ANALYTICS_API_URL` と `ANALYTICS_API_SECRET` があ�
 
 ### Kill Switch
 
-`KILL_SWITCH=true` は、新しい注文を止めます。Render と仮想マシンは、それぞれ自分の値を読みます。Render は Webhook の注文を止めます。仮想マシンは `/api/mexc/order`、`/api/arcus/order`、保護決済を止めます。両方を `true` にしてから、もう一度デプロイして、スイッチが閉じたと扱います。`dry_run` は Render に残します。仮想マシンは、注文を出す側のままです。
+`KILL_SWITCH=true` は、新しい注文を止めます。Render と仮想マシンは、それぞれ自分の値を読みます。Render は Webhook の注文を止めます。仮想マシンは `/api/mexc/order`、`/api/arcus/order`、`/api/venue/order`、保護決済を止めます。両方を `true` にしてから、もう一度デプロイして、スイッチが閉じたと扱います。`dry_run` は Render に残します。仮想マシンは、注文を出す側のままです。
+
+## 追加会場
+
+`SIGNAL_NEXUS_VENUEADD` は、任意の会場パッケージをカンマ区切りで名指しします。空なら、MEXC 現物、MEXC 先物、Arcus は変わりません。モジュール名は、導入した会場の手順が書きます。プロセスは起動時に同じ値を読みます。予約 ID、重複した ID、1 以外のポート版は、パッケージを飛ばさずにプロセスを止めます。一つの戦略は、これまでどおり複数の会場を並べられます。
 
 ## 必要な設定
 
@@ -281,7 +285,7 @@ venues:
 
 保護決済は、仮想マシン上の内部決済です。TradingView のアラートではありません。アームでは監査行も Discord も作りません。決済の試みは、既存の `ACCEPTED`、`SUCCESS`、`FAILED`、`SKIPPED` だけを使います。`SIGNAL RECEIVED` は作らず、Dashboard の Latest Alert も動きません。損切りの理由は `protective_exit stop=<stop_price> mark=<trigger_price>` です。利食いの理由は `protective_exit take_profit=<take_profit_price> mark=<trigger_price>` です。`FAILED` と `SKIPPED` には会場またはシステムの原因を続けます。仮想マシンが監査行を書き、`AUDIT_COPY_URL` があるときは写しを Render へ渡します。Discord の送信は Render が行います。タイトルは `ORDER ACCEPTED`、`ORDER SUCCESS`、`ORDER FAILED`、`ORDER NOT SENT` です。転送できないときは監査行が残り、写しは Not configured になります。
 
-アラートの本文に `protective_exit`、`loss_pct`、`profit_pct` は入れません。Analytics API は仮想マシンの `KILL_SWITCH` を読みます。そこが `true` のとき、保護決済を止め、`/api/mexc/order` と `/api/arcus/order` を拒否します。発注 API は、Webhook と同じ `side` と action の規則も適用します。拒否は HTTP 403 で、監査行を残します。キルスイッチは `order_not_sent`、方向の不一致は `validation_rejected` です。Postgres が落ちているときは監査行をスキップします。注文はそれでも拒否します。
+アラートの本文に `protective_exit`、`loss_pct`、`profit_pct` は入れません。Analytics API は仮想マシンの `KILL_SWITCH` を読みます。そこが `true` のとき、保護決済を止め、`/api/mexc/order` と `/api/arcus/order` と `/api/venue/order` を拒否します。発注 API は、Webhook と同じ `side` と action の規則も適用します。拒否は HTTP 403 で、監査行を残します。キルスイッチは `order_not_sent`、方向の不一致は `validation_rejected` です。Postgres が落ちているときは監査行をスキップします。注文はそれでも拒否します。
 
 ## Webhook の本文
 

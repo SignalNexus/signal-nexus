@@ -7,4 +7,12 @@ def execute_order(strategy, action: str, client_order_id: str, exit_bar_close_ms
         from app.execution.mexc_remote import execute_mexc_remote
 
         return execute_mexc_remote(strategy, action, client_order_id, exit_bar_close_ms)
-    raise RuntimeError("venue has no order adapter")
+    from app.execution.venue_port import port_for
+    from app.execution.venue_remote import execute_venue_remote, hands_off
+
+    port = port_for(strategy.venue)
+    if port is None:
+        raise RuntimeError("venue has no order adapter")
+    if hands_off():
+        return execute_venue_remote(strategy, action, client_order_id)
+    return port.execute(strategy, action, client_order_id)

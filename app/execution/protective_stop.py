@@ -410,7 +410,12 @@ def submit_close(strategy, action: str, client_order_id: str):
         from app.execution.futures import execute_futures
 
         return execute_futures(futures_client(), strategy, action, client_order_id, strategies)
-    return LiveResult("not_sent", False, "market unavailable")
+    from app.execution.venue_port import port_for
+
+    port = port_for(strategy.venue)
+    if port is None:
+        return LiveResult("not_sent", False, "market unavailable")
+    return port.execute(strategy, action, client_order_id)
 
 
 def forward_copy(message) -> tuple[str, str]:
@@ -763,7 +768,12 @@ def _read_mark(symbol: str, venue: str) -> Decimal | None:
                 timeout=2.5,
             )
         else:
-            return None
+            from app.execution.venue_port import port_for
+
+            port = port_for(venue)
+            if port is None:
+                return None
+            return port.mark(symbol)
         response.raise_for_status()
         return _public_price(response.json(), venue)
     except Exception:
