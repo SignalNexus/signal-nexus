@@ -166,9 +166,13 @@ def execute_arcus(strategy, action: str, client_order_id: str, client: "ArcusCli
                 settle()
             except Exception as exc:
                 from app.execution.order_executor import public_order_error
+                from app.execution.protective_stop import hold_exit
                 from app.notifications.discord import order_failed, send_audit
 
-                send_audit(order_failed(strategy.strategy_id, public_order_error(exc), venue=strategy.venue))
+                reason = public_order_error(exc)
+                if hold_exit(kind="order_failed", reason=reason, average=None, realized=None):
+                    return
+                send_audit(order_failed(strategy.strategy_id, reason, venue=strategy.venue))
                 return
             _report_arcus(strategy, action, prepared["holder"]["result"], client_order_id)
 
@@ -181,6 +185,7 @@ def execute_arcus(strategy, action: str, client_order_id: str, client: "ArcusCli
     return LiveResult(
         "accepted",
         True,
+        average=_combined_price(closed.get("prices") or []),
         realized=_arcus_realized(strategy, action, filled, closed, client_order_id),
     )
 
@@ -569,8 +574,16 @@ def _report_arcus(strategy, action: str, result: dict, client_order_id: str) -> 
     filled = result.get("filled") or Decimal("0")
     if not isinstance(filled, Decimal):
         filled = Decimal(str(filled))
+    price = _combined_price(result.get("prices") or [])
+    realized = _arcus_realized(strategy, action, filled, result, client_order_id)
+    from app.execution.protective_stop import hold_exit
+
     if filled <= 0:
+        if hold_exit(kind="order_failed", reason="filled base missing", average=None, realized=None):
+            return
         send_audit(order_failed(strategy.strategy_id, "filled base missing", venue=strategy.venue))
+        return
+    if hold_exit(kind="order_success", reason="closed", average=price, realized=realized):
         return
     send_audit(
         order_success(
@@ -579,9 +592,9 @@ def _report_arcus(strategy, action: str, result: dict, client_order_id: str) -> 
             action,
             float(strategy.size_quote),
             "closed",
-            _combined_price(result.get("prices") or []),
+            price,
             venue=strategy.venue,
-            realized=_arcus_realized(strategy, action, filled, result, client_order_id),
+            realized=realized,
         )
     )
 
@@ -672,6 +685,7 @@ def _apply_lot(strategy_id: str, action: str, result: dict, client_order_id: str
         from app.execution.strategy_lots import LotStoreError, configured, note_fill
 
         if configured():
+            price = _combined_price(result.get("prices") or [])
             updated = Decimal("0")
             try:
                 for order_key, amount in fills:
@@ -681,6 +695,8 @@ def _apply_lot(strategy_id: str, action: str, result: dict, client_order_id: str
                         strategy_id,
                         action in ("COVER", "FLAT"),
                         amount if isinstance(amount, Decimal) else Decimal(str(amount)),
+                        fill_price=None if price is None else Decimal(str(price)),
+                        protect=action in ("LONG", "SHORT") and price not in (None, 0),
                     )
             except LotStoreError:
                 logger.warning("arcus lot was not stored")

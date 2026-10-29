@@ -21,6 +21,7 @@ class Deployment:
     size_quote: float
     enabled: bool = True
     leverage: int | None = None
+    protective_exit: "StopPolicy | None" = None
 
 
 @dataclass(frozen=True)
@@ -32,6 +33,7 @@ class Strategy:
     side: str = ""
     deployments: tuple[Deployment, ...] = ()
     leverage: int | None = None
+    protective_exit: "StopPolicy | None" = None
 
     def __post_init__(self) -> None:
         deployments = self.deployments
@@ -55,6 +57,7 @@ class Strategy:
             self.side,
             (deployment,),
             deployment.leverage,
+            self.protective_exit,
         )
 
 
@@ -71,6 +74,9 @@ def load_strategies(path: Path | None = None) -> dict[str, Strategy]:
         strategies[strategy_id] = _strategy(strategy_id, raw)
     _reject_mixed_directions(strategies)
     _reject_leverage(strategies)
+    from app.execution.protective_stop import load_exit_defaults
+
+    load_exit_defaults()
     return strategies
 
 
@@ -144,9 +150,19 @@ def _strategy(strategy_id: str, raw: dict) -> Strategy:
         deployments = tuple(_deployment(row) for row in rows)
         if len({item.venue for item in deployments}) != len(deployments):
             raise RegistryRejection("strategy registry is invalid")
+        parent_stop = _row_stop(raw)
     else:
         deployments = (_deployment(raw),)
-    strategy = Strategy(strategy_id, symbol, deployments[0].size_quote, deployments[0].venue, side, deployments)
+        parent_stop = None
+    strategy = Strategy(
+        strategy_id,
+        symbol,
+        deployments[0].size_quote,
+        deployments[0].venue,
+        side,
+        deployments,
+        protective_exit=parent_stop,
+    )
     if strategy.side == "short" and any(asset_class_of(item.venue) != "futures" for item in strategy.deployments):
         raise RegistryRejection("a short strategy cannot deploy to a spot venue")
     return strategy
@@ -164,6 +180,7 @@ def _deployment(raw: object) -> Deployment:
         leverage = _leverage_value(raw.get("leverage"))
     else:
         leverage = None
+    stop = _row_stop(raw)
     if (
         not isinstance(venue, str)
         or venue not in enabled_venues()
@@ -173,7 +190,15 @@ def _deployment(raw: object) -> Deployment:
         or not isinstance(enabled, bool)
     ):
         raise RegistryRejection("strategy registry is invalid")
-    return Deployment(venue, float(size_quote), enabled, leverage)
+    return Deployment(venue, float(size_quote), enabled, leverage, stop)
+
+
+def _row_stop(raw: dict):
+    if "protective_exit" not in raw:
+        return None
+    from app.execution.protective_stop import policy_from_mapping
+
+    return policy_from_mapping(raw.get("protective_exit"))
 
 
 def _leverage_value(value: object) -> int:

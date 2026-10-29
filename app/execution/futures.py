@@ -328,7 +328,9 @@ def _open(
     status, filled = _settle_fill(exchange, symbol, exchange_id, status, filled)
     if filled <= 0:
         return LiveResult("order_failed", True, "filled quantity missing")
-    _lots[strategy.strategy_id] = _stored_futures(strategy.strategy_id, exchange_id, filled, closing=False)
+    _lots[strategy.strategy_id] = _stored_futures(
+        strategy.strategy_id, exchange_id, filled, closing=False, fill_price=average
+    )
     return LiveResult(status, True, average=average)
 
 
@@ -359,7 +361,9 @@ def _close(
     )
 
 
-def _stored_futures(strategy_id: str, order_key: str, filled: float, closing: bool) -> float:
+def _stored_futures(
+    strategy_id: str, order_key: str, filled: float, closing: bool, fill_price: float | None = None
+) -> float:
     from decimal import Decimal
 
     from app.execution.strategy_lots import LotStoreError, configured, note_fill
@@ -375,6 +379,8 @@ def _stored_futures(strategy_id: str, order_key: str, filled: float, closing: bo
             strategy_id,
             closing,
             Decimal(str(filled)),
+            fill_price=None if fill_price is None else Decimal(str(fill_price)),
+            protect=not closing and fill_price not in (None, 0),
         )
     except LotStoreError:
         updated = current - filled if closing else current + filled

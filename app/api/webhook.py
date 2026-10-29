@@ -47,6 +47,7 @@ class AuditCopyIn(BaseModel):
     reason: str = ""
     venue: str = ""
     content: str = Field(min_length=1, max_length=2000)
+    deliver_only: bool = False
 
     @field_validator("kind")
     @classmethod
@@ -72,6 +73,11 @@ def accept_audit_copy(
 ) -> dict[str, str]:
     if not analytics_secret_matches(_presented_secret(authorization)):
         raise HTTPException(status_code=401, detail="unauthorized")
+    if body.deliver_only:
+        from app.notifications.discord import discord_copy
+
+        status, detail = discord_copy(body.content)
+        return {"status": "ok", "discord_status": status, "discord_detail": detail}
     send_audit(
         AuditMessage(
             body.content,

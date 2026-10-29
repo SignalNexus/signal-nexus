@@ -33,6 +33,8 @@ def note_fill(
     *,
     symbol: str | None = None,
     bought_at_ms: int | None = None,
+    fill_price: Decimal | None = None,
+    protect: bool = False,
 ) -> Decimal:
     if filled < 0:
         filled = Decimal("0")
@@ -63,6 +65,7 @@ def note_fill(
                 delete_spot_meta(connection, strategy_id)
             elif symbol and bought_at_ms is not None and current <= 0:
                 save_spot_meta(connection, strategy_id, symbol, bought_at_ms)
+        _sync_stop(connection, venue, strategy_id, updated, closing, filled=delta, fill_price=fill_price, protect=protect)
     return updated
 
 
@@ -309,6 +312,21 @@ def _sync_arcus() -> None:
     apply_arcus_fills(fills, strategy_codes(strategies))
     mark_synced("arcus")
     refresh_arcus_from_store()
+
+
+def _sync_stop(connection, venue: str, strategy_id: str, updated: Decimal, closing: bool, *, filled: Decimal, fill_price: Decimal | None, protect: bool) -> None:
+    try:
+        with connection.savepoint():
+            if updated <= 0:
+                from app.execution.protective_stop import cancel_armed
+
+                cancel_armed(connection, venue, strategy_id)
+            elif protect and not closing and filled > 0 and fill_price is not None and fill_price > 0:
+                from app.execution.protective_stop import arm_from_fill
+
+                arm_from_fill(connection, venue, strategy_id, fill_price)
+    except Exception:
+        logger.warning("protective stop was not updated")
 
 
 def _taker_fee() -> float:

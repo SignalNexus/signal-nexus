@@ -179,14 +179,21 @@ def _market_buy(
     if filled <= 0:
         invalidate()
         return LiveResult("order_failed", True, "filled base missing")
-    _add_buy(strategy, filled, exchange_id)
+    _add_buy(strategy, filled, exchange_id, fill_price=average)
     return LiveResult(status, True, average=average)
 
 
-def _add_buy(strategy: Strategy, filled: float, order_key: str) -> None:
+def _add_buy(strategy: Strategy, filled: float, order_key: str, fill_price: float | None = None) -> None:
     current = open_holding(strategy.strategy_id)
     bought_at = current.bought_at_ms if current is not None else None
-    stored = _store_spot_fill(strategy, order_key, filled, closing=False, bought_at_ms=bought_at)
+    stored = _store_spot_fill(
+        strategy,
+        order_key,
+        filled,
+        closing=False,
+        bought_at_ms=bought_at,
+        fill_price=fill_price,
+    )
     if stored is not None:
         if stored <= 0:
             reduce(strategy.strategy_id, current.base_qty if current is not None else filled)
@@ -199,7 +206,14 @@ def _add_buy(strategy: Strategy, filled: float, order_key: str) -> None:
     remember(strategy.strategy_id, strategy.symbol, current.base_qty + filled, current.bought_at_ms)
 
 
-def _store_spot_fill(strategy, order_key: str, filled: float, closing: bool, bought_at_ms: int | None):
+def _store_spot_fill(
+    strategy,
+    order_key: str,
+    filled: float,
+    closing: bool,
+    bought_at_ms: int | None,
+    fill_price: float | None = None,
+):
     from decimal import Decimal
 
     from app.execution.strategy_lots import LotStoreError, configured, note_fill
@@ -218,6 +232,8 @@ def _store_spot_fill(strategy, order_key: str, filled: float, closing: bool, bou
             Decimal(str(filled)),
             symbol=strategy.symbol,
             bought_at_ms=when,
+            fill_price=None if fill_price is None else Decimal(str(fill_price)),
+            protect=not closing and fill_price not in (None, 0),
         )
     except LotStoreError:
         return None
@@ -249,7 +265,7 @@ def _finish_buy(exchange, strategy, client_order_id, exchange_id, order_id, amou
             )
             fills = [(limit_gross, limit_average)]
             if net > 0:
-                _add_buy(strategy, net, exchange_id)
+                _add_buy(strategy, net, exchange_id, fill_price=limit_average)
             status = "closed"
             if remaining > 0:
                 remainder_id = exchange_client_order_id(
@@ -271,7 +287,7 @@ def _finish_buy(exchange, strategy, client_order_id, exchange_id, order_id, amou
                     report_order_link(remainder_id, client_order_id)
                     fills.append((market_gross, market_average))
                     if extra > 0:
-                        _add_buy(strategy, extra, remainder_id)
+                        _add_buy(strategy, extra, remainder_id, fill_price=market_average)
                         net += extra
             if net <= 0:
                 invalidate()

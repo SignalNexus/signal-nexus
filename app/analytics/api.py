@@ -331,6 +331,10 @@ async def _lifespan(_app):
     Thread(target=_preload_mexc, daemon=True).start()
     if os.environ.get("ANALYTICS_DATABASE_URL", "").strip():
         Thread(target=_sync_lots_forever, daemon=True).start()
+        if os.environ.get("PROTECTIVE_STOP_WATCH", "1") != "0":
+            from app.execution.protective_stop import watch_forever
+
+            Thread(target=lambda: watch_forever(time.sleep), daemon=True).start()
         if os.environ.get("ANALYTICS_BOARD_REFRESH") == "1":
             _load_board_snapshot()
             Thread(target=_warm_board_forever, daemon=True).start()

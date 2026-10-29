@@ -135,6 +135,29 @@ STATEMENTS = (
         synced_at timestamptz NOT NULL
     )
     """,
+    """
+    CREATE TABLE IF NOT EXISTS strategy_stops (
+        venue text NOT NULL CHECK (char_length(venue) > 0),
+        strategy_id text NOT NULL CHECK (char_length(strategy_id) > 0),
+        symbol text NOT NULL CHECK (char_length(symbol) > 0),
+        side text NOT NULL CHECK (side IN ('long', 'short')),
+        entry_price numeric NOT NULL CHECK (entry_price > 0),
+        stop_price numeric CHECK (stop_price IS NULL OR stop_price > 0),
+        take_profit_price numeric CHECK (take_profit_price IS NULL OR take_profit_price > 0),
+        loss_pct numeric CHECK (loss_pct IS NULL OR (loss_pct > 0 AND loss_pct < 100)),
+        profit_pct numeric CHECK (profit_pct IS NULL OR (profit_pct > 0 AND profit_pct < 100)),
+        status text NOT NULL CHECK (status IN ('armed', 'triggering', 'closed', 'cancelled')),
+        client_order_id text NOT NULL DEFAULT '',
+        trigger_price numeric,
+        armed_at timestamptz NOT NULL,
+        triggered_at timestamptz,
+        closed_at timestamptz,
+        attempt_count integer NOT NULL DEFAULT 0 CHECK (attempt_count >= 0),
+        unconfirmed boolean NOT NULL DEFAULT FALSE,
+        PRIMARY KEY (venue, strategy_id),
+        CHECK (stop_price IS NOT NULL OR take_profit_price IS NOT NULL)
+    )
+    """,
 )
 
 

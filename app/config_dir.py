@@ -11,6 +11,7 @@ RUNTIME_NAMES = (
     "strategies.yml",
     "strategy_results.yml",
     "venues.yml",
+    "protective_exit.yml",
 )
 
 
