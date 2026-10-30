@@ -6,6 +6,7 @@ import yaml
 from app.config_dir import config_file
 
 REGISTRY_PATH = config_file("venues.yml")
+STABLE_QUOTES = frozenset({"USD", "USDC", "USDG", "USDT"})
 
 
 @dataclass(frozen=True)
@@ -59,6 +60,29 @@ def is_spot(venue: str | None) -> bool:
 
 def is_futures(venue: str | None) -> bool:
     return asset_class_of(venue) == "futures"
+
+
+def order_symbol(symbol: str, venue: str | None) -> str:
+    """Use the venue's stable quote. The TradingView symbol stays unchanged."""
+    target = _explicit_quote(venue)
+    if target is None or "/" not in symbol:
+        return symbol
+    base, quote = symbol.split("/", 1)
+    if quote.upper() not in STABLE_QUOTES or target.upper() not in STABLE_QUOTES:
+        return symbol
+    return f"{base}/{target}"
+
+
+def _explicit_quote(venue: str | None) -> str | None:
+    if not venue:
+        return None
+    try:
+        found = load_venues().get(venue)
+    except (OSError, ValueError):
+        return None
+    if found is None or not found.quote:
+        return None
+    return found.quote
 
 
 def quote_currency(venue: str | None) -> str:

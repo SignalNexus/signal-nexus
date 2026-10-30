@@ -3,7 +3,7 @@ from decimal import Decimal
 from html import escape
 
 from app.core.config import execution_mode, kill_switch_enabled
-from app.venues import is_futures, is_spot, quote_currency
+from app.venues import enabled_venues, is_futures, is_spot, quote_currency
 from app.portal_data import next_due, read_schedule
 from app.portal_model import (
     audits_view,
@@ -41,15 +41,46 @@ from app.portal_text import (
 
 # Daily, weekly, monthly, and yearly figures are grouped in UTC.
 AGGREGATION = timezone.utc
-# Venue Lifecycle は販売戦略の会場状態に合わせる。MEXC は本番、Arcus は測定と接続の途中、残りは未対応。
-VENUE_CARDS = (
-    {"name": "MEXC", "status": "Supported", "lines": (("Spot", "mexc_spot"), ("Futures", "mexc_futures"))},
-    {"name": "Arcus", "status": "Supported", "lines": (("Perpetual", "arcus"),)},
-    {"name": "Hyperliquid", "status": "Planned", "lines": (("Perpetual", "hyperliquid"),)},
-    {"name": "Paradex", "status": "Planned", "lines": (("Perpetual", "paradex"),)},
-    {"name": "Vertex", "status": "Planned", "lines": (("Perpetual", "vertex"),)},
-    {"name": "GRVT", "status": "Planned", "lines": (("Perpetual", "grvt"),)},
-)
+_CARD_LINES = {
+    "mexc_spot": ("MEXC", "Spot"),
+    "mexc_futures": ("MEXC", "Futures"),
+    "arcus": ("Arcus", "Perpetual"),
+    "lighter": ("Lighter", "Perpetual"),
+    "txflow": ("TxFlow", "Perpetual"),
+}
+
+
+def venue_cards() -> tuple[dict, ...]:
+    try:
+        loaded = enabled_venues()
+    except (OSError, ValueError):
+        return ()
+    grouped: dict[str, list[tuple[str, str]]] = {}
+    order: list[str] = []
+    for venue_id, venue in loaded.items():
+        name, label = _CARD_LINES.get(
+            venue_id,
+            (venue_id, "Spot" if venue.asset_class == "spot" else "Perpetual"),
+        )
+        if name not in grouped:
+            order.append(name)
+            grouped[name] = []
+        grouped[name].append((label, venue_id))
+    return tuple({"name": name, "status": "Supported", "lines": tuple(grouped[name])} for name in order)
+
+
+def _enabled_ids() -> set[str] | None:
+    try:
+        return set(enabled_venues())
+    except (OSError, ValueError):
+        return None
+
+
+def _enabled_rows(rows: list[dict]) -> list[dict]:
+    enabled = _enabled_ids()
+    if enabled is None:
+        return rows
+    return [row for row in rows if (row.get("venue") or "mexc_spot") in enabled]
 PENDING_MARK = (
     '<svg class="status-mark" viewBox="0 0 24 24" aria-hidden="true"><g fill="none" '
     'stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'
@@ -544,7 +575,7 @@ def _today(board: dict) -> str:
 
 def _risk(board: dict, now: datetime) -> str:
     moment = now.astimezone(timezone.utc)
-    rows = board.get("positions") or []
+    rows = _enabled_rows(board.get("positions") or [])
     return f"""
     <section class="block" data-fold aria-label="Risk Summary">
       <p class="eyebrow">Risk Summary</p>
@@ -648,7 +679,7 @@ def _strategy_summary(board: dict) -> str:
             live = item.get("live")
             if live:
                 rows.append({**live, "strategy_name": item.get("name")})
-    view = strategies_view(rows)
+    view = strategies_view(_enabled_rows(rows))
     body = "".join(
         "<tr>"
         f"<td>{escape(show_text(row['strategy_name']))}</td>"
@@ -679,6 +710,7 @@ def _strategy_summary(board: dict) -> str:
 def _positions(rows: list[dict] | None, now: datetime) -> str:
     if rows is None:
         return _blank_summary(("Open Positions", "Unrealized PnL"))
+    rows = _enabled_rows(rows)
     moment = now.astimezone(timezone.utc)
     total = _position_summary(positions_view(rows, moment), "USD")
 
@@ -691,6 +723,7 @@ def _positions(rows: list[dict] | None, now: datetime) -> str:
 def _trades(rows: list[dict] | None) -> str:
     if rows is None:
         return _blank_summary(("Recent Trades", t("当日約定数"), count_label("BUY", "fills"), count_label("SELL", "fills"), unclassified_count("fills")))
+    rows = _enabled_rows(rows)
     today = datetime.now(portal_zone()).date()
 
     def section(_label: str, venue_id: str, line_rows: list[dict]) -> str:
@@ -780,7 +813,7 @@ def _orders(view: dict | None, fetched_at: datetime | None) -> str:
 def _order_body(view: dict | None, fetched_at: datetime | None, venue_id: str) -> str:
     if view is None:
         return '<p class="empty">Unable to retrieve</p>'
-    if venue_id == "arcus":
+    if venue_id in {"arcus", "lighter"}:
         left_name, right_name = count_label("LONG", "orders"), count_label("SHORT", "orders")
         left = sum(1 for row in view["rows"] if row["side"] == "LONG")
         right = sum(1 for row in view["rows"] if row["side"] == "SHORT")
@@ -1053,7 +1086,7 @@ def _backtests(view: dict) -> str:
     )
     table = []
     cards_html = []
-    for row in view["rows"]:
+    for row in _enabled_rows(view["rows"]):
         table.append(
             "<tr>"
             f"<td class=\"identity\">{escape(show_text(row['strategy_name']))}</td><td class=\"identity\">{escape(row.get('venue') or 'mexc_spot')}</td>"
@@ -1230,13 +1263,8 @@ def _by_asset_class(rows: list[dict]) -> tuple[list[dict], list[dict]]:
 
 
 def _venue_grid(board: dict, kind: str, month: str, now: datetime | None = None) -> str:
-    positions = board.get("positions") or []
-    visible = []
-    for card in VENUE_CARDS:
-        booked = any(_venue_booked(board, venue_id, positions) for _label, venue_id in card["lines"])
-        if card["status"] == "Planned" and not booked:
-            continue
-        visible.append(_venue_card(board, card, kind, month, positions, now))
+    positions = _enabled_rows(board.get("positions") or [])
+    visible = [_venue_card(board, card, kind, month, positions, now) for card in venue_cards()]
     return f'<div class="venue-grid">{"".join(visible)}</div>'
 
 
@@ -1376,31 +1404,20 @@ def _card_shell(card: dict, body: str) -> str:
 
 def _trading_grid(rows: list[dict], section) -> str:
     cards = []
-    for card in VENUE_CARDS:
-        booked = any(_for_venue(rows, venue_id) for _label, venue_id in card["lines"])
-        if card["status"] == "Planned" and not booked:
-            continue
-        if card["status"] == "Supported" or booked:
-            body = "".join(
-                f'<div class="venue-block"><p class="kicker">{escape(label)}</p>'
-                + section(label, venue_id, _for_venue(rows, venue_id))
-                + "</div>"
-                for label, venue_id in card["lines"]
-            )
-        else:
-            body = '<p class="quiet">No Activity</p>'
+    for card in venue_cards():
+        body = "".join(
+            f'<div class="venue-block"><p class="kicker">{escape(label)}</p>'
+            + section(label, venue_id, _for_venue(rows, venue_id))
+            + "</div>"
+            for label, venue_id in card["lines"]
+        )
         cards.append(_card_shell(card, body))
     return f'<div class="venue-grid books">{"".join(cards)}</div>'
 
 
 def _account_grid(accounts: dict, section) -> str:
     cards = []
-    for card in VENUE_CARDS:
-        if card["status"] == "Planned":
-            continue
-        if card["status"] != "Supported":
-            cards.append(_card_shell(card, '<p class="quiet">No Activity</p>'))
-            continue
+    for card in venue_cards():
         body = "".join(
             f'<div class="venue-block"><p class="kicker">{escape(label)}</p>'
             + (
@@ -1424,6 +1441,7 @@ def _book_realized(rows: list[dict]) -> Decimal:
 
 
 def _grouped(rows: list[dict]) -> list[tuple[str, list[dict]]]:
+    rows = _enabled_rows(rows)
     present = {row.get("venue") or "mexc_spot" for row in rows}
 
     def rank(venue: str) -> tuple:

@@ -42,7 +42,7 @@ Displayed information.
 
 Some value labels are currently displayed in Japanese. The information described in this document corresponds to those labels.
 
-- Today. Result for the month so far, month volume, month target, progress against that target, amount still required, and the month-end projection. A fold shows the same block by venue.
+- Today. Result for the month so far, month volume, month target, progress against that target, amount still required, and the month-end projection. A fold shows one card for each venue id with `enabled: true` in `venues.yml`. MEXC Spot and MEXC Futures share one card. A disabled id is omitted.
 - Risk Summary. Count of open positions and unrealized result. A fold shows the same block by venue.
 - Operations. Name, due date, and state for tasks that are upcoming or overdue.
 - System Health. Mode (`dry_run` or `live`), whether new orders are allowed, whether the aggregate is available, whether ingest is current, and the time of the latest alert.
@@ -72,8 +72,8 @@ Displayed information.
 
 - Positions. Count of open positions and unrealized result. Each row is one strategy and symbol: unrealized result, hold time, remaining quantity, venue, open time, and last price. Rows with no price sit at the end.
 - Trades. Fills already booked: time, strategy, venue, symbol, side, quote received, quote spent, and quantity. The summary counts today's fills and unclassified rows.
-- Open Orders. Orders still open when the screen was opened: remaining quantity, age, strategy, symbol, side, price, order type, and original quantity. The screen says the list is not stored. Spot counts buys and sells. Futures counts shorts and covers. Arcus counts longs and shorts. An added venue appears in the same grid and is counted by the asset class in `venues.yml`.
-- Balances. For each currency: total, available, and amount locked in orders. The summary reads the USDT total, what is available, what is in orders, and how many coins are listed.
+- Open Orders. Orders still open when the screen was opened: remaining quantity, age, strategy, symbol, side, price, order type, and original quantity. The screen says the list is not stored. Spot counts buys and sells. Futures counts shorts and covers. Arcus and Lighter count longs and shorts. The grid lists only venue ids with `enabled: true`.
+- Balances. For each currency: total, available, and amount locked in orders. The summary reads the USDT total, what is available, what is in orders, and how many coins are listed. Arcus and Lighter show equity, available balance, margin, and the open-position count. Lighter's amounts use its quote.
 
 A venue the screen cannot read shows that the read failed. The screen does not invent a zero.
 

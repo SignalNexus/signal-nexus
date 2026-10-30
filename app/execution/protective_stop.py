@@ -773,7 +773,9 @@ def _read_mark(symbol: str, venue: str) -> Decimal | None:
             port = port_for(venue)
             if port is None:
                 return None
-            return port.mark(symbol)
+            from app.venues import order_symbol
+
+            return port.mark(order_symbol(symbol, venue))
         response.raise_for_status()
         return _public_price(response.json(), venue)
     except Exception:

@@ -110,7 +110,15 @@ Volume Pack と Profit Pack は、別々のリサーチのパッケージです�
 
 VenueAdd は、公開版に無い一つの会場を、その会場が有効になり手順が文書になったあとで接続します。その会場の保守は、同じ拡張に残ります。日付のリサーチのパッケージではなく、あとから増えるすべての会場の権利でもありません。
 
-一つの戦略は、複数の会場を名指しできます。一つのアラートは、そのアクションを受け付ける有効な deployment のすべてへ進みます。追加会場も同じ経路です。公開プロセスは `SIGNAL_NEXUS_VENUEADD` から追加会場を読み、`execute`、`mark`、`sync_lots`、`open_orders`、`balance`、`apply_leverage` の六つを呼びます。設定が空なら、MEXC 現物、MEXC 先物、Arcus は今のままです。この三つの ID は予約です。パッケージが予約 ID、重複した ID、または 1 以外のポート版を返すと、そのプロセスは起動時に止まります。有料会場の接続は、このツリーの外に残します。
+一つの戦略は、複数の会場を名指しできます。一つのアラートは、そのアクションを受け付ける有効な deployment のすべてへ進みます。追加会場も同じ経路です。
+
+Webhook は会場の実装を知りません。扱うのは `venue_id` だけです。会場ごとの差異、SDK、API クライアント、署名方式、秘密、Venue Package は VM だけが持ちます。新しい VenueAdd を追加しても、Webhook に会場固有コードを追加しません。
+
+`ANALYTICS_API_URL` があるとき、`execute_order` は Venue Package を import する前に転送します。組み込みの集合は、既存の `RESERVED_VENUE_IDS` です。値は `arcus`、`mexc_spot`、`mexc_futures` です。別の定数は増やしません。`arcus` は `/api/arcus/order`、`mexc_spot` と `mexc_futures` は `/api/mexc/order` です。この集合に無い `venue_id` は、すべて同じ転送規則で `/api/venue/order` へ渡します。Webhook はそれらの ID を区別しません。新しい VenueAdd を足しても、転送規則は変わらず、Webhook の改修も要りません。TxFlow、Lighter、QFEX は例であり、例外ではありません。VenueAdd はすべて同じ経路を通ります。会場ごとの Webhook 分岐は追加しません。`ANALYTICS_API_URL` が無いとき、未ロードの会場はこれまでどおり `venue has no order adapter` で止まります。
+
+`SIGNAL_NEXUS_VENUEADD` を import し、`execute`、`mark`、`sync_lots`、`open_orders`、`balance`、`apply_leverage` の六つを呼ぶのは、VM のプロセスです。設定が空なら、MEXC 現物、MEXC 先物、Arcus は今のままです。パッケージが予約 ID、重複した ID、または 1 以外のポート版を返すと、そのプロセスは起動時に止まります。有料会場の接続は、このツリーの外に残します。
+
+この引き渡しの完了は、Webhook が転送し、Analytics API が受信の監査を保存したときです。取引所の約定は、この引き渡しの出口ではありません。確認の前に、Webhook、`signal-nexus-dev`、Analytics VM の `strategies.yml` のコミットが同じであることを見ます。世代が違う状態は、確認になりません。
 
 各商品が何を含むかは [Product Specification](../product/PRODUCT_SPECIFICATION_JA.md) が定義します。この節は価格を定めません。
 
@@ -166,7 +174,7 @@ Arcus は、いまの発注先です。約定の読み取りは `ANALYTICS_ARCUS
 2. Render が `WEBHOOK_SECRET` を確認し、`strategy_id`、`symbol`、`action` を `config/strategies.yml` と照合する。
 3. 注文額は、その行の `size_quote` である。アラートの本文に `size` も `size_quote` も無い。
 4. `dry_run` では、Render は注文を出さない。
-5. `live` では、注文は仮想マシン上の Analytics API を通り、MEXC または Arcus へ出る。
+5. `live` では、Webhook が会場名を Analytics API へ転送する。組み込み会場は既存の注文エンドポイントを使う。それ以外の会場名は `POST /api/venue/order` を使う。注文を実行するのは仮想マシンである。
 6. 監査の行は Postgres に保存される。Render は写しを Discord へ届けられる。
 
 保護決済は、TradingView のアラートが足の確定時にだけ評価されるため、その間の急な価格変化への対応を補うための付加機能です。Signal Nexus は、戦略ごとにストップ 価格1 つと利食い価格 1 つを持ちます。価格は、その戦略の最新エントリー約定に loss_pct と profit_pct を掛けて決めます。仮想マシンが 5 秒ごとに新しい公開価格を見て、先に割れた方で、その戦略の残数量全体を成行で閉じます。アラートの代わりではなく、次の足のアラートが来るまでに想定外の損失を防ぐ、もしくは利益の確保を行うための保護です。約定ごとには保存せず、平均建値からも取りません。MEXC や Arcus のストップ注文でも利食い注文でもありません。決済は既存の監査種別を 1 つ書き、その写しを Render へ渡します。Discord の送信は Render が行います。Dashboard の最新アラート時刻は `SIGNAL RECEIVED` だけを読むため、この決済では動きません。転送に失敗しても、監査行は Postgres に残ります。

@@ -933,7 +933,9 @@ def _mark_prices(opens) -> dict:
                 port = port_for(venue)
                 if port is None:
                     return pair, None
-                return pair, port.mark(symbol)
+                from app.venues import order_symbol
+
+                return pair, port.mark(order_symbol(symbol, venue))
             response.raise_for_status()
             return pair, _public_last(response.json(), venue)
         except Exception:

@@ -156,7 +156,7 @@ These are the runtime names. This section does not say how to create the values.
 
 The webhook process holds these. They authenticate alerts, reach the Analytics API, open the portal, and decide whether an order is sent.
 
-- `WEBHOOK_SECRET` — `POST /webhook` compares this with the JSON field `secret`. A configured value shorter than 24 characters stops this process from starting. The same length rule applies to `PORTAL_PASSWORD` and `ANALYTICS_API_SECRET` on the process that holds them. An unset value stays closed at the request.
+- `WEBHOOK_SECRET` — `POST /webhook` compares this with the JSON field `secret`. A configured value shorter than 24 characters stops this process from starting. `ANALYTICS_API_SECRET` has the same length rule on the process that holds it. `PORTAL_PASSWORD` does not. An unset value stays closed at the request.
 - `ANALYTICS_API_URL` — Where the webhook reaches the Analytics API. The URL carries no secret.
 - `ANALYTICS_API_SECRET` — Shared secret for that call. The same value is set on the Analytics service. It is not `WEBHOOK_SECRET`.
 - `PORTAL_PASSWORD` — Password for the portal served by the webhook process.

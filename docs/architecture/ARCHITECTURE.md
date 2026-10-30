@@ -110,7 +110,15 @@ Volume Pack and Profit Pack are separate research packages. Research stays priva
 
 VenueAdd connects one venue that is not in the public release, after that venue is enabled and documented. Maintenance of that venue stays in the same extension. It is not a dated research package, and it is not a right to every later venue.
 
-One strategy can name more than one venue. One alert goes to each enabled deployment that accepts the action. That is one strategy to many venues, and an added venue uses the same path. The public process loads an added venue from `SIGNAL_NEXUS_VENUEADD` and calls six methods: `execute`, `mark`, `sync_lots`, `open_orders`, `balance`, and `apply_leverage`. An empty setting leaves MEXC Spot, MEXC Futures, and Arcus as they are. Those three ids are reserved. A package that returns one of them, a repeated id, or a port version other than 1 stops that process during startup. The connector for a paid venue stays outside this tree.
+One strategy can name more than one venue. One alert goes to each enabled deployment that accepts the action. That is one strategy to many venues, and an added venue uses the same path.
+
+The webhook does not know a venue's implementation. It handles only the `venue_id`. Venue-specific differences, the SDK, the API client, the signing method, secrets, and the venue package belong only to the virtual machine. Adding a VenueAdd does not add venue-specific code to the webhook.
+
+When `ANALYTICS_API_URL` is set, `execute_order` forwards before it imports a venue package. The built-in set is the existing `RESERVED_VENUE_IDS`: `arcus`, `mexc_spot`, and `mexc_futures`. A second constant is not added. `arcus` is posted to `/api/arcus/order`. `mexc_spot` and `mexc_futures` are posted to `/api/mexc/order`. Every `venue_id` outside that set uses the same forwarding rule and is posted to `/api/venue/order`. The webhook does not distinguish those ids. A new VenueAdd does not change the rule and does not require a webhook change. TxFlow, Lighter, and QFEX are examples, not exceptions. Every VenueAdd uses that same path. The webhook does not gain a branch per venue. When `ANALYTICS_API_URL` is unset, an unloaded venue still stops with `venue has no order adapter`.
+
+The virtual machine is the process that imports `SIGNAL_NEXUS_VENUEADD` and calls `execute`, `mark`, `sync_lots`, `open_orders`, `balance`, and `apply_leverage`. An empty setting leaves MEXC Spot, MEXC Futures, and Arcus as they are. A package that returns a reserved id, a repeated id, or a port version other than 1 stops that process during startup. The connector for a paid venue stays outside this tree.
+
+The handoff is complete when the webhook has forwarded the order and the Analytics API has stored the received audit. A fill at the exchange is not the exit for this handoff. Before that check, the `strategies.yml` commit on the webhook, on `signal-nexus-dev`, and on the Analytics VM must be the same commit. A mismatched generation is not a valid check.
 
 What each product includes is defined in [Product Specification](../product/PRODUCT_SPECIFICATION.md). This section does not set a price.
 
@@ -166,7 +174,7 @@ Arcus is a current order path. Fills are read with `ANALYTICS_ARCUS_ADDRESS` and
 2. Render checks `WEBHOOK_SECRET`, then `strategy_id`, `symbol`, and `action` against `config/strategies.yml`.
 3. The order amount is `size_quote` on that row. The alert body does not carry `size` or `size_quote`.
 4. In `dry_run`, Render does not send the order.
-5. In `live`, the order goes out through the Analytics API on the virtual machine to MEXC or Arcus.
+5. In `live`, the webhook forwards the venue name to the Analytics API. Built-in venues use their existing order endpoints. Every other venue name uses `POST /api/venue/order`. The virtual machine executes the order.
 6. The audit row is stored in Postgres. Render can deliver a copy to Discord.
 
 A protective exit is an added function that covers sharp price changes between bars, because a TradingView alert is evaluated only when a bar closes. Signal Nexus keeps one stop price and one take-profit price for each strategy. Those prices are set by applying `loss_pct` and `profit_pct` to that strategy's latest entry fill. Every five seconds, the virtual machine reads a fresh public price and closes that strategy's entire remaining quantity with a market order at the first level the price crosses. It does not replace the alert. It limits an unexpected loss, or secures a profit, until the next bar's alert arrives. The prices are not stored per fill, and they are not taken from average cost. It is not a stop or take-profit order at MEXC or Arcus. The exit writes one of the existing audit events and forwards that copy to Render, which delivers Discord. The Dashboard latest-alert time reads `SIGNAL RECEIVED` only, so this exit does not move it. A failed forward leaves the audit row in Postgres.

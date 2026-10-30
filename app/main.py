@@ -28,7 +28,7 @@ def preload_positions() -> None:
 async def lifespan(_app: FastAPI):
     from app.execution.venue_port import load_ports
 
-    require_secret_strength("WEBHOOK_SECRET", "PORTAL_PASSWORD", "ANALYTICS_API_SECRET")
+    require_secret_strength("WEBHOOK_SECRET", "ANALYTICS_API_SECRET")
     max_bar_age_seconds()
     load_ports()
     if execution_mode() == "live":

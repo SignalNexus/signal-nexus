@@ -4,7 +4,7 @@ from pathlib import Path
 import yaml
 
 from app.config_dir import config_file
-from app.venues import asset_class_of, enabled_venues
+from app.venues import asset_class_of, enabled_venues, order_symbol
 
 REGISTRY_PATH = config_file("strategies.yml")
 
@@ -51,7 +51,7 @@ class Strategy:
     def bound(self, deployment: Deployment) -> "Strategy":
         return Strategy(
             self.strategy_id,
-            self.symbol,
+            order_symbol(self.symbol, deployment.venue),
             deployment.size_quote,
             deployment.venue,
             self.side,
@@ -86,7 +86,7 @@ def leverage_book(venue: str) -> dict[str, int]:
         for deployment in strategy.deployments:
             if deployment.venue != venue or not deployment.enabled or deployment.leverage is None:
                 continue
-            book[strategy.symbol] = deployment.leverage
+            book[order_symbol(strategy.symbol, venue)] = deployment.leverage
     return book
 
 
@@ -228,7 +228,7 @@ def _reject_mixed_directions(strategies: dict[str, Strategy]) -> None:
     sides: dict[tuple[str, str], str] = {}
     for strategy in strategies.values():
         for deployment in strategy.deployments:
-            key = (deployment.venue, strategy.symbol)
+            key = (deployment.venue, order_symbol(strategy.symbol, deployment.venue))
             previous = sides.get(key)
             if previous is not None and previous != strategy.side:
                 raise RegistryRejection(f"{strategy.symbol} on {deployment.venue} cannot mix long and short")
@@ -239,7 +239,7 @@ def _reject_leverage(strategies: dict[str, Strategy]) -> None:
     found: dict[tuple[str, str], int] = {}
     for strategy in strategies.values():
         for deployment in strategy.deployments:
-            key = (deployment.venue, strategy.symbol)
+            key = (deployment.venue, order_symbol(strategy.symbol, deployment.venue))
             if asset_class_of(deployment.venue) != "futures":
                 if deployment.leverage != 1:
                     raise RegistryRejection(f"leverage for {strategy.symbol} on {deployment.venue} is 1")

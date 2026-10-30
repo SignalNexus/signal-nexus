@@ -156,7 +156,7 @@ Analytics の記録は、`ANALYTICS_API_URL` と `ANALYTICS_API_SECRET` があ�
 
 Webhook のプロセスが持ちます。アラートの確認、Analytics API への到達、ポータルを開くこと、注文を出すかどうかが、ここにあります。
 
-- `WEBHOOK_SECRET` — `POST /webhook` が、JSON の `secret` とこの値を比べます。設定した値が 24 文字より短いと、このプロセスは起動しません。`PORTAL_PASSWORD` と `ANALYTICS_API_SECRET` も、それを持つプロセスでは同じ長さです。未設定の値は、リクエストの時点で閉じたままです。
+- `WEBHOOK_SECRET` — `POST /webhook` が、JSON の `secret` とこの値を比べます。設定した値が 24 文字より短いと、このプロセスは起動しません。`ANALYTICS_API_SECRET` も、それを持つプロセスでは同じ長さです。`PORTAL_PASSWORD` には、この長さの制約はありません。未設定の値は、リクエストの時点で閉じたままです。
 - `ANALYTICS_API_URL` — Webhook が Analytics API に届く先です。URL に秘密は入れません。
 - `ANALYTICS_API_SECRET` — その呼び出しの共有の秘密です。同じ値を Analytics サービスにも置きます。`WEBHOOK_SECRET` とは別です。
 - `PORTAL_PASSWORD` — Webhook のプロセスが出すポータルのパスワードです。
