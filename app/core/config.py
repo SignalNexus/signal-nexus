@@ -2,7 +2,8 @@ import os
 from datetime import datetime, timedelta, timezone
 
 MIN_SECRET_LENGTH = 24
-DEFAULT_MAX_BAR_AGE_SECONDS = 300
+# Bar open is sent at bar close. A 4-hour bar is already 4 hours old, plus delivery.
+DEFAULT_MAX_BAR_AGE_SECONDS = 24 * 60 * 60
 
 
 def execution_mode() -> str:

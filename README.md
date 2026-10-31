@@ -308,7 +308,7 @@ The alert body does not carry `protective_exit`, `loss_pct`, or `profit_pct`. Th
 | `strategy_id` | The key in `config/strategies.yml` |
 | `symbol` | The `symbol` on that row |
 | `action` | An action that row accepts |
-| `bar_time` | ISO-8601 time within `MAX_BAR_AGE_SECONDS` of the server clock, before or after. The default is 300. An older or further-future value is HTTP 422 |
+| `bar_time` | ISO-8601 time within `MAX_BAR_AGE_SECONDS` of the server clock, before or after. The default is 24 hours (86400 seconds). An older or further-future value is HTTP 422 |
 | `client_order_id` | An id for this attempt. A repeat for that venue is discarded |
 
 `exit_bar_close` is optional, and only with `SELL` or `STOP`. It is an ISO-8601 time.

@@ -79,7 +79,7 @@ The body is a JSON object. These fields are required.
 | `strategy_id` | The key in `config/strategies.yml` |
 | `symbol` | The `symbol` on that row, such as `BTC/USDT` |
 | `action` | One of the actions in the next section |
-| `bar_time` | ISO-8601 time within `MAX_BAR_AGE_SECONDS` of the server clock. The default is 300 seconds, both before and after now |
+| `bar_time` | ISO-8601 time within `MAX_BAR_AGE_SECONDS` of the server clock. The default is 24 hours (86400 seconds), both before and after now |
 | `client_order_id` | An id for this attempt. A repeat of the same id is discarded |
 
 `exit_bar_close` is optional, and only with `SELL` or `STOP`. It is also an ISO-8601 time.

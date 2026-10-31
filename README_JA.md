@@ -308,7 +308,7 @@ venues:
 | `strategy_id` | `config/strategies.yml` のキー |
 | `symbol` | その行の `symbol` |
 | `action` | その行が受け付けるアクション |
-| `bar_time` | サーバ時刻との差が `MAX_BAR_AGE_SECONDS` 以内の ISO-8601。前後とも同じです。既定は 300 秒です。それより古い、または先の時刻は HTTP 422 です |
+| `bar_time` | サーバ時刻との差が `MAX_BAR_AGE_SECONDS` 以内の ISO-8601。前後とも同じです。既定は 24 時間（86400 秒）です。それより古い、または先の時刻は HTTP 422 です |
 | `client_order_id` | その一回の id。同じ venue での再送は破棄される |
 
 `exit_bar_close` は任意で、`SELL` または `STOP` のときだけです。こちらも ISO-8601 の時刻です。
