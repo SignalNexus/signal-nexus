@@ -5,19 +5,19 @@ Wants=network-online.target
 
 [Service]
 Type=simple
-User=ubuntu
-Group=ubuntu
-WorkingDirectory=/home/ubuntu/signal-nexus
+User=@SERVICE_USER@
+Group=@SERVICE_USER@
+WorkingDirectory=@CORE_DIRECTORY@
 Environment=PYTHONUNBUFFERED=1
 Environment=ARCUS_APPLY_LEVERAGE=1
 Environment=ANALYTICS_API_URL=http://127.0.0.1:8080
 Environment=ANALYTICS_BOARD_REFRESH=1
-Environment=ANALYTICS_BOARD_SNAPSHOT=/home/ubuntu/signal-nexus-board.json
-EnvironmentFile=/home/ubuntu/analytics.env
-EnvironmentFile=-/home/ubuntu/arcus.env
-EnvironmentFile=-/home/ubuntu/mexc.env
+Environment=ANALYTICS_BOARD_SNAPSHOT=@ENV_DIRECTORY@/signal-nexus-board.json
+EnvironmentFile=@ENV_DIRECTORY@/analytics.env
+EnvironmentFile=-@ENV_DIRECTORY@/arcus.env
+EnvironmentFile=-@ENV_DIRECTORY@/mexc.env
 Environment=EXECUTION_MODE=live
-ExecStart=/home/ubuntu/signal-nexus/.venv/bin/python -m app.analytics.api
+ExecStart=@CORE_DIRECTORY@/.venv/bin/python -m app.analytics.api
 Restart=on-failure
 RestartSec=5
 StartLimitIntervalSec=60

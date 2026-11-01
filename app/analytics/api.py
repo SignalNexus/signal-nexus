@@ -372,6 +372,21 @@ def _sync_lots_forever() -> None:
             logger.warning("strategy lots were not synced")
 
 
+def _import_venue_fills_forever() -> None:
+    global _warm_stamp
+    while True:
+        try:
+            from app.analytics.importer import ingest_venue_fills
+
+            with _connect() as connection:
+                inserted = ingest_venue_fills(connection, datetime.now(timezone.utc))
+            if inserted:
+                _warm_stamp = None
+        except Exception:
+            logger.warning("venue fills were not read")
+        time.sleep(60)
+
+
 def _preload_mexc() -> None:
     if os.environ.get("MEXC_API_KEY", "").strip() and os.environ.get("MEXC_API_SECRET", "").strip():
         try:
@@ -421,6 +436,7 @@ async def _lifespan(_app):
     Thread(target=_preload_mexc, daemon=True).start()
     if os.environ.get("ANALYTICS_DATABASE_URL", "").strip():
         Thread(target=_sync_lots_forever, daemon=True).start()
+        Thread(target=_import_venue_fills_forever, daemon=True).start()
         if os.environ.get("PROTECTIVE_STOP_WATCH", "1") != "0":
             from app.execution.protective_stop import watch_forever
 

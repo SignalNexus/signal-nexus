@@ -5,12 +5,12 @@ Wants=network-online.target
 
 [Service]
 Type=simple
-User=ubuntu
-Group=ubuntu
-WorkingDirectory=/home/ubuntu/signal-nexus
+User=@SERVICE_USER@
+Group=@SERVICE_USER@
+WorkingDirectory=@CORE_DIRECTORY@
 Environment=PYTHONUNBUFFERED=1
-EnvironmentFile=/home/ubuntu/analytics.env
-ExecStart=/home/ubuntu/signal-nexus/.venv/bin/python -m app.analytics.importer
+EnvironmentFile=@ENV_DIRECTORY@/analytics.env
+ExecStart=@CORE_DIRECTORY@/.venv/bin/python -m app.analytics.importer
 Restart=on-failure
 RestartSec=5
 StartLimitIntervalSec=60

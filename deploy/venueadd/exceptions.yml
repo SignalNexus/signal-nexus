@@ -1,0 +1,7 @@
+# Reviewed exceptions to venue package metadata.
+# A venue manifest cannot add an override. Only this list can.
+exceptions:
+  - distribution: lighter-sdk
+    version: "1.1.8"
+    drop_requires:
+      - urllib3

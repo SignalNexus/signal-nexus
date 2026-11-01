@@ -186,6 +186,42 @@ def store_trades(
     return inserted
 
 
+def ingest_venue_fills(connection, now: datetime) -> int:
+    """Store fill rows from VenueAdd packages. The core does not parse a venue."""
+    try:
+        from app.execution.venue_port import ports
+    except Exception:
+        logger.warning("venue fills were not read")
+        return 0
+    inserted = 0
+    try:
+        loaded = ports()
+    except Exception:
+        logger.warning("venue fills were not read")
+        return 0
+    for venue_id, port in loaded.items():
+        reader = getattr(port, "read_fills", None)
+        if not callable(reader):
+            continue
+        try:
+            rows = reader(now)
+        except Exception:
+            logger.warning("venue fills were not read: %s", venue_id)
+            continue
+        if not isinstance(rows, list):
+            logger.warning("venue fills were not read: %s", venue_id)
+            continue
+        try:
+            with connection.transaction():
+                create_schema(connection)
+                for row in rows:
+                    if isinstance(row, dict) and insert_fill(connection, ignore_conflict=True, **row):
+                        inserted += 1
+        except Exception:
+            logger.warning("venue fills were not read: %s", venue_id)
+    return inserted
+
+
 def run_ingest(
     connection,
     exchange,
@@ -206,6 +242,7 @@ def run_ingest(
     arcus_fills = _load_arcus_fills(now, arcus_get)
     inserted = store_trades(connection, trades, strategies, succeeded_at=now, arcus_fills=arcus_fills)
     inserted += _ingest_futures(connection, strategies, now)
+    inserted += ingest_venue_fills(connection, now)
     return inserted
 
 

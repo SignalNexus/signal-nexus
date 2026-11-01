@@ -104,7 +104,7 @@ def effective_buy_quantity(fill: FillView) -> Decimal:
 
 def _arcus_long(rows: list[FillView]) -> bool:
     for fill in rows:
-        if fill.venue != "arcus":
+        if fill.venue not in {"arcus", "lighter"}:
             return False
         client = fill.exchange_client_order_id or ""
         if len(client) == 32 and client[10] in ("l", "f"):
@@ -120,7 +120,7 @@ def reconstruct(fills: list[FillView]) -> tuple[list[ClosedTrade], list[OpenPosi
     opens: list[OpenPosition] = []
     for strategy_name, symbol, venue in sorted(grouped):
         rows = sorted(grouped[(strategy_name, symbol, venue)], key=lambda item: (item.filled_at, item.trade_id))
-        if venue == "arcus" and strategy_name == "未分類":
+        if venue in {"arcus", "lighter"} and strategy_name == "未分類":
             continue
         lots: list[_Lot] = []
         pending: _Pending | None = None

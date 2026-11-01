@@ -1,12 +1,17 @@
 import os
 import sys
 
-from deploy.envfile import SECRET_KEYS, upsert_env
+from deploy.envfile import parse_builtin_venues, secret_keys_for, upsert_env
 
 
 def main() -> None:
     path = sys.argv[1]
-    missing = [key for key in SECRET_KEYS if not os.environ.get(key)]
+    raw = os.environ.get("BUILTIN_VENUES", "")
+    if not raw.strip():
+        print("BUILTIN_VENUES is unset", file=sys.stderr)
+        sys.exit(1)
+    keys = secret_keys_for(parse_builtin_venues(raw))
+    missing = [key for key in keys if not os.environ.get(key)]
     if missing:
         print("missing env names: " + ", ".join(missing), file=sys.stderr)
         sys.exit(1)
@@ -14,7 +19,7 @@ def main() -> None:
     if os.path.exists(path):
         with open(path, encoding="utf-8") as handle:
             current = handle.read()
-    updated = upsert_env(current, {key: os.environ[key] for key in SECRET_KEYS})
+    updated = upsert_env(current, {key: os.environ[key] for key in keys})
     health = os.environ.get("RENDER_HEALTH_URL", "").strip()
     if health.endswith("/health"):
         updated = upsert_env(updated, {"AUDIT_COPY_URL": health[: -len("/health")] + "/api/audit-copies"})

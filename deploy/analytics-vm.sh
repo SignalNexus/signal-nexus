@@ -2,12 +2,14 @@
 # VM 上で実行する。Postgres は localhost だけにする。5432 は外へ開かない。
 set -euo pipefail
 
-ROOT=/home/ubuntu/signal-nexus
-ENV_FILE=/home/ubuntu/analytics.env
+ROOT="${CORE_DIRECTORY:?CORE_DIRECTORY is unset}"
+ENV_DIRECTORY="${ENV_DIRECTORY:-$(dirname "$ROOT")}"
+SERVICE_USER="${SERVICE_USER:-$(id -un)}"
+ENV_FILE="$ENV_DIRECTORY/analytics.env"
 cd "$ROOT"
 echo "analytics-vm start"
 
-SITE_FILE=/home/ubuntu/site.env
+SITE_FILE="$ENV_DIRECTORY/site.env"
 if [[ ! -f "$ENV_FILE" ]]; then
   echo "analytics.env is missing" >&2
   exit 1
@@ -138,11 +140,27 @@ python3 -m venv "$ROOT/.venv"
 "$ROOT/.venv/bin/pip" install -r "$ROOT/requirements.txt"
 "$ROOT/.venv/bin/python" -m deploy.futures_read "$ENV_FILE"
 
-sudo -n cp deploy/systemd/signal-nexus-analytics-api.service /etc/systemd/system/
-sudo -n cp deploy/systemd/signal-nexus-analytics-importer.service /etc/systemd/system/
-sudo -n cp deploy/systemd/signal-nexus-render-keepalive.service /etc/systemd/system/
+render_unit() {
+  local rendered
+  rendered="$(sed \
+    -e "s|@CORE_DIRECTORY@|${ROOT}|g" \
+    -e "s|@ENV_DIRECTORY@|${ENV_DIRECTORY}|g" \
+    -e "s|@SERVICE_USER@|${SERVICE_USER}|g" \
+    "$1")"
+  if grep -E '@(CORE_DIRECTORY|ENV_DIRECTORY|SERVICE_USER)@' <<<"$rendered"; then
+    echo "unit placeholder remains in $1" >&2
+    exit 1
+  fi
+  printf '%s\n' "$rendered" | sudo -n tee "$2" >/dev/null
+}
+
+render_unit deploy/systemd/signal-nexus-analytics-api.service /etc/systemd/system/signal-nexus-analytics-api.service
+render_unit deploy/systemd/signal-nexus-analytics-importer.service /etc/systemd/system/signal-nexus-analytics-importer.service
+render_unit deploy/systemd/signal-nexus-render-keepalive.service /etc/systemd/system/signal-nexus-render-keepalive.service
 sudo -n cp deploy/systemd/signal-nexus-render-keepalive.timer /etc/systemd/system/
 sudo -n systemctl daemon-reload
+echo "rendered unit signal-nexus-analytics-api"
+sudo -n systemctl cat signal-nexus-analytics-api
 sudo -n systemctl enable signal-nexus-analytics-api signal-nexus-analytics-importer
 sudo -n systemctl enable --now signal-nexus-render-keepalive.timer
 sudo -n systemctl restart signal-nexus-analytics-api signal-nexus-analytics-importer
@@ -160,6 +178,9 @@ if [[ "$ready" != 1 ]]; then
   sudo -n journalctl -u signal-nexus-analytics-api -n 120 --no-pager --output=short-iso >&2 || true
   exit 1
 fi
+echo "analytics api health"
+curl -fsS --max-time 2 http://127.0.0.1:8080/health
+echo
 
 sudo -n systemctl is-active --quiet signal-nexus-analytics-api
 sudo -n systemctl is-active --quiet signal-nexus-analytics-importer
@@ -179,7 +200,7 @@ if ! command -v caddy >/dev/null 2>&1; then
   apt_get install -y caddy
 fi
 sudo -n mkdir -p /etc/systemd/system/caddy.service.d
-printf '%s\n' '[Service]' 'EnvironmentFile=/home/ubuntu/site.env' | sudo -n tee /etc/systemd/system/caddy.service.d/site.conf >/dev/null
+printf '%s\n' '[Service]' "EnvironmentFile=${SITE_FILE}" | sudo -n tee /etc/systemd/system/caddy.service.d/site.conf >/dev/null
 sudo -n systemctl daemon-reload
 sudo -n cp deploy/caddy/Caddyfile /etc/caddy/Caddyfile
 sudo -n env CADDY_SITE_ADDRESS="$CADDY_SITE_ADDRESS" caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile

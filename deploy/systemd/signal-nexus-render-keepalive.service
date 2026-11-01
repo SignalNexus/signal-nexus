@@ -5,9 +5,9 @@ Wants=network-online.target
 
 [Service]
 Type=oneshot
-User=ubuntu
-Group=ubuntu
-EnvironmentFile=/home/ubuntu/site.env
+User=@SERVICE_USER@
+Group=@SERVICE_USER@
+EnvironmentFile=@ENV_DIRECTORY@/site.env
 # Discard the body: cron-job.org aborts above 64 KiB when Render returns a
 # spin-up HTML page, but curl here still wakes the service.
 ExecStart=/usr/bin/curl -sS -o /dev/null --max-time 90 ${RENDER_HEALTH_URL}

@@ -73,12 +73,34 @@ def role_sql(password: str, *, exists: bool) -> str:
     return statement + "\n"
 
 
-SECRET_KEYS = (
+ALWAYS_SECRET_KEYS = (
     "ANALYTICS_API_SECRET",
     "ANALYTICS_DB_PASSWORD",
+)
+ARCUS_SECRET_KEYS = ("ANALYTICS_ARCUS_ADDRESS",)
+MEXC_SPOT_SECRET_KEYS = (
     "ANALYTICS_MEXC_API_KEY",
     "ANALYTICS_MEXC_API_SECRET",
+)
+MEXC_FUTURES_SECRET_KEYS = (
     "ANALYTICS_MEXC_FUTURES_API_KEY",
     "ANALYTICS_MEXC_FUTURES_API_SECRET",
-    "ANALYTICS_ARCUS_ADDRESS",
 )
+SECRET_KEYS = ALWAYS_SECRET_KEYS + ARCUS_SECRET_KEYS + MEXC_SPOT_SECRET_KEYS + MEXC_FUTURES_SECRET_KEYS
+
+
+def parse_builtin_venues(text: str) -> set[str]:
+    if text.strip() == "none":
+        return set()
+    return {part.strip() for part in text.split(",") if part.strip()}
+
+
+def secret_keys_for(venues: set[str]) -> tuple[str, ...]:
+    keys = list(ALWAYS_SECRET_KEYS)
+    if "arcus" in venues:
+        keys.extend(ARCUS_SECRET_KEYS)
+    if "mexc_spot" in venues:
+        keys.extend(MEXC_SPOT_SECRET_KEYS)
+    if "mexc_futures" in venues:
+        keys.extend(MEXC_FUTURES_SECRET_KEYS)
+    return tuple(keys)

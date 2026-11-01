@@ -1,0 +1,64 @@
+name: venueadd-install
+
+on:
+  workflow_call:
+    inputs:
+      core_repository:
+        description: Repository that contains the core tree
+        required: true
+        type: string
+      core_sha:
+        description: Core commit to check out
+        required: true
+        type: string
+      venues_manifest:
+        description: Path to the venue manifest in the caller repository
+        required: true
+        type: string
+    secrets:
+      checkout_token:
+        required: false
+
+permissions:
+  contents: read
+  actions: write
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: ${{ inputs.core_repository }}
+          ref: ${{ inputs.core_sha }}
+          path: core
+
+      - uses: actions/checkout@v4
+        with:
+          path: caller
+
+      - uses: astral-sh/setup-uv@v6
+
+      - name: Resolve purchased venues
+        working-directory: core
+        env:
+          CHECKOUT_TOKEN: ${{ secrets.checkout_token }}
+          VENUES_MANIFEST: ${{ github.workspace }}/caller/${{ inputs.venues_manifest }}
+        run: |
+          mkdir -p build/venueadd-out
+          if [[ -z "${{ inputs.venues_manifest }}" || ! -f "$VENUES_MANIFEST" ]]; then
+            : > build/venueadd-out/imports.txt
+            : > build/venueadd-out/lock.txt
+            mkdir -p build/venueadd-out/trees
+            exit 0
+          fi
+          python -m deploy.venueadd.fetch "$VENUES_MANIFEST" build/venueadd
+          python -m deploy.venueadd.resolve requirements.txt build/venueadd build/venueadd-out/lock.txt
+          python -m deploy.venueadd.validate "$VENUES_MANIFEST" build/venueadd
+          python -m deploy.venueadd.bundle "$VENUES_MANIFEST" build/venueadd build/venueadd-out
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: venueadd-bundle
+          path: core/build/venueadd-out
+          if-no-files-found: error

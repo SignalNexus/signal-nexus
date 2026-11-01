@@ -1,0 +1,8 @@
+# Example only. A real manifest stays at venueadd/venues.yaml in the
+# private development repository and is not part of the public export.
+venues:
+  - import_name: venueadd_lighter
+    repository: SignalNexus/signal-nexus-venueadd-lighter
+    sha: "0000000000000000000000000000000000000000"
+    venue_id: lighter
+    requirements_file: requirements.txt

@@ -1,0 +1,321 @@
+# Deploy one Analytics API host from inputs.
+# The caller supplies the core repository, the strategies file, and the checkout token.
+# This file does not name a customer, a host, or a machine.
+
+name: analytics-deploy
+
+on:
+  workflow_call:
+    inputs:
+      core_repository:
+        description: Repository that contains the core tree
+        required: true
+        type: string
+      core_sha:
+        description: Core commit to check out
+        required: true
+        type: string
+      expected_strategies_blob:
+        description: Git blob of the caller repository strategies file
+        required: true
+        type: string
+      venues_manifest:
+        description: Path to the venue manifest in the caller repository
+        required: true
+        type: string
+      ssh_user:
+        description: SSH user on the Analytics VM
+        required: true
+        type: string
+      core_directory:
+        description: Core checkout directory on the Analytics VM
+        required: true
+        type: string
+      venue_directory:
+        description: VenueAdd tree directory on the Analytics VM
+        required: true
+        type: string
+      builtin_venues:
+        description: Built-in venues to configure. Use none when this deployment uses no Arcus or MEXC.
+        required: true
+        type: string
+    secrets:
+      checkout_token:
+        required: false
+      ANALYTICS_SSH_HOST:
+        required: true
+      ANALYTICS_SSH_PRIVATE_KEY:
+        required: true
+      ANALYTICS_SSH_HOST_FINGERPRINT:
+        required: true
+      ANALYTICS_API_SECRET:
+        required: true
+      ANALYTICS_DB_PASSWORD:
+        required: true
+      RENDER_HEALTH_URL:
+        required: true
+      CADDY_SITE_ADDRESS:
+        required: true
+      KILL_SWITCH:
+        required: false
+      ANALYTICS_ARCUS_ADDRESS:
+        required: false
+      ARCUS_ADDRESS:
+        required: false
+      ARCUS_SIGNING_KEY:
+        required: false
+      ANALYTICS_MEXC_API_KEY:
+        required: false
+      ANALYTICS_MEXC_API_SECRET:
+        required: false
+      ANALYTICS_MEXC_FUTURES_API_KEY:
+        required: false
+      ANALYTICS_MEXC_FUTURES_API_SECRET:
+        required: false
+      MEXC_API_KEY:
+        required: false
+      MEXC_API_SECRET:
+        required: false
+      MEXC_FUTURES_API_KEY:
+        required: false
+      MEXC_FUTURES_API_SECRET:
+        required: false
+
+permissions:
+  contents: read
+  actions: write
+
+jobs:
+  venueadd:
+    uses: ./.github/workflows/venueadd-install.yml
+    with:
+      core_repository: ${{ inputs.core_repository }}
+      core_sha: ${{ inputs.core_sha }}
+      venues_manifest: ${{ inputs.venues_manifest }}
+    secrets:
+      checkout_token: ${{ secrets.checkout_token }}
+
+  deploy:
+    needs: venueadd
+    if: needs.venueadd.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      ANALYTICS_SSH_HOST: ${{ secrets.ANALYTICS_SSH_HOST }}
+      ANALYTICS_SSH_USER: ${{ inputs.ssh_user }}
+      CORE_DIRECTORY: ${{ inputs.core_directory }}
+      VENUE_DIRECTORY: ${{ inputs.venue_directory }}
+      BUILTIN_VENUES: ${{ inputs.builtin_venues }}
+      ANALYTICS_SSH_HOST_FINGERPRINT: ${{ secrets.ANALYTICS_SSH_HOST_FINGERPRINT }}
+      RENDER_HEALTH_URL: ${{ secrets.RENDER_HEALTH_URL }}
+      CADDY_SITE_ADDRESS: ${{ secrets.CADDY_SITE_ADDRESS }}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: venueadd-bundle
+          path: venueadd-bundle
+
+      - name: Require the deployment inputs
+        run: |
+          missing=0
+          for name in ANALYTICS_SSH_HOST ANALYTICS_SSH_USER CORE_DIRECTORY VENUE_DIRECTORY BUILTIN_VENUES ANALYTICS_SSH_HOST_FINGERPRINT RENDER_HEALTH_URL CADDY_SITE_ADDRESS; do
+            if [[ -z "${!name}" ]]; then
+              echo "$name is unset" >&2
+              missing=1
+            fi
+          done
+          test "$missing" = 0
+
+      - uses: actions/checkout@v4
+        with:
+          repository: ${{ inputs.core_repository }}
+          ref: ${{ inputs.core_sha }}
+          path: core
+
+      - uses: actions/checkout@v4
+        with:
+          path: caller
+
+      - name: Confirm strategies.yml before SSH
+        working-directory: caller
+        env:
+          PYTHONPATH: ${{ github.workspace }}/core
+        run: python3 -m deploy.confirm_strategies config/strategies.yml ${{ inputs.expected_strategies_blob }}
+
+      - name: Confirm Render health
+        run: |
+          ready=0
+          for _ in $(seq 1 12); do
+            if curl -fsS "$RENDER_HEALTH_URL" | grep -q '"status":"ok"'; then
+              ready=1
+              break
+            fi
+            sleep 15
+          done
+          test "$ready" = 1
+
+      - name: Confirm the VM host key
+        run: |
+          mkdir -p "$RUNNER_TEMP/ssh"
+          ssh-keyscan -T 10 -t ed25519 "$ANALYTICS_SSH_HOST" | awk '$1 !~ /^#/' > "$RUNNER_TEMP/ssh/known_hosts"
+          if ! ssh-keygen -lf "$RUNNER_TEMP/ssh/known_hosts" | awk '{print $2}' | grep -qx "$ANALYTICS_SSH_HOST_FINGERPRINT"; then
+            echo "ssh host fingerprint mismatch" >&2
+            ssh-keygen -lf "$RUNNER_TEMP/ssh/known_hosts" >&2 || true
+            exit 1
+          fi
+
+      - name: Write the VM env file
+        env:
+          ANALYTICS_API_SECRET: ${{ secrets.ANALYTICS_API_SECRET }}
+          KILL_SWITCH: ${{ secrets.KILL_SWITCH }}
+          ANALYTICS_DB_PASSWORD: ${{ secrets.ANALYTICS_DB_PASSWORD }}
+          ANALYTICS_MEXC_API_KEY: ${{ secrets.ANALYTICS_MEXC_API_KEY }}
+          ANALYTICS_MEXC_API_SECRET: ${{ secrets.ANALYTICS_MEXC_API_SECRET }}
+          ANALYTICS_MEXC_FUTURES_API_KEY: ${{ secrets.ANALYTICS_MEXC_FUTURES_API_KEY }}
+          ANALYTICS_MEXC_FUTURES_API_SECRET: ${{ secrets.ANALYTICS_MEXC_FUTURES_API_SECRET }}
+          BUILTIN_VENUES: ${{ inputs.builtin_venues }}
+          ANALYTICS_ARCUS_ADDRESS: ${{ secrets.ANALYTICS_ARCUS_ADDRESS }}
+          ARCUS_ADDRESS: ${{ secrets.ARCUS_ADDRESS }}
+          ARCUS_SIGNING_KEY: ${{ secrets.ARCUS_SIGNING_KEY }}
+          MEXC_API_KEY: ${{ secrets.MEXC_API_KEY }}
+          MEXC_API_SECRET: ${{ secrets.MEXC_API_SECRET }}
+          MEXC_FUTURES_API_KEY: ${{ secrets.MEXC_FUTURES_API_KEY }}
+          MEXC_FUTURES_API_SECRET: ${{ secrets.MEXC_FUTURES_API_SECRET }}
+          PYTHONPATH: ${{ github.workspace }}/core
+        run: |
+          python3 -m deploy.write_env "$RUNNER_TEMP/analytics.env"
+          python3 -m deploy.write_arcus_env "$RUNNER_TEMP/arcus.env"
+          python3 -m deploy.write_mexc_env "$RUNNER_TEMP/mexc.env"
+          python3 - <<'PY'
+          import os
+          from pathlib import Path
+
+          path = Path(os.environ["RUNNER_TEMP"]) / "site.env"
+          lines = (
+              "RENDER_HEALTH_URL=" + os.environ["RENDER_HEALTH_URL"],
+              "CADDY_SITE_ADDRESS=" + os.environ["CADDY_SITE_ADDRESS"],
+          )
+          path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+          path.chmod(0o600)
+          imports = Path("venueadd-bundle") / "imports.txt"
+          names = [line.strip() for line in imports.read_text(encoding="utf-8").splitlines() if line.strip()] if imports.is_file() else []
+          if names:
+              env_path = Path(os.environ["RUNNER_TEMP"]) / "analytics.env"
+              text = env_path.read_text(encoding="utf-8")
+              if not text.endswith("\n"):
+                  text += "\n"
+              env_path.write_text(text + "SIGNAL_NEXUS_VENUEADD=" + ",".join(names) + "\n", encoding="utf-8")
+          PY
+
+      - name: Install the key
+        env:
+          ANALYTICS_SSH_PRIVATE_KEY: ${{ secrets.ANALYTICS_SSH_PRIVATE_KEY }}
+        run: |
+          install -m 700 -d "$RUNNER_TEMP/ssh"
+          printf '%s\n' "$ANALYTICS_SSH_PRIVATE_KEY" > "$RUNNER_TEMP/ssh/id"
+          chmod 600 "$RUNNER_TEMP/ssh/id"
+
+      - name: Copy the repository and env file
+        run: |
+          env_directory="$(dirname "$CORE_DIRECTORY")"
+          ssh_opts="-i $RUNNER_TEMP/ssh/id -o IdentitiesOnly=yes -o ServerAliveInterval=30 -o ServerAliveCountMax=20 -o UserKnownHostsFile=$RUNNER_TEMP/ssh/known_hosts"
+          target="$ANALYTICS_SSH_USER@$ANALYTICS_SSH_HOST"
+          ssh $ssh_opts "$target" "mkdir -p '$CORE_DIRECTORY'"
+          strategies_mtime="$(ssh $ssh_opts "$target" "stat -c %Y '$CORE_DIRECTORY/config/strategies.yml'")"
+          echo "strategies.yml mtime before rsync ${strategies_mtime}"
+          rsync -az --delete \
+            --exclude .git \
+            --exclude .venv \
+            --exclude .env \
+            --exclude __pycache__ \
+            --exclude .pytest_cache \
+            --exclude research/data \
+            --exclude config/strategies.yml \
+            -e "ssh $ssh_opts" \
+            core/ "$target:$CORE_DIRECTORY/"
+          strategies_mtime_after="$(ssh $ssh_opts "$target" "stat -c %Y '$CORE_DIRECTORY/config/strategies.yml'")"
+          echo "strategies.yml mtime after rsync ${strategies_mtime_after}"
+          test "$strategies_mtime" = "$strategies_mtime_after"
+          scp $ssh_opts "$RUNNER_TEMP/analytics.env" "$target:$env_directory/analytics.env"
+          if [[ -f "$RUNNER_TEMP/arcus.env" ]]; then
+            scp $ssh_opts "$RUNNER_TEMP/arcus.env" "$target:$env_directory/arcus.env"
+          fi
+          if [[ -f "$RUNNER_TEMP/mexc.env" ]]; then
+            scp $ssh_opts "$RUNNER_TEMP/mexc.env" "$target:$env_directory/mexc.env"
+          fi
+          scp $ssh_opts "$RUNNER_TEMP/site.env" "$target:$env_directory/site.env"
+          if [[ -s venueadd-bundle/imports.txt ]]; then
+            ssh $ssh_opts "$target" "sudo -n mkdir -p '$VENUE_DIRECTORY' && sudo -n chown -R '$ANALYTICS_SSH_USER:$ANALYTICS_SSH_USER' '$(dirname "$VENUE_DIRECTORY")'"
+            rsync -az --delete \
+              -e "ssh $ssh_opts" \
+              venueadd-bundle/trees/ "$target:/tmp/venueadd-trees/"
+            scp $ssh_opts venueadd-bundle/lock.txt venueadd-bundle/lock.no-deps venueadd-bundle/imports.txt "$target:/tmp/"
+            ssh $ssh_opts "$target" "command -v uv >/dev/null 2>&1 || curl -LsSf https://astral.sh/uv/install.sh | sh"
+            ssh $ssh_opts "$target" "export PATH=\"\$HOME/.local/bin:\$PATH\"; cd '$CORE_DIRECTORY' && .venv/bin/python -m deploy.venueadd.apply /tmp/venueadd-trees '$VENUE_DIRECTORY' .venv/bin/python /tmp/lock.txt /tmp/imports.txt"
+          fi
+          strategies_sha="$(sha256sum caller/config/strategies.yml | awk '{print $1}')"
+          echo "strategies.yml sha256 ${strategies_sha}"
+          scp $ssh_opts caller/config/strategies.yml "$target:$CORE_DIRECTORY/config/strategies.yml.new"
+          ssh $ssh_opts "$target" "bash '$CORE_DIRECTORY/deploy/promote_strategies.sh' '$CORE_DIRECTORY' '$strategies_sha'"
+          restore_strategies() {
+            echo "restoring strategies.yml" >&2
+            ssh $ssh_opts "$target" "cp -a '$CORE_DIRECTORY/config/strategies.yml.prev' '$CORE_DIRECTORY/config/strategies.yml'"
+            ssh $ssh_opts "$target" "CORE_DIRECTORY='$CORE_DIRECTORY' ENV_DIRECTORY='$env_directory' SERVICE_USER='$ANALYTICS_SSH_USER' bash '$CORE_DIRECTORY/deploy/analytics-vm.sh'" || true
+          }
+          if ! ssh $ssh_opts "$target" "chmod 600 '$env_directory/analytics.env' '$env_directory/site.env' && if [[ -f '$env_directory/arcus.env' ]]; then chmod 600 '$env_directory/arcus.env'; fi && if [[ -f '$env_directory/mexc.env' ]]; then chmod 600 '$env_directory/mexc.env'; fi && echo preflight && systemctl is-active caddy || true && systemctl is-active signal-nexus-analytics-api || true && systemctl is-active signal-nexus-analytics-importer || true && ps -ef | grep -E 'apt-get|dpkg|analytics-vm.sh' | grep -v grep || true && if ! systemctl is-active --quiet caddy; then echo 'caddy is down; restarting the current unit'; sudo -n systemctl restart caddy || true; systemctl is-active caddy || true; sudo -n journalctl -u caddy -n 40 --no-pager || true; fi && CORE_DIRECTORY='$CORE_DIRECTORY' ENV_DIRECTORY='$env_directory' SERVICE_USER='$ANALYTICS_SSH_USER' bash '$CORE_DIRECTORY/deploy/analytics-vm.sh'"; then
+            restore_strategies
+            exit 1
+          fi
+          remote_sha="$(ssh $ssh_opts "$target" "sha256sum '$CORE_DIRECTORY/config/strategies.yml'" | awk '{print $1}')"
+          if [[ "$remote_sha" != "$strategies_sha" ]]; then
+            echo "strategies.yml sha256 ${remote_sha} != ${strategies_sha}" >&2
+            restore_strategies
+            exit 1
+          fi
+          echo "strategies.yml sha256 ${remote_sha}"
+
+      - name: Confirm the VM reads Arcus fills
+        if: contains(inputs.builtin_venues, 'arcus')
+        run: |
+          ssh_opts="-i $RUNNER_TEMP/ssh/id -o IdentitiesOnly=yes -o ServerAliveInterval=30 -o ServerAliveCountMax=20 -o UserKnownHostsFile=$RUNNER_TEMP/ssh/known_hosts"
+          target="$ANALYTICS_SSH_USER@$ANALYTICS_SSH_HOST"
+          env_directory="$(dirname "$CORE_DIRECTORY")"
+          ssh $ssh_opts "$target" "cd '$CORE_DIRECTORY' && python3 -m deploy.confirm_arcus_address '$env_directory/analytics.env'"
+          ready=0
+          for _ in $(seq 1 24); do
+            if ssh $ssh_opts "$target" "sudo -n journalctl -u signal-nexus-analytics-importer --since '20 min ago' --no-pager -o cat" | grep -q 'arcus fills '; then
+              ready=1
+              break
+            fi
+            sleep 15
+          done
+          test "$ready" = 1
+          ssh $ssh_opts "$target" "sudo -n journalctl -u signal-nexus-analytics-importer --since '20 min ago' --no-pager -o cat | grep 'futures ' || true"
+
+      - name: Confirm Arcus leverage from the VM
+        if: contains(inputs.builtin_venues, 'arcus')
+        run: |
+          ssh_opts="-i $RUNNER_TEMP/ssh/id -o IdentitiesOnly=yes -o ServerAliveInterval=30 -o ServerAliveCountMax=20 -o UserKnownHostsFile=$RUNNER_TEMP/ssh/known_hosts"
+          target="$ANALYTICS_SSH_USER@$ANALYTICS_SSH_HOST"
+          env_directory="$(dirname "$CORE_DIRECTORY")"
+          ssh $ssh_opts "$target" "cd '$CORE_DIRECTORY' && python3 -m deploy.confirm_arcus_leverage '$env_directory/analytics.env' '$env_directory/arcus.env'"
+
+      - name: Confirm MEXC order keys on the VM
+        if: contains(inputs.builtin_venues, 'mexc_spot') || contains(inputs.builtin_venues, 'mexc_futures')
+        run: |
+          ssh_opts="-i $RUNNER_TEMP/ssh/id -o IdentitiesOnly=yes -o ServerAliveInterval=30 -o ServerAliveCountMax=20 -o UserKnownHostsFile=$RUNNER_TEMP/ssh/known_hosts"
+          target="$ANALYTICS_SSH_USER@$ANALYTICS_SSH_HOST"
+          env_directory="$(dirname "$CORE_DIRECTORY")"
+          ssh $ssh_opts "$target" "cd '$CORE_DIRECTORY' && python3 -m deploy.confirm_mexc_env '$env_directory/mexc.env'"
+
+      - name: Confirm Render health again
+        run: |
+          ready=0
+          for _ in $(seq 1 12); do
+            if curl -fsS "$RENDER_HEALTH_URL" | grep -q '"status":"ok"'; then
+              ready=1
+              break
+            fi
+            sleep 15
+          done
+          test "$ready" = 1
