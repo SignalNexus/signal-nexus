@@ -251,7 +251,7 @@ jobs:
             -e "ssh $ssh_opts" \
             core/ "$target:$CORE_DIRECTORY/"
           while read -r name config_mtime; do
-            config_mtime_after="$(ssh $ssh_opts "$target" "stat -c %Y '$CORE_DIRECTORY/config/$name'")"
+            config_mtime_after="$(ssh -n $ssh_opts "$target" "stat -c %Y '$CORE_DIRECTORY/config/$name'")"
             echo "$name mtime after rsync ${config_mtime_after}"
             test "$config_mtime" = "$config_mtime_after"
           done < "$RUNNER_TEMP/config-mtime"
@@ -530,7 +530,7 @@ jobs:
             exit 1
           fi
           while read -r name _ expected_sha; do
-            remote_sha="$(ssh $ssh_opts "$target" "sha256sum '$CORE_DIRECTORY/config/$name'" | awk '{print $1}')"
+            remote_sha="$(ssh -n $ssh_opts "$target" "sha256sum '$CORE_DIRECTORY/config/$name'" | awk '{print $1}')"
             if [[ "$remote_sha" != "$expected_sha" ]]; then
               echo "$name sha256 ${remote_sha} != ${expected_sha}" >&2
               restore_config
