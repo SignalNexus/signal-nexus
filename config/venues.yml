@@ -10,9 +10,9 @@ venues:
     enabled: true
   - id: txflow
     asset_class: futures
-    enabled: true
+    enabled: false
     quote: USDC
   - id: lighter
     asset_class: futures
-    enabled: true
+    enabled: false
     quote: USDG
