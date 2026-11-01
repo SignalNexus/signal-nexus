@@ -227,8 +227,13 @@ jobs:
           ssh_opts="-i $RUNNER_TEMP/ssh/id -o IdentitiesOnly=yes -o ServerAliveInterval=30 -o ServerAliveCountMax=20 -o UserKnownHostsFile=$RUNNER_TEMP/ssh/known_hosts"
           target="$ANALYTICS_SSH_USER@$ANALYTICS_SSH_HOST"
           ssh $ssh_opts "$target" "mkdir -p '$CORE_DIRECTORY'"
-          strategies_mtime="$(ssh $ssh_opts "$target" "stat -c %Y '$CORE_DIRECTORY/config/strategies.yml'")"
-          echo "strategies.yml mtime before rsync ${strategies_mtime}"
+          config_names="locale.yml month_target.yml ops_schedule.yml protective_exit.yml strategies.yml strategy_results.yml venues.yml"
+          : > "$RUNNER_TEMP/config-mtime"
+          for name in $config_names; do
+            config_mtime="$(ssh $ssh_opts "$target" "stat -c %Y '$CORE_DIRECTORY/config/$name'")"
+            echo "$name mtime before rsync ${config_mtime}"
+            printf '%s %s\n' "$name" "$config_mtime" >> "$RUNNER_TEMP/config-mtime"
+          done
           rsync -az --delete \
             --exclude .git \
             --exclude .venv \
@@ -236,12 +241,20 @@ jobs:
             --exclude __pycache__ \
             --exclude .pytest_cache \
             --exclude research/data \
+            --exclude config/locale.yml \
+            --exclude config/month_target.yml \
+            --exclude config/ops_schedule.yml \
+            --exclude config/protective_exit.yml \
             --exclude config/strategies.yml \
+            --exclude config/strategy_results.yml \
+            --exclude config/venues.yml \
             -e "ssh $ssh_opts" \
             core/ "$target:$CORE_DIRECTORY/"
-          strategies_mtime_after="$(ssh $ssh_opts "$target" "stat -c %Y '$CORE_DIRECTORY/config/strategies.yml'")"
-          echo "strategies.yml mtime after rsync ${strategies_mtime_after}"
-          test "$strategies_mtime" = "$strategies_mtime_after"
+          while read -r name config_mtime; do
+            config_mtime_after="$(ssh $ssh_opts "$target" "stat -c %Y '$CORE_DIRECTORY/config/$name'")"
+            echo "$name mtime after rsync ${config_mtime_after}"
+            test "$config_mtime" = "$config_mtime_after"
+          done < "$RUNNER_TEMP/config-mtime"
           scp $ssh_opts "$RUNNER_TEMP/analytics.env" "$target:$env_directory/analytics.env"
           if [[ -f "$RUNNER_TEMP/arcus.env" ]]; then
             scp $ssh_opts "$RUNNER_TEMP/arcus.env" "$target:$env_directory/arcus.env"
@@ -259,16 +272,24 @@ jobs:
             ssh $ssh_opts "$target" "command -v uv >/dev/null 2>&1 || curl -LsSf https://astral.sh/uv/install.sh | sh"
             ssh $ssh_opts "$target" "export PATH=\"\$HOME/.local/bin:\$PATH\"; cd '$CORE_DIRECTORY' && .venv/bin/python -m deploy.venueadd.apply /tmp/venueadd-trees '$VENUE_DIRECTORY' .venv/bin/python /tmp/lock.txt /tmp/imports.txt"
           fi
-          strategies_sha="$(sha256sum caller/config/strategies.yml | awk '{print $1}')"
-          echo "strategies.yml sha256 ${strategies_sha}"
-          scp $ssh_opts caller/config/strategies.yml "$target:$CORE_DIRECTORY/config/strategies.yml.new"
-          remote_new="$(ssh $ssh_opts "$target" "sha256sum '$CORE_DIRECTORY/config/strategies.yml.new'" | awk '{print $1}')"
-          if [[ "$remote_new" != "$strategies_sha" ]]; then
-            echo "strategies.yml.new sha256 ${remote_new} != ${strategies_sha}" >&2
-            ssh $ssh_opts "$target" "rm -f '$CORE_DIRECTORY/config/strategies.yml.new'"
-            exit 1
-          fi
-          echo "strategies.yml.new sha256 ${remote_new}"
+          : > "$RUNNER_TEMP/config-shas.txt"
+          for name in $config_names; do
+            if [[ ! -s "caller/config/$name" ]]; then
+              echo "$name is missing" >&2
+              exit 1
+            fi
+            config_sha="$(sha256sum "caller/config/$name" | awk '{print $1}')"
+            echo "$name sha256 ${config_sha}"
+            printf '%s sha256 %s\n' "$name" "$config_sha" >> "$RUNNER_TEMP/config-shas.txt"
+            scp $ssh_opts "caller/config/$name" "$target:$CORE_DIRECTORY/config/$name.new"
+            remote_new="$(ssh $ssh_opts "$target" "sha256sum '$CORE_DIRECTORY/config/$name.new'" | awk '{print $1}')"
+            if [[ "$remote_new" != "$config_sha" ]]; then
+              echo "$name.new sha256 ${remote_new} != ${config_sha}" >&2
+              ssh $ssh_opts "$target" "cd '$CORE_DIRECTORY/config' && rm -f locale.yml.new month_target.yml.new ops_schedule.yml.new protective_exit.yml.new strategies.yml.new strategy_results.yml.new venues.yml.new"
+              exit 1
+            fi
+            echo "$name.new sha256 ${remote_new}"
+          done
           cat > "$RUNNER_TEMP/render_stage.py" << 'PY'
           import json
           import os
@@ -281,9 +302,12 @@ jobs:
           hook = os.environ["RENDER_DEPLOY_HOOK"]
           token = os.environ["RENDER_API_KEY"]
           health_url = os.environ["RENDER_HEALTH_URL"]
-          expected = os.environ["STRATEGIES_SHA"]
           state = Path(os.environ["RUNNER_TEMP"]) / "render-previous-deploy-id"
-          marker = "strategies.yml sha256 " + expected
+          markers = [
+              line.strip()
+              for line in Path(os.environ["CONFIG_SHA_FILE"]).read_text(encoding="utf-8").splitlines()
+              if line.strip()
+          ]
 
           def request(method, url, body=None):
               data = None if body is None else json.dumps(body).encode()
@@ -375,12 +399,15 @@ jobs:
                   ]
                   if started:
                       params.append(("startTime", started))
+                  collected = ""
                   for _ in range(10):
                       status, payload = request("GET", "https://api.render.com/v1/logs?" + urllib.parse.urlencode(params))
                       if status != 200 or not isinstance(payload, dict):
                           break
-                      if marker in json.dumps(payload):
-                          print(marker)
+                      collected += json.dumps(payload)
+                      if all(line in collected for line in markers):
+                          for line in markers:
+                              print(line)
                           return True
                       if not payload.get("hasMore"):
                           break
@@ -408,7 +435,7 @@ jobs:
                   return False
               deploy = payload.get("deploy", payload) if isinstance(payload, dict) else {}
               deploy_id = deploy.get("id") or previous
-              finished = wait_deploy(sid, deploy_id, 600)
+              finished = wait_deploy(sid, deploy_id, 900)
               if finished is None:
                   return False
               print(f"render rollback {deploy_id} live")
@@ -472,39 +499,45 @@ jobs:
               raise SystemExit(0 if rollback() else 1)
           raise SystemExit(0 if deploy() else 1)
           PY
-          if ! STRATEGIES_SHA="$strategies_sha" RENDER_STAGE_MODE=deploy python3 "$RUNNER_TEMP/render_stage.py"; then
-            ssh $ssh_opts "$target" "rm -f '$CORE_DIRECTORY/config/strategies.yml.new'"
+          if ! CONFIG_SHA_FILE="$RUNNER_TEMP/config-shas.txt" RENDER_STAGE_MODE=deploy python3 "$RUNNER_TEMP/render_stage.py"; then
+            ssh $ssh_opts "$target" "cd '$CORE_DIRECTORY/config' && rm -f locale.yml.new month_target.yml.new ops_schedule.yml.new protective_exit.yml.new strategies.yml.new strategy_results.yml.new venues.yml.new"
             exit 1
           fi
-          live_before="$(ssh $ssh_opts "$target" "sha256sum '$CORE_DIRECTORY/config/strategies.yml'" | awk '{print $1}')"
-          echo "strategies.yml sha256 before promotion ${live_before}"
-          restore_strategies() {
-            echo "restoring strategies.yml" >&2
-            ssh $ssh_opts "$target" "cp -a '$CORE_DIRECTORY/config/strategies.yml.prev' '$CORE_DIRECTORY/config/strategies.yml'"
+          restore_config() {
+            echo "restoring config" >&2
+            for name in $config_names; do
+              ssh $ssh_opts "$target" "test -s '$CORE_DIRECTORY/config/$name.prev' && cp -a '$CORE_DIRECTORY/config/$name.prev' '$CORE_DIRECTORY/config/$name'" || true
+            done
             ssh $ssh_opts "$target" "CORE_DIRECTORY='$CORE_DIRECTORY' ENV_DIRECTORY='$env_directory' SERVICE_USER='$ANALYTICS_SSH_USER' bash '$CORE_DIRECTORY/deploy/analytics-vm.sh'" || true
-            RENDER_STAGE_MODE=rollback python3 "$RUNNER_TEMP/render_stage.py" || true
+            CONFIG_SHA_FILE="$RUNNER_TEMP/config-shas.txt" RENDER_STAGE_MODE=rollback python3 "$RUNNER_TEMP/render_stage.py" || true
           }
-          if ! ssh $ssh_opts "$target" "bash '$CORE_DIRECTORY/deploy/promote_strategies.sh' '$CORE_DIRECTORY' '$strategies_sha'"; then
-            live_after="$(ssh $ssh_opts "$target" "sha256sum '$CORE_DIRECTORY/config/strategies.yml'" | awk '{print $1}')"
-            if [[ "$live_after" != "$live_before" ]]; then
-              restore_strategies
-            else
-              echo "strategies.yml was not replaced" >&2
-              RENDER_STAGE_MODE=rollback python3 "$RUNNER_TEMP/render_stage.py" || true
+          promoted=0
+          for name in $config_names; do
+            if ! ssh $ssh_opts "$target" "test -s '$CORE_DIRECTORY/config/$name' && cp -a '$CORE_DIRECTORY/config/$name' '$CORE_DIRECTORY/config/$name.prev' && mv -f '$CORE_DIRECTORY/config/$name.new' '$CORE_DIRECTORY/config/$name'"; then
+              echo "$name was not replaced" >&2
+              if [[ "$promoted" -eq 1 ]]; then
+                restore_config
+              else
+                CONFIG_SHA_FILE="$RUNNER_TEMP/config-shas.txt" RENDER_STAGE_MODE=rollback python3 "$RUNNER_TEMP/render_stage.py" || true
+              fi
+              exit 1
             fi
-            exit 1
-          fi
+            promoted=1
+            echo "$name promoted"
+          done
           if ! ssh $ssh_opts "$target" "chmod 600 '$env_directory/analytics.env' '$env_directory/site.env' && if [[ -f '$env_directory/arcus.env' ]]; then chmod 600 '$env_directory/arcus.env'; fi && if [[ -f '$env_directory/mexc.env' ]]; then chmod 600 '$env_directory/mexc.env'; fi && echo preflight && systemctl is-active caddy || true && systemctl is-active signal-nexus-analytics-api || true && systemctl is-active signal-nexus-analytics-importer || true && ps -ef | grep -E 'apt-get|dpkg|analytics-vm.sh' | grep -v grep || true && if ! systemctl is-active --quiet caddy; then echo 'caddy is down; restarting the current unit'; sudo -n systemctl restart caddy || true; systemctl is-active caddy || true; sudo -n journalctl -u caddy -n 40 --no-pager || true; fi && CORE_DIRECTORY='$CORE_DIRECTORY' ENV_DIRECTORY='$env_directory' SERVICE_USER='$ANALYTICS_SSH_USER' bash '$CORE_DIRECTORY/deploy/analytics-vm.sh'"; then
-            restore_strategies
+            restore_config
             exit 1
           fi
-          remote_sha="$(ssh $ssh_opts "$target" "sha256sum '$CORE_DIRECTORY/config/strategies.yml'" | awk '{print $1}')"
-          if [[ "$remote_sha" != "$strategies_sha" ]]; then
-            echo "strategies.yml sha256 ${remote_sha} != ${strategies_sha}" >&2
-            restore_strategies
-            exit 1
-          fi
-          echo "strategies.yml sha256 ${remote_sha}"
+          while read -r name _ expected_sha; do
+            remote_sha="$(ssh $ssh_opts "$target" "sha256sum '$CORE_DIRECTORY/config/$name'" | awk '{print $1}')"
+            if [[ "$remote_sha" != "$expected_sha" ]]; then
+              echo "$name sha256 ${remote_sha} != ${expected_sha}" >&2
+              restore_config
+              exit 1
+            fi
+            echo "$name sha256 ${remote_sha}"
+          done < "$RUNNER_TEMP/config-shas.txt"
 
       - name: Confirm the VM reads Arcus fills
         if: contains(inputs.builtin_venues, 'arcus')

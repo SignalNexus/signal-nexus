@@ -1,5 +1,6 @@
 #!/bin/bash
 # VM 上で実行する。Postgres は localhost だけにする。5432 は外へ開かない。
+# Cutover check: a push of this file must not deploy.
 set -euo pipefail
 
 ROOT="${CORE_DIRECTORY:?CORE_DIRECTORY is unset}"
