@@ -80,6 +80,10 @@ on:
         required: false
       MEXC_FUTURES_API_SECRET:
         required: false
+      RENDER_DEPLOY_HOOK:
+        required: false
+      RENDER_API_KEY:
+        required: false
 
 permissions:
   contents: read
@@ -99,7 +103,7 @@ jobs:
     needs: venueadd
     if: needs.venueadd.result == 'success'
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
     env:
       ANALYTICS_SSH_HOST: ${{ secrets.ANALYTICS_SSH_HOST }}
       ANALYTICS_SSH_USER: ${{ inputs.ssh_user }}
@@ -109,6 +113,8 @@ jobs:
       ANALYTICS_SSH_HOST_FINGERPRINT: ${{ secrets.ANALYTICS_SSH_HOST_FINGERPRINT }}
       RENDER_HEALTH_URL: ${{ secrets.RENDER_HEALTH_URL }}
       CADDY_SITE_ADDRESS: ${{ secrets.CADDY_SITE_ADDRESS }}
+      RENDER_DEPLOY_HOOK: ${{ secrets.RENDER_DEPLOY_HOOK }}
+      RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
     steps:
       - uses: actions/download-artifact@v4
         with:
@@ -118,7 +124,7 @@ jobs:
       - name: Require the deployment inputs
         run: |
           missing=0
-          for name in ANALYTICS_SSH_HOST ANALYTICS_SSH_USER CORE_DIRECTORY VENUE_DIRECTORY BUILTIN_VENUES ANALYTICS_SSH_HOST_FINGERPRINT RENDER_HEALTH_URL CADDY_SITE_ADDRESS; do
+          for name in ANALYTICS_SSH_HOST ANALYTICS_SSH_USER CORE_DIRECTORY VENUE_DIRECTORY BUILTIN_VENUES ANALYTICS_SSH_HOST_FINGERPRINT RENDER_HEALTH_URL CADDY_SITE_ADDRESS RENDER_DEPLOY_HOOK RENDER_API_KEY; do
             if [[ -z "${!name}" ]]; then
               echo "$name is unset" >&2
               missing=1
@@ -256,12 +262,238 @@ jobs:
           strategies_sha="$(sha256sum caller/config/strategies.yml | awk '{print $1}')"
           echo "strategies.yml sha256 ${strategies_sha}"
           scp $ssh_opts caller/config/strategies.yml "$target:$CORE_DIRECTORY/config/strategies.yml.new"
-          ssh $ssh_opts "$target" "bash '$CORE_DIRECTORY/deploy/promote_strategies.sh' '$CORE_DIRECTORY' '$strategies_sha'"
+          remote_new="$(ssh $ssh_opts "$target" "sha256sum '$CORE_DIRECTORY/config/strategies.yml.new'" | awk '{print $1}')"
+          if [[ "$remote_new" != "$strategies_sha" ]]; then
+            echo "strategies.yml.new sha256 ${remote_new} != ${strategies_sha}" >&2
+            ssh $ssh_opts "$target" "rm -f '$CORE_DIRECTORY/config/strategies.yml.new'"
+            exit 1
+          fi
+          echo "strategies.yml.new sha256 ${remote_new}"
+          cat > "$RUNNER_TEMP/render_stage.py" << 'PY'
+          import json
+          import os
+          import time
+          import urllib.error
+          import urllib.parse
+          import urllib.request
+          from pathlib import Path
+
+          hook = os.environ["RENDER_DEPLOY_HOOK"]
+          token = os.environ["RENDER_API_KEY"]
+          health_url = os.environ["RENDER_HEALTH_URL"]
+          expected = os.environ["STRATEGIES_SHA"]
+          state = Path(os.environ["RUNNER_TEMP"]) / "render-previous-deploy-id"
+          marker = "strategies.yml sha256 " + expected
+
+          def request(method, url, body=None):
+              data = None if body is None else json.dumps(body).encode()
+              req = urllib.request.Request(
+                  url,
+                  data=data,
+                  method=method,
+                  headers={
+                      "Authorization": "Bearer " + token,
+                      "Accept": "application/json",
+                      "Content-Type": "application/json",
+                  },
+              )
+              try:
+                  with urllib.request.urlopen(req, timeout=60) as resp:
+                      raw = resp.read().decode()
+                      return resp.status, json.loads(raw) if raw else {}
+              except urllib.error.HTTPError as exc:
+                  raw = exc.read().decode()
+                  try:
+                      payload = json.loads(raw) if raw else {}
+                  except json.JSONDecodeError:
+                      payload = {"message": "unreadable response"}
+                  return exc.code, payload
+
+          def service_id():
+              path = urllib.parse.urlparse(hook).path
+              name = path.rstrip("/").split("/")[-1]
+              if not name.startswith("srv-"):
+                  raise SystemExit("deploy hook does not name a service")
+              return name
+
+          def rows(payload):
+              if isinstance(payload, dict):
+                  payload = payload.get("deploys", [payload])
+              found = []
+              for item in payload:
+                  if isinstance(item, dict):
+                      found.append(item.get("deploy", item))
+              return found
+
+          def live_deploy(sid):
+              status, payload = request("GET", f"https://api.render.com/v1/services/{sid}/deploys?limit=20")
+              if status != 200:
+                  raise SystemExit(f"list deploys returned HTTP {status}")
+              for deploy in rows(payload):
+                  if deploy.get("status") == "live":
+                      return deploy
+              raise SystemExit("no live deploy")
+
+          def health():
+              for _ in range(36):
+                  try:
+                      with urllib.request.urlopen(health_url, timeout=30) as resp:
+                          body = resp.read().decode()
+                  except Exception:
+                      body = ""
+                  if '"status":"ok"' in body.replace(" ", ""):
+                      print('render health {"status":"ok"}')
+                      return True
+                  time.sleep(10)
+              print("render health failed")
+              return False
+
+          def wait_deploy(sid, deploy_id, limit):
+              deadline = time.time() + limit
+              pending = {"created", "queued", "build_in_progress", "update_in_progress", "pre_deploy_in_progress"}
+              while time.time() < deadline:
+                  status, payload = request("GET", f"https://api.render.com/v1/services/{sid}/deploys/{deploy_id}")
+                  deploy = payload.get("deploy", payload) if isinstance(payload, dict) else {}
+                  current = deploy.get("status", "")
+                  if status == 200 and current == "live":
+                      return deploy
+                  if status == 200 and current not in pending:
+                      print(f"render deploy {deploy_id} {current}")
+                      return None
+                  time.sleep(15)
+              print(f"render deploy {deploy_id} timed out")
+              return None
+
+          def build_has_sha(sid, owner, started):
+              for direction in ("forward", "backward"):
+                  params = [
+                      ("ownerId", owner),
+                      ("resource", sid),
+                      ("type", "build"),
+                      ("limit", "100"),
+                      ("direction", direction),
+                  ]
+                  if started:
+                      params.append(("startTime", started))
+                  for _ in range(10):
+                      status, payload = request("GET", "https://api.render.com/v1/logs?" + urllib.parse.urlencode(params))
+                      if status != 200 or not isinstance(payload, dict):
+                          break
+                      if marker in json.dumps(payload):
+                          print(marker)
+                          return True
+                      if not payload.get("hasMore"):
+                          break
+                      start = payload.get("nextStartTime")
+                      end = payload.get("nextEndTime")
+                      if not start or not end:
+                          break
+                      params = [item for item in params if item[0] not in {"startTime", "endTime"}]
+                      params.append(("startTime", start))
+                      params.append(("endTime", end))
+              print("render build log returned no matching sha256")
+              return False
+
+          def rollback():
+              previous = state.read_text(encoding="utf-8").strip()
+              sid = service_id()
+              print(f"render rollback target {previous}")
+              status, payload = request(
+                  "POST",
+                  f"https://api.render.com/v1/services/{sid}/rollback",
+                  {"deployId": previous},
+              )
+              if status not in {200, 201, 202}:
+                  print(f"render rollback returned HTTP {status}")
+                  return False
+              deploy = payload.get("deploy", payload) if isinstance(payload, dict) else {}
+              deploy_id = deploy.get("id") or previous
+              finished = wait_deploy(sid, deploy_id, 600)
+              if finished is None:
+                  return False
+              print(f"render rollback {deploy_id} live")
+              return health()
+
+          def deploy():
+              sid = service_id()
+              status, service = request("GET", f"https://api.render.com/v1/services/{sid}")
+              if status != 200:
+                  raise SystemExit(f"read service returned HTTP {status}")
+              previous = live_deploy(sid)
+              state.write_text(previous["id"] + "\n", encoding="utf-8")
+              print(f"render rollback target {previous['id']}")
+              try:
+                  hook_req = urllib.request.Request(hook, data=b"", method="POST")
+                  with urllib.request.urlopen(hook_req, timeout=60) as resp:
+                      code = resp.status
+                      raw = resp.read().decode()
+              except urllib.error.HTTPError as exc:
+                  code = exc.code
+                  raw = exc.read().decode()
+              if code not in {200, 202}:
+                  print(f"deploy hook returned HTTP {code}")
+                  return False
+              deploy_id = ""
+              try:
+                  body = json.loads(raw) if raw else {}
+                  nested = body.get("deploy", body) if isinstance(body, dict) else {}
+                  deploy_id = nested.get("id", "") if isinstance(nested, dict) else ""
+              except json.JSONDecodeError:
+                  deploy_id = ""
+              deadline = time.time() + 90
+              while not deploy_id and time.time() < deadline:
+                  status, payload = request("GET", f"https://api.render.com/v1/services/{sid}/deploys?limit=5")
+                  if status == 200:
+                      for item in rows(payload):
+                          if item.get("id") != previous["id"] and item.get("trigger") == "deploy_hook":
+                              deploy_id = item["id"]
+                              break
+                  if not deploy_id:
+                      time.sleep(5)
+              if not deploy_id:
+                  print("deploy hook did not start a deploy")
+                  return False
+              finished = wait_deploy(sid, deploy_id, 1080)
+              if finished is None:
+                  return False
+              started = finished.get("createdAt") or previous.get("createdAt")
+              if not build_has_sha(sid, service.get("ownerId", ""), started):
+                  print("render build log sha256 mismatch")
+                  rollback()
+                  return False
+              if not health():
+                  rollback()
+                  return False
+              print(f"render deploy {deploy_id} live")
+              return True
+
+          mode = os.environ.get("RENDER_STAGE_MODE", "deploy")
+          if mode == "rollback":
+              raise SystemExit(0 if rollback() else 1)
+          raise SystemExit(0 if deploy() else 1)
+          PY
+          if ! STRATEGIES_SHA="$strategies_sha" RENDER_STAGE_MODE=deploy python3 "$RUNNER_TEMP/render_stage.py"; then
+            ssh $ssh_opts "$target" "rm -f '$CORE_DIRECTORY/config/strategies.yml.new'"
+            exit 1
+          fi
+          live_before="$(ssh $ssh_opts "$target" "sha256sum '$CORE_DIRECTORY/config/strategies.yml'" | awk '{print $1}')"
+          echo "strategies.yml sha256 before promotion ${live_before}"
           restore_strategies() {
             echo "restoring strategies.yml" >&2
             ssh $ssh_opts "$target" "cp -a '$CORE_DIRECTORY/config/strategies.yml.prev' '$CORE_DIRECTORY/config/strategies.yml'"
             ssh $ssh_opts "$target" "CORE_DIRECTORY='$CORE_DIRECTORY' ENV_DIRECTORY='$env_directory' SERVICE_USER='$ANALYTICS_SSH_USER' bash '$CORE_DIRECTORY/deploy/analytics-vm.sh'" || true
+            RENDER_STAGE_MODE=rollback python3 "$RUNNER_TEMP/render_stage.py" || true
           }
+          if ! ssh $ssh_opts "$target" "bash '$CORE_DIRECTORY/deploy/promote_strategies.sh' '$CORE_DIRECTORY' '$strategies_sha'"; then
+            live_after="$(ssh $ssh_opts "$target" "sha256sum '$CORE_DIRECTORY/config/strategies.yml'" | awk '{print $1}')"
+            if [[ "$live_after" != "$live_before" ]]; then
+              restore_strategies
+            else
+              echo "strategies.yml was not replaced" >&2
+              RENDER_STAGE_MODE=rollback python3 "$RUNNER_TEMP/render_stage.py" || true
+            fi
+            exit 1
+          fi
           if ! ssh $ssh_opts "$target" "chmod 600 '$env_directory/analytics.env' '$env_directory/site.env' && if [[ -f '$env_directory/arcus.env' ]]; then chmod 600 '$env_directory/arcus.env'; fi && if [[ -f '$env_directory/mexc.env' ]]; then chmod 600 '$env_directory/mexc.env'; fi && echo preflight && systemctl is-active caddy || true && systemctl is-active signal-nexus-analytics-api || true && systemctl is-active signal-nexus-analytics-importer || true && ps -ef | grep -E 'apt-get|dpkg|analytics-vm.sh' | grep -v grep || true && if ! systemctl is-active --quiet caddy; then echo 'caddy is down; restarting the current unit'; sudo -n systemctl restart caddy || true; systemctl is-active caddy || true; sudo -n journalctl -u caddy -n 40 --no-pager || true; fi && CORE_DIRECTORY='$CORE_DIRECTORY' ENV_DIRECTORY='$env_directory' SERVICE_USER='$ANALYTICS_SSH_USER' bash '$CORE_DIRECTORY/deploy/analytics-vm.sh'"; then
             restore_strategies
             exit 1
