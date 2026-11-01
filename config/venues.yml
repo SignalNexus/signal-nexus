@@ -8,3 +8,11 @@ venues:
   - id: arcus
     asset_class: futures
     enabled: true
+  - id: txflow
+    asset_class: futures
+    enabled: true
+    quote: USDC
+  - id: lighter
+    asset_class: futures
+    enabled: true
+    quote: USDG
