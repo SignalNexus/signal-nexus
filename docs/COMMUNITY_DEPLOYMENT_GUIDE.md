@@ -2,9 +2,17 @@
 
 English is canonical. The Japanese mirror is [COMMUNITY_DEPLOYMENT_GUIDE_JA.md](COMMUNITY_DEPLOYMENT_GUIDE_JA.md).
 
-This guide is the public authority for deploying Signal Nexus Community Edition through health validation. A skilled operator can follow it with `SignalNexus/signal-nexus` and `SignalNexus/signal-nexus-deploy` only.
+This guide is the public authority for deploying Signal Nexus Community Edition through health validation. It is for a reader who already knows the basic operations of GitHub, Linux, and Render. That reader can follow it with `SignalNexus/signal-nexus` and `SignalNexus/signal-nexus-deploy` only.
 
-[README](../README.md) is the front door. [Architecture](architecture/ARCHITECTURE.md) is the reference. The Buildbook, included with Starter, is the long form: detail, checklists, screens, FAQ, and failure notes. It does not add a required fact.
+Required:
+
+- [README](../README.md)
+- This guide
+
+Optional:
+
+- [Architecture](architecture/ARCHITECTURE.md). It confirms the system layout. It is not required to reach health validation.
+- The Buildbook, included with Starter. It adds detail, checklists, screens, FAQ, and failure notes. It does not add a required fact.
 
 ## Quick path
 
@@ -115,6 +123,8 @@ These commands are the authority for the caller repository:
 | Build | `bash render-build.sh && pip install -r .core/requirements.txt` |
 | Start | `cd .core && uvicorn app.main:app --host 0.0.0.0 --port $PORT` |
 
+Set these as the Build Command and the Start Command of the Render Web Service.
+
 `render-build.sh` reads `core-pin`, fetches that commit of `SignalNexus/signal-nexus` into `.core/`, copies the seven live files into `.core/config/`, and prints one sha256 line per file. The workflow reads those lines from the build log.
 
 Render environment before the first deploy:
@@ -130,7 +140,7 @@ Render environment before the first deploy:
 
 ## 6. Required secrets
 
-Required before the first `workflow_dispatch`:
+Set these as GitHub repository secrets on the caller repository. They are required before the first `workflow_dispatch`:
 
 | Secret | Meaning |
 | --- | --- |
@@ -158,6 +168,8 @@ Set later:
 Names without values are listed in the template file `deploy/target.env.example`.
 
 ## 7. Required variables
+
+Set these as GitHub repository variables on the caller repository.
 
 | Variable | Value |
 | --- | --- |
@@ -195,6 +207,8 @@ The deploy installs PostgreSQL when it is missing, creates `signalnexus`, copies
 When the workflow finishes, carry out the checks in section 10.
 
 ## 10. Success
+
+This deploy is successful only when every item below is met.
 
 | Check | Expected |
 | --- | --- |
@@ -235,7 +249,7 @@ Do not read the first success as the only SHA that can be recommended.
 
 ## 13. Rollback
 
-Rollback changes that caller's repository, that caller's host, and that caller's Render service.
+A failure of the checks in section 10 is a rollback. The rollback changes that caller's repository, that caller's host, and that caller's Render service.
 
 On a failed first deploy, set `DEPLOY_ANALYTICS` to false on that repository. Leave `venues: []` and the pin in place. A retry uses a new SSH key and a new database password. The workflow rolls the Render service back to the deploy that was live before the hook.
 
@@ -248,10 +262,11 @@ Do not edit another caller's repository as part of this rollback.
 | Item | This guide | Buildbook |
 | --- | --- | --- |
 | Authority for this path | Yes | Follows this guide |
-| Requirements and commands | The short form | Console clicks for the reference accounts |
+| Requirements and commands | Yes. The short form | Console clicks for the reference accounts |
 | Secrets and variables | The names | A checklist while pasting |
+| Checklist | — | Yes |
 | Registry | One minimal registry | Commented examples |
-| Success criteria | The checks in section 10 | A filled run |
-| Rollback | One section | Failure notes |
+| Success criteria | Yes. The checks in section 10 | A filled run |
+| Rollback | Yes. One section | Failure notes |
 
 Starter adds verification, detail, checklists, screens, FAQ, and failure notes. It does not add a required fact.

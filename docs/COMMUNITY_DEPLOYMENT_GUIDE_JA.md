@@ -2,9 +2,17 @@
 
 英語版が正本です。このファイルは [COMMUNITY_DEPLOYMENT_GUIDE.md](COMMUNITY_DEPLOYMENT_GUIDE.md) の日本語版です。
 
-このガイドは、Signal Nexus Community Edition を Health Validation（health の確認）までデプロイするための公開の正本です。技術のある利用者は、`SignalNexus/signal-nexus` と `SignalNexus/signal-nexus-deploy` だけを読んで、Health Validation まで進めます。
+このガイドは、Signal Nexus Community Edition を Health Validation（health の確認）までデプロイするための公開の正本です。対象は、GitHub、Linux、Render の基本操作を理解している利用者です。その利用者は、`SignalNexus/signal-nexus` と `SignalNexus/signal-nexus-deploy` だけを読んで、Health Validation まで進めます。
 
-[README](../README_JA.md) は最初に読む文書です。[Architecture](architecture/ARCHITECTURE_JA.md) はシステム構成を確認するための文書です。Starter の Buildbook は、本ガイドの詳細版です。チェックリスト、画面例、FAQ、失敗を避けるメモを加えます。本ガイドに無い必須事項は加えません。
+必須:
+
+- [README](../README_JA.md)
+- このガイド
+
+任意:
+
+- [Architecture](architecture/ARCHITECTURE_JA.md)。システム構成を確認するための文書です。Health Validation までには必須ではありません。
+- Starter の Buildbook。本ガイドの詳細版です。チェックリスト、画面例、FAQ、失敗を避けるメモを加えます。本ガイドに無い必須事項は加えません。
 
 ## まずやること
 
@@ -123,6 +131,8 @@ Oracle の `ap-tokyo-1` にある `VM.Standard.E2.1.Micro` は、例として挙
 | Build | `bash render-build.sh && pip install -r .core/requirements.txt` |
 | Start | `cd .core && uvicorn app.main:app --host 0.0.0.0 --port $PORT` |
 
+これらは、Render の Web Service の Build Command と Start Command に設定します。
+
 `render-build.sh` は `core-pin` を読み、その commit の `SignalNexus/signal-nexus` を `.core/` に取得し、配置先の七ファイルを `.core/config/` へコピーし、ファイルごとに sha256 の行を出します。workflow は build log からその行を読みます。
 
 初回 deploy の前の Render の環境変数:
@@ -140,7 +150,7 @@ Oracle の `ap-tokyo-1` にある `VM.Standard.E2.1.Micro` は、例として挙
 
 ## 6. 必要な secret
 
-最初の `workflow_dispatch` の前に必要:
+これらは、呼び出し元リポジトリの GitHub Repository Secrets に設定します。最初の `workflow_dispatch` の前に必要です。
 
 | Secret | 意味 |
 | --- | --- |
@@ -170,6 +180,8 @@ Oracle の `ap-tokyo-1` にある `VM.Standard.E2.1.Micro` は、例として挙
 <a id="sec-7"></a>
 
 ## 7. 必要な variable
+
+これらは、呼び出し元リポジトリの GitHub Repository Variables に設定します。
 
 | Variable | 値 |
 | --- | --- |
@@ -214,6 +226,8 @@ workflow が完了したら、第10節の確認項目を実施します。
 
 ## 10. 成功
 
+次の項目をすべて満たした場合のみ、この deploy を成功とします。
+
 | 確認 | 期待 |
 | --- | --- |
 | Render の `GET /health` | `{"status":"ok"}` |
@@ -255,7 +269,7 @@ hash は、配置した七つの path に対して `sha256sum` を実行して�
 
 ## 13. Rollback
 
-rollback の対象は、その呼び出し元のリポジトリ、ホスト、Render サービスです。
+第10節の確認に失敗した場合は、rollback の対象です。対象は、その呼び出し元のリポジトリ、ホスト、Render サービスです。
 
 初回 deploy が失敗したときは、そのリポジトリの `DEPLOY_ANALYTICS` を false にします。`venues: []` と pin は残します。再試行は新しい SSH 鍵と新しい database パスワードを使います。workflow は、Render のサービスを、hook の前に Live だった deploy へ戻します。
 
@@ -267,11 +281,12 @@ rollback の対象は、その呼び出し元のリポジトリ、ホスト、Re
 
 | 項目 | このガイド | Buildbook |
 | --- | --- | --- |
-| 手順の正本 | はい | このガイドに従う |
-| 要件とコマンド | 短く書く | 例にした Oracle と Render の画面操作 |
+| 手順の正本 | ○ | このガイドに従う |
+| 要件とコマンド | ○。短く書く | 例にした Oracle と Render の画面操作 |
 | secret と variable | 名前 | 値を貼り付けるときのチェックリスト |
+| チェックリスト | — | ○ |
 | registry | 最小の registry 一つ | 注釈付きの例 |
-| 成功条件 | 第10節の確認 | 記入例つきの実行記録 |
-| rollback | 説明 | 失敗のメモ |
+| 成功条件 | ○。第10節の確認 | 記入例つきの実行記録 |
+| rollback | ○。説明 | 失敗のメモ |
 
 Starter が加えるのは、検証、詳細、チェックリスト、画面、FAQ、失敗のメモです。必須の事実は加えません。
