@@ -19,13 +19,18 @@ def confirm(path: Path, expected_blob: str) -> str:
         raise SystemExit("strategies.yml is empty")
     catalog = path.parent / "venues.yml"
     previous = os.environ.get("SIGNAL_NEXUS_CONFIG_DIR")
+    import app.venues as venues
+
+    previous_registry = venues.REGISTRY_PATH
     if catalog.is_file():
         os.environ["SIGNAL_NEXUS_CONFIG_DIR"] = str(path.parent.resolve())
+        venues.REGISTRY_PATH = catalog
     try:
         loaded = load_strategies(path)
     except RegistryRejection as error:
         raise SystemExit(f"strategies.yml rejected: {error}") from error
     finally:
+        venues.REGISTRY_PATH = previous_registry
         if previous is None:
             os.environ.pop("SIGNAL_NEXUS_CONFIG_DIR", None)
         else:
