@@ -1,14 +1,14 @@
 """Clone purchased VenueAdd repositories at the pinned commit.
 
 The token is a fine-grained personal access token stored on the customer's
-deploy repository. Git sends it as HTTP Basic, with username x-access-token,
-and does not consult credential helpers. An empty manifest fetches nothing
-and does not need a token.
+deploy repository. Git 2.56 asks for a username before it sends an extra
+header, so the fetch clears other credential helpers and answers with
+username x-access-token and this token as the password. An empty manifest
+fetches nothing and does not need a token.
 """
 
 from __future__ import annotations
 
-import base64
 import os
 import stat
 import subprocess
@@ -19,11 +19,6 @@ from pathlib import Path
 from deploy.venueadd.manifest import load_manifest
 
 TOKEN_ENV = "VENUEADD_READ_TOKEN"
-
-
-def _basic_header(token: str) -> str:
-    basic = base64.b64encode(f"x-access-token:{token}".encode("ascii")).decode("ascii")
-    return f"AUTHORIZATION: basic {basic}"
 
 
 def _fetch_env() -> dict[str, str]:
@@ -72,7 +67,6 @@ def fetch(repository: str, sha: str, dest: Path, token: str) -> None:
         _write_helper(helper)
         env = _fetch_env()
         env["VENUEADD_TOKEN"] = token
-        header = _basic_header(token)
         _git(["init"], dest)
         _git(["remote", "add", "origin", f"https://github.com/{repository}.git"], dest)
         try:
@@ -82,8 +76,6 @@ def fetch(repository: str, sha: str, dest: Path, token: str) -> None:
                     "credential.helper=",
                     "-c",
                     f"credential.helper=!{helper}",
-                    "-c",
-                    f"http.https://github.com/.extraheader={header}",
                     "fetch",
                     "--depth",
                     "1",
