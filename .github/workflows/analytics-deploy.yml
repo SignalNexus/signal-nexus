@@ -509,7 +509,7 @@ jobs:
             for name in $config_names; do
               ssh $ssh_opts "$target" "test -s '$CORE_DIRECTORY/config/$name.prev' && cp -a '$CORE_DIRECTORY/config/$name.prev' '$CORE_DIRECTORY/config/$name'" || true
             done
-            ssh $ssh_opts "$target" "CORE_DIRECTORY='$CORE_DIRECTORY' ENV_DIRECTORY='$env_directory' SERVICE_USER='$ANALYTICS_SSH_USER' bash '$CORE_DIRECTORY/deploy/analytics-vm.sh'" || true
+            ssh $ssh_opts "$target" "CORE_DIRECTORY='$CORE_DIRECTORY' ENV_DIRECTORY='$env_directory' SERVICE_USER='$ANALYTICS_SSH_USER' BUILTIN_VENUES='$BUILTIN_VENUES' bash '$CORE_DIRECTORY/deploy/analytics-vm.sh'" || true
             CONFIG_SHA_FILE="$RUNNER_TEMP/config-shas.txt" RENDER_STAGE_MODE=rollback python3 "$RUNNER_TEMP/render_stage.py" || true
           }
           promoted=0
@@ -526,7 +526,7 @@ jobs:
             promoted=1
             echo "$name promoted"
           done
-          if ! ssh $ssh_opts "$target" "chmod 600 '$env_directory/analytics.env' '$env_directory/site.env' && if [[ -f '$env_directory/arcus.env' ]]; then chmod 600 '$env_directory/arcus.env'; fi && if [[ -f '$env_directory/mexc.env' ]]; then chmod 600 '$env_directory/mexc.env'; fi && echo preflight && systemctl is-active caddy || true && systemctl is-active signal-nexus-analytics-api || true && systemctl is-active signal-nexus-analytics-importer || true && ps -ef | grep -E 'apt-get|dpkg|analytics-vm.sh' | grep -v grep || true && if ! systemctl is-active --quiet caddy; then echo 'caddy is down; restarting the current unit'; sudo -n systemctl restart caddy || true; systemctl is-active caddy || true; sudo -n journalctl -u caddy -n 40 --no-pager || true; fi && CORE_DIRECTORY='$CORE_DIRECTORY' ENV_DIRECTORY='$env_directory' SERVICE_USER='$ANALYTICS_SSH_USER' bash '$CORE_DIRECTORY/deploy/analytics-vm.sh'"; then
+          if ! ssh $ssh_opts "$target" "chmod 600 '$env_directory/analytics.env' '$env_directory/site.env' && if [[ -f '$env_directory/arcus.env' ]]; then chmod 600 '$env_directory/arcus.env'; fi && if [[ -f '$env_directory/mexc.env' ]]; then chmod 600 '$env_directory/mexc.env'; fi && echo preflight && systemctl is-active caddy || true && systemctl is-active signal-nexus-analytics-api || true && systemctl is-active signal-nexus-analytics-importer || true && ps -ef | grep -E 'apt-get|dpkg|analytics-vm.sh' | grep -v grep || true && if ! systemctl is-active --quiet caddy; then echo 'caddy is down; restarting the current unit'; sudo -n systemctl restart caddy || true; systemctl is-active caddy || true; sudo -n journalctl -u caddy -n 40 --no-pager || true; fi && CORE_DIRECTORY='$CORE_DIRECTORY' ENV_DIRECTORY='$env_directory' SERVICE_USER='$ANALYTICS_SSH_USER' BUILTIN_VENUES='$BUILTIN_VENUES' bash '$CORE_DIRECTORY/deploy/analytics-vm.sh'"; then
             restore_config
             exit 1
           fi

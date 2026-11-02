@@ -139,7 +139,19 @@ fi
 python3 -m venv "$ROOT/.venv"
 "$ROOT/.venv/bin/pip" install --upgrade pip
 "$ROOT/.venv/bin/pip" install -r "$ROOT/requirements.txt"
-"$ROOT/.venv/bin/python" -m deploy.futures_read "$ENV_FILE"
+# futures-read-gate
+# secret_keys_for() adds the MEXC futures names only when this set contains mexc_futures.
+futures_read_required() {
+  local venues=",$(printf '%s' "${BUILTIN_VENUES:-}" | tr -d '[:space:]'),"
+  case "$venues" in
+    *,mexc_futures,*) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+# end futures-read-gate
+if futures_read_required; then
+  "$ROOT/.venv/bin/python" -m deploy.futures_read "$ENV_FILE"
+fi
 
 render_unit() {
   local rendered
