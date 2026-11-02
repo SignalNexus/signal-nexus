@@ -1,5 +1,6 @@
 """Fail before SSH unless the checkout strategies file is the expected registry."""
 
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -16,10 +17,19 @@ def confirm(path: Path, expected_blob: str) -> str:
         raise SystemExit("strategies.yml is missing")
     if path.stat().st_size == 0:
         raise SystemExit("strategies.yml is empty")
+    catalog = path.parent / "venues.yml"
+    previous = os.environ.get("SIGNAL_NEXUS_CONFIG_DIR")
+    if catalog.is_file():
+        os.environ["SIGNAL_NEXUS_CONFIG_DIR"] = str(path.parent.resolve())
     try:
         loaded = load_strategies(path)
     except RegistryRejection as error:
         raise SystemExit(f"strategies.yml rejected: {error}") from error
+    finally:
+        if previous is None:
+            os.environ.pop("SIGNAL_NEXUS_CONFIG_DIR", None)
+        else:
+            os.environ["SIGNAL_NEXUS_CONFIG_DIR"] = previous
     if not loaded:
         raise SystemExit("strategies.yml is empty")
     blob = git_blob(path)
