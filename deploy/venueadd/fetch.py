@@ -25,9 +25,11 @@ def fetch(repository: str, sha: str, dest: Path, token: str) -> None:
     if dest.exists():
         raise SystemExit(f"checkout already exists: {dest}")
     dest.mkdir(parents=True)
-    askpass = Path(tempfile.mkstemp(prefix="venueadd-askpass-")[1])
+    fd, name = tempfile.mkstemp(prefix="venueadd-askpass-")
+    askpass = Path(name)
     try:
-        askpass.write_text('#!/bin/sh\nprintf "%s" "$VENUEADD_TOKEN"\n', encoding="utf-8")
+        with os.fdopen(fd, "w", encoding="utf-8") as handle:
+            handle.write('#!/bin/sh\nprintf "%s" "$VENUEADD_TOKEN"\n')
         askpass.chmod(askpass.stat().st_mode | stat.S_IEXEC)
         env = os.environ.copy()
         env["VENUEADD_TOKEN"] = token
