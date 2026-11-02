@@ -6,6 +6,20 @@ This guide is the public authority for deploying Signal Nexus Community Edition 
 
 [README](../README.md) is the front door. [Architecture](architecture/ARCHITECTURE.md) is the reference. The Buildbook, included with Starter, is the long form: detail, checklists, screens, FAQ, and failure notes. It does not add a required fact.
 
+## Quick path
+
+In this guide, the private repository you generate from `SignalNexus/signal-nexus-deploy` is the caller repository. Do the work in this order. Each step links to the section that has the detail.
+
+1. Create the caller repository from the template. [Section 2](#2-deploy-repository).
+2. Create the seven runtime files. [Section 3](#3-required-runtime-files).
+3. Create the Render Web Service that receives webhooks. [Sections 4](#4-infrastructure-minimum) and [5](#5-build-and-start).
+4. Prepare the Linux host. [Section 4](#4-infrastructure-minimum).
+5. Set the secrets and the variables. [Sections 6](#6-required-secrets), [7](#7-required-variables), and [8](#8-builtin_venues).
+6. Start the GitHub Actions workflow named `deploy` with `workflow_dispatch`. [Section 9](#9-initial-deploy).
+7. Check health. [Section 10](#10-success).
+
+A later change uses the same workflow. [Section 11](#11-ongoing-deployments).
+
 ## 1. Deployment architecture
 
 ```text
@@ -31,7 +45,7 @@ The reference webhook host is a Render Web Service. The reference machine is a L
 
 ## 2. Deploy repository
 
-Generate a private repository from the template `SignalNexus/signal-nexus-deploy`. The core source stays in `SignalNexus/signal-nexus`. The caller does not fork the core.
+This guide calls the private repository you generate from `SignalNexus/signal-nexus-deploy` the caller repository. It is yours. The core source stays in `SignalNexus/signal-nexus`. The caller repository does not fork the core.
 
 These three are the same 40-character public SHA:
 
@@ -63,7 +77,7 @@ Copy each example to the live name and edit it before the first deploy. All seve
 
 `venueadd/venues.yaml` is not one of the seven. Leave it as `venues: []` until a venue is purchased.
 
-The example registry is valid when copied unchanged:
+`confirm` is the check that validates the runtime files. The example registry passes that check when copied unchanged:
 
 ```yaml
 example-btc-spot:
@@ -82,11 +96,13 @@ example-btc-spot:
 | Linux host | Canonical Ubuntu 24.04. User `ubuntu`. `sudo -n` succeeds. Home `/home/ubuntu` |
 | Ingress | TCP 22 reachable by GitHub-hosted runners. TCP 443 from the internet. TCP 5432 closed. TCP 80 closed. Caddy uses TLS-ALPN |
 | PostgreSQL | The deploy installs the Ubuntu 24.04 package, PostgreSQL 16. It listens on localhost. `pg_hba.conf` allows `127.0.0.1/32` with `scram-sha-256` or `md5`. The first deploy creates role `signalnexus` and database `signalnexus` |
-| Render | A Web Service on the caller repository, branch `main`. It is Live, and `GET /health` returns `{"status":"ok"}`, before `workflow_dispatch` |
+| Render | A Web Service on the caller repository, branch `main`. It receives webhooks. It is Live, and `GET /health` returns `{"status":"ok"}`, before you start the deploy workflow |
 | Site | `CADDY_SITE_ADDRESS` is `<public-ip>.sslip.io`, the hostname only. `RENDER_HEALTH_URL` is `https://<render-host>/health`. `ANALYTICS_API_URL` on Render is `https://` plus the site address |
 | Fingerprint | The Actions secret is the `SHA256:` field from `ssh-keygen -lf` on the ed25519 host key. The private key has no passphrase |
 
 `VM.Standard.E2.1.Micro` in Oracle `ap-tokyo-1` is the reference shape. It is not the only host that can run the software. The console clicks are in the Buildbook.
+
+`workflow_dispatch` is how you start the GitHub Actions workflow named `deploy` on the caller repository. You open that workflow and run it. No screenshot is required. Section 9 is the first run. Section 11 is every later run.
 
 ## 5. Build and start
 
@@ -170,7 +186,7 @@ A registry row that names `mexc_spot` does not by itself require spot keys. The 
 3. Create the Linux host and record the fingerprint.
 4. Create the Render service with the commands in section 5. Wait until `GET /health` is `{"status":"ok"}`.
 5. Store the nine secrets, then the five variables. `DEPLOY_ANALYTICS=true` is last.
-6. Run the `deploy` workflow once with `workflow_dispatch`.
+6. On GitHub, open Actions, open the workflow named `deploy`, and run it once with `workflow_dispatch`.
 
 The deploy installs PostgreSQL when it is missing, creates `signalnexus`, copies the seven files, and restarts the Analytics API. With `venues: []` it does not fetch a venue repository.
 
@@ -187,11 +203,23 @@ The deploy installs PostgreSQL when it is missing, creates `signalnexus`, copies
 
 Compute the hashes with `sha256sum` on the seven live paths.
 
-## 11. Recommended SHA
+## 11. Ongoing deployments
 
-For that caller, the recommended SHA is the public core SHA of its first green `deploy`. It is the value in `core-pin` when section 10 passes. A failed run leaves it unset. Another caller's pin is a different record.
+The first deploy is section 9. After that, the same workflow deploys a change.
 
-## 12. Rollback
+1. Update the seven live runtime files, or write a new public SHA in `core-pin`, `uses`, and `core_sha`, or change the Render environment variables. A new SHA still has to contain the futures-read gate from section 2. The three SHA fields stay equal.
+2. The Render service is already Live. `GET /health` still returns `{"status":"ok"}` before you start.
+3. Run the GitHub Actions workflow named `deploy` once with `workflow_dispatch`. `DEPLOY_ANALYTICS` stays `true`.
+4. Repeat the checks in section 10.
+5. When those checks pass, the recommended SHA for this environment becomes the public core SHA this deploy used.
+
+## 12. Recommended SHA
+
+The recommended SHA is the public core SHA that last passed the checks in section 10 for that environment. The first deploy that passes sets it. Each later deploy that passes the same checks replaces it. A failed deploy does not replace it, and it does not clear the previous value. Another caller's pin is a different record.
+
+Do not read the first success as the only SHA that can be recommended.
+
+## 13. Rollback
 
 Rollback changes that caller's repository, that caller's host, and that caller's Render service.
 
@@ -199,7 +227,7 @@ On a failed first deploy, set `DEPLOY_ANALYTICS` to false on that repository. Le
 
 Do not edit another caller's repository as part of this rollback.
 
-## 13. Starter
+## 14. Starter
 
 | This guide | Buildbook |
 | --- | --- |

@@ -6,6 +6,20 @@
 
 [README](../README_JA.md) は最初に読む文書です。[Architecture](architecture/ARCHITECTURE_JA.md) はシステム構成を確認するための文書です。Starter の Buildbook は、本ガイドの詳細版です。チェックリスト、画面例、FAQ、失敗を避けるメモを加えます。本ガイドに無い必須事項は加えません。
 
+## まずやること
+
+このガイドでは、`SignalNexus/signal-nexus-deploy` から作る利用者自身の非公開リポジトリを、呼び出し元リポジトリと呼びます。作業はこの順です。各手順の詳細は、リンク先の節にあります。
+
+1. テンプレートから呼び出し元リポジトリを作る。[第2節](#sec-2)。
+2. runtime ファイルを七つ作る。[第3節](#sec-3)。
+3. Webhook を受ける Render の Web Service を作る。[第4節](#sec-4)と[第5節](#sec-5)。
+4. Linux ホストを準備する。[第4節](#sec-4)。
+5. secret と variable を設定する。[第6節](#sec-6)、[第7節](#sec-7)、[第8節](#sec-8)。
+6. GitHub Actions の workflow `deploy` を `workflow_dispatch` で起動する。[第9節](#sec-9)。
+7. Health Validation を確認する。[第10節](#sec-10)。
+
+あとからの変更も、同じ workflow を使います。[第11節](#sec-11)。
+
 ## 1. Deployment の構造
 
 ```text
@@ -29,9 +43,11 @@ webhook はアラートを受けます。Analytics API は運用の記録を保�
 
 手順で例にする Webhook の置き場所は Render の Web Service です。例にするマシンは Linux の VM です。Signal Nexus 自体は、Render でも Linux VM でもありません。デプロイの自動化が前提にするのは、GitHub Actions、`ubuntu` としての SSH、TCP 443 の Caddy、localhost の PostgreSQL、`RENDER_HEALTH_URL` です。
 
+<a id="sec-2"></a>
+
 ## 2. Deploy リポジトリ
 
-テンプレート `SignalNexus/signal-nexus-deploy` から非公開リポジトリを生成します。コアのソースは `SignalNexus/signal-nexus` に残ります。呼び出し元リポジトリは、コアを fork しません。
+このガイドでは、テンプレート `SignalNexus/signal-nexus-deploy` から作った利用者自身の非公開リポジトリを、呼び出し元リポジトリと呼びます。コアのソースは `SignalNexus/signal-nexus` に残ります。呼び出し元は、コアを fork しません。
 
 次の三つは、同じ 40 文字の公開 SHA です。
 
@@ -44,6 +60,8 @@ webhook はアラートを受けます。Analytics API は運用の記録を保�
 pin job は、それらが違うときに止まります。より新しい公開 SHA に上げるときは、三か所すべてを書き換えます。
 
 最小の SHA は `c301cb2f1d76344bb5126dc57efccd704eb74eb3` です。その commit は、`BUILTIN_VENUES` に `mexc_futures` が含まれるときだけ `deploy.futures_read` を実行します。同じ条件を持つ、より新しい公開コアができたときに置き換えます。
+
+<a id="sec-3"></a>
 
 ## 3. 必要な runtime ファイル
 
@@ -63,7 +81,7 @@ pin job は、それらが違うときに止まります。より新しい公開
 
 `venueadd/venues.yaml` は、この7ファイルには含まれません。購入まで `venues: []` のままにします。
 
-例の registry は、編集せずコピーしても `confirm` を通ります。
+`confirm` は、runtime の設定ファイルの内容を検証するチェックです。例の registry は、編集せずコピーしても、そのチェックを通ります。
 
 ```yaml
 example-btc-spot:
@@ -75,6 +93,8 @@ example-btc-spot:
 
 strategy の会場は有効なカタログ行でなければならないので、例では `mexc_spot` が有効です。`mexc_futures` と `arcus` は記載し、`enabled` は false です。
 
+<a id="sec-4"></a>
+
 ## 4. インフラの最小要件
 
 | 要素 | 最小 |
@@ -82,11 +102,15 @@ strategy の会場は有効なカタログ行でなければならないので�
 | Linux ホスト | Canonical Ubuntu 24.04。ユーザー `ubuntu`。`sudo -n` が成功する。ホームは `/home/ubuntu` |
 | 開けるポート | GitHub-hosted runner が届く TCP 22。インターネットからの TCP 443。TCP 5432 は閉じる。TCP 80 は閉じる。Caddy は TLS-ALPN |
 | PostgreSQL | deploy が Ubuntu 24.04 のパッケージ、PostgreSQL 16 を入れる。localhost で待ち受ける。`pg_hba.conf` は `127.0.0.1/32` を `scram-sha-256` または `md5` で許可する。初回 deploy が role `signalnexus` と database `signalnexus` を作る |
-| Render | 呼び出し元の branch `main` の Web Service。`workflow_dispatch` の前に Live で、`GET /health` が `{"status":"ok"}` |
+| Render | 呼び出し元の branch `main` の Web Service。Webhook を受けます。deploy workflow を起動する前に Live で、`GET /health` が `{"status":"ok"}` |
 | Site | `CADDY_SITE_ADDRESS` は `<public-ip>.sslip.io`。ホスト名だけ。`RENDER_HEALTH_URL` は `https://<render-host>/health`。Render 上の `ANALYTICS_API_URL` は、`https://` のあとに site address を続けたもの |
 | Fingerprint | Actions の secret は、ed25519 の host key に対する `ssh-keygen -lf` の `SHA256:` のフィールド。秘密鍵にパスフレーズは無い |
 
 Oracle の `ap-tokyo-1` にある `VM.Standard.E2.1.Micro` は、例として挙げる shape です。ソフトウェアが動く唯一のホストではありません。コンソールのクリックは Buildbook にあります。
+
+`workflow_dispatch` は、呼び出し元にある GitHub Actions の workflow `deploy` を起動する方法です。その workflow を開き、実行します。画面の画像は要りません。第9節が初回です。第11節が、そのあと毎回です。
+
+<a id="sec-5"></a>
 
 ## 5. Build と Start
 
@@ -109,6 +133,8 @@ Oracle の `ap-tokyo-1` にある `VM.Standard.E2.1.Micro` は、例として挙
 | `KILL_SWITCH` | `false` |
 
 `WEBHOOK_SECRET`、`PORTAL_PASSWORD`、`DISCORD_WEBHOOK_URL` は、あとから設定できます。設定した secret が 24 文字未満だと、プロセスは止まります。
+
+<a id="sec-6"></a>
 
 ## 6. 必要な secret
 
@@ -139,6 +165,8 @@ Oracle の `ap-tokyo-1` にある `VM.Standard.E2.1.Micro` は、例として挙
 
 名前だけで、値は書かれていません。置場はテンプレートの `deploy/target.env.example` です。
 
+<a id="sec-7"></a>
+
 ## 7. 必要な variable
 
 | Variable | 値 |
@@ -148,6 +176,8 @@ Oracle の `ap-tokyo-1` にある `VM.Standard.E2.1.Micro` は、例として挙
 | `ANALYTICS_VENUE_DIRECTORY` | `/opt/signal-nexus/venueadd` |
 | `BUILTIN_VENUES` | `none`、またはこの環境で使う組み込み会場 |
 | `DEPLOY_ANALYTICS` | `true`。九つの secret のあと、`workflow_dispatch` の直前 |
+
+<a id="sec-8"></a>
 
 ## 8. BUILTIN_VENUES
 
@@ -163,6 +193,8 @@ Oracle の `ap-tokyo-1` にある `VM.Standard.E2.1.Micro` は、例として挙
 
 registry の行が `mexc_spot` を指定するだけでは、spot の鍵は必要になりません。鍵を必須にするのは、変数の方です。例の registry は、`BUILTIN_VENUES=none` のまま deploy できます。
 
+<a id="sec-9"></a>
+
 ## 9. 初回 deploy
 
 1. SHA を書く三か所を、同じ公開 commit に pin します。第2節の最小 SHA と同じか、それより新しい公開 SHA にします。
@@ -170,9 +202,11 @@ registry の行が `mexc_spot` を指定するだけでは、spot の鍵は必�
 3. Linux ホストを作り、fingerprint を記録します。
 4. 第 5 節の command で Render のサービスを作ります。`GET /health` が `{"status":"ok"}` になるまで待ちます。
 5. secret を九つ置き、そのあと variable を五つ置きます。`DEPLOY_ANALYTICS=true` は最後です。
-6. `deploy` workflow を `workflow_dispatch` で一度実行します。
+6. GitHub で Actions を開き、workflow `deploy` を開き、`workflow_dispatch` で一度実行します。
 
 deploy は、PostgreSQL が無ければインストールし、`signalnexus` を作り、七ファイルをコピーし、Analytics API を再起動します。`venues: []` では会場リポジトリを fetch しません。
+
+<a id="sec-10"></a>
 
 ## 10. 成功
 
@@ -187,11 +221,25 @@ deploy は、PostgreSQL が無ければインストールし、`signalnexus` を
 
 hash は、配置した七つの path に対して `sha256sum` を実行して計算します。
 
-## 11. 推奨 SHA
+<a id="sec-11"></a>
 
-その呼び出し元では、推奨 SHA は、最初に成功した `deploy` が使った公開コアの SHA です。第 10 節が通ったときの `core-pin` の値です。失敗した実行では、推奨 SHA は決まりません。別の呼び出し元の pin は、別の値です。
+## 11. 二回目以降の deploy
 
-## 12. Rollback
+初回は第9節です。そのあとの変更も、同じ workflow で deploy します。
+
+1. 配置した runtime ファイル七つを更新するか、`core-pin`、`uses`、`core_sha` に新しい公開 SHA を書くか、Render の環境変数を変えます。新しい SHA も、第2節の futures read の条件を含みます。SHA を書く三か所は、同じ値のままです。
+2. Render のサービスは、すでに Live です。起動する前に、`GET /health` は `{"status":"ok"}` のままです。
+3. GitHub Actions の workflow `deploy` を、`workflow_dispatch` で一度実行します。`DEPLOY_ANALYTICS` は `true` のままです。
+4. 第10節の確認を、もう一度行います。
+5. その確認が通ったら、この環境の推奨 SHA は、この deploy が使った公開コアの SHA になります。
+
+## 12. 推奨 SHA
+
+推奨 SHA は、その環境で第10節の確認を最後に通った公開コアの SHA です。最初に確認を通した deploy が、それを決めます。同じ確認を通したあとの deploy は、その deploy が使った公開コアの SHA に置き換えます。失敗した deploy は置き換えず、前の値も消しません。別の呼び出し元の pin は、別の値です。
+
+最初の成功だけが推奨だと読まないでください。
+
+## 13. Rollback
 
 rollback の対象は、その呼び出し元のリポジトリ、ホスト、Render サービスです。
 
@@ -199,7 +247,7 @@ rollback の対象は、その呼び出し元のリポジトリ、ホスト、Re
 
 この手順では、ほかの呼び出し元のリポジトリは変更しません。
 
-## 13. Starter
+## 14. Starter
 
 | このガイド | Buildbook |
 | --- | --- |
