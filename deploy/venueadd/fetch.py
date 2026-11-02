@@ -12,7 +12,6 @@ import base64
 import os
 import subprocess
 import sys
-import tempfile
 from pathlib import Path
 
 from deploy.venueadd.manifest import load_manifest
@@ -20,17 +19,12 @@ from deploy.venueadd.manifest import load_manifest
 TOKEN_ENV = "VENUEADD_READ_TOKEN"
 
 
-def _auth_config(token: str) -> str:
+def _basic_header(token: str) -> str:
     basic = base64.b64encode(f"x-access-token:{token}".encode("ascii")).decode("ascii")
-    return (
-        "[credential]\n"
-        "\thelper =\n"
-        '[http "https://github.com"]\n'
-        f"\textraheader = AUTHORIZATION: basic {basic}\n"
-    )
+    return f"AUTHORIZATION: basic {basic}"
 
 
-def _fetch_env(auth_file: Path) -> dict[str, str]:
+def _fetch_env() -> dict[str, str]:
     env = {
         key: value
         for key, value in os.environ.items()
@@ -38,8 +32,6 @@ def _fetch_env(auth_file: Path) -> dict[str, str]:
         not in {
             "GIT_ASKPASS",
             "SSH_ASKPASS",
-            "GIT_CONFIG_GLOBAL",
-            "GIT_CONFIG_SYSTEM",
             "GIT_CONFIG_COUNT",
             "GIT_CONFIG_NOSYSTEM",
             "GIT_CURL_VERBOSE",
@@ -49,9 +41,30 @@ def _fetch_env(auth_file: Path) -> dict[str, str]:
         and not key.startswith("GIT_TRACE")
     }
     env["GIT_TERMINAL_PROMPT"] = "0"
-    env["GIT_CONFIG_NOSYSTEM"] = "1"
-    env["GIT_CONFIG_GLOBAL"] = str(auth_file)
     return env
+
+
+def _write_local_header(dest: Path, token: str) -> None:
+    config = dest / ".git" / "config"
+    config.parent.mkdir(parents=True, exist_ok=True)
+    with config.open("a", encoding="utf-8") as handle:
+        handle.write(
+            '\n[http "https://github.com"]\n'
+            f"\textraheader = {_basic_header(token)}\n"
+        )
+    config.chmod(0o600)
+
+
+def _strip_local_header(dest: Path) -> None:
+    config = dest / ".git" / "config"
+    if not config.is_file():
+        return
+    kept = [
+        line
+        for line in config.read_text(encoding="utf-8").splitlines(keepends=True)
+        if "extraheader" not in line and "AUTHORIZATION:" not in line
+    ]
+    config.write_text("".join(kept), encoding="utf-8")
 
 
 def fetch(repository: str, sha: str, dest: Path, token: str) -> None:
@@ -60,22 +73,21 @@ def fetch(repository: str, sha: str, dest: Path, token: str) -> None:
     if dest.exists():
         raise SystemExit(f"checkout already exists: {dest}")
     dest.mkdir(parents=True)
-    fd, name = tempfile.mkstemp(prefix="venueadd-auth-")
-    auth = Path(name)
+    _git(["init"], dest)
+    _git(["remote", "add", "origin", f"https://github.com/{repository}.git"], dest)
+    _write_local_header(dest, token)
     try:
-        with os.fdopen(fd, "w", encoding="utf-8") as handle:
-            handle.write(_auth_config(token))
-        auth.chmod(0o600)
-        env = _fetch_env(auth)
-        _git(["init"], dest)
-        _git(["remote", "add", "origin", f"https://github.com/{repository}.git"], dest)
         try:
-            _git(["fetch", "--depth", "1", "origin", sha], dest, env)
+            _git(
+                ["-c", "credential.helper=", "fetch", "--depth", "1", "origin", sha],
+                dest,
+                _fetch_env(),
+            )
         except subprocess.CalledProcessError:
             raise SystemExit(f"venue repository was not fetched: {repository}") from None
         _git(["checkout", "--detach", "FETCH_HEAD"], dest)
     finally:
-        auth.unlink(missing_ok=True)
+        _strip_local_header(dest)
 
 
 def fetch_manifest(manifest: Path, dest: Path, token: str) -> None:
