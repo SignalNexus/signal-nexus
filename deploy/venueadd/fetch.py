@@ -10,8 +10,10 @@ from __future__ import annotations
 
 import base64
 import os
+import stat
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 from deploy.venueadd.manifest import load_manifest
@@ -44,33 +46,58 @@ def _fetch_env() -> dict[str, str]:
     return env
 
 
+def _write_helper(path: Path) -> None:
+    path.write_text(
+        "#!/bin/sh\n"
+        "case \"$1\" in\n"
+        "  *get*)\n"
+        "    printf '%s\\n' 'username=x-access-token' \"password=$VENUEADD_TOKEN\"\n"
+        "    ;;\n"
+        "esac\n",
+        encoding="utf-8",
+    )
+    path.chmod(path.stat().st_mode | stat.S_IEXEC)
+
+
 def fetch(repository: str, sha: str, dest: Path, token: str) -> None:
     if not token:
         raise SystemExit("venue read token is required")
     if dest.exists():
         raise SystemExit(f"checkout already exists: {dest}")
     dest.mkdir(parents=True)
-    _git(["init"], dest)
-    _git(["remote", "add", "origin", f"https://github.com/{repository}.git"], dest)
+    fd, name = tempfile.mkstemp(prefix="venueadd-auth-")
+    helper = Path(name)
     try:
-        _git(
-            [
-                "-c",
-                "credential.helper=",
-                "-c",
-                f"http.https://github.com/.extraheader={_basic_header(token)}",
-                "fetch",
-                "--depth",
-                "1",
-                "origin",
-                sha,
-            ],
-            dest,
-            _fetch_env(),
-        )
-    except subprocess.CalledProcessError:
-        raise SystemExit(f"venue repository was not fetched: {repository}") from None
-    _git(["checkout", "--detach", "FETCH_HEAD"], dest)
+        os.close(fd)
+        _write_helper(helper)
+        env = _fetch_env()
+        env["VENUEADD_TOKEN"] = token
+        header = _basic_header(token)
+        _git(["init"], dest)
+        _git(["remote", "add", "origin", f"https://github.com/{repository}.git"], dest)
+        try:
+            _git(
+                [
+                    "-c",
+                    "credential.helper=",
+                    "-c",
+                    f"credential.helper=!{helper}",
+                    "-c",
+                    f"http.https://github.com/.extraheader={header}",
+                    "fetch",
+                    "--depth",
+                    "1",
+                    "origin",
+                    sha,
+                ],
+                dest,
+                env,
+            )
+        except subprocess.CalledProcessError:
+            raise SystemExit(f"venue repository was not fetched: {repository}") from None
+        _git(["checkout", "--detach", "FETCH_HEAD"], dest)
+    finally:
+        helper.unlink(missing_ok=True)
 
 
 def fetch_manifest(manifest: Path, dest: Path, token: str) -> None:
