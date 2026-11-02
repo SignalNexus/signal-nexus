@@ -524,15 +524,7 @@ def audits(authorization: str | None = Header(default=None)) -> dict:
 @app.get("/api/trades")
 def trades(authorization: str | None = Header(default=None)) -> dict:
     _require_secret(authorization)
-    fills = _load_fill_views()
-    realized = final_fill_realized(fills)
-    rows = []
-    for fill in fills:
-        row = _fill_json(fill)
-        amount = realized.get(fill.trade_id)
-        row["realized"] = None if amount is None else _decimal(amount)
-        rows.append(row)
-    return {"trades": rows}
+    return {"trades": _trade_rows(_load_fill_views())}
 
 
 @app.get("/api/positions")
@@ -625,7 +617,7 @@ def _assemble_board(sources: tuple[list[FillView], list | None, datetime | None]
             "futures": _volume_json(_class_fills(fills, "futures"), now),
         },
         "positions": [_position_json(item) for item in marked],
-        "trades": [] if summary else [_fill_json(fill) for fill in fills],
+        "trades": [] if summary else _trade_rows(fills),
         "strategies": [_strategy_json(row) for row in attach_volumes(strategy_rows(closed), fills, by="strategy")],
         "tickers": [_ticker_json(row) for row in attach_volumes(ticker_rows(closed), fills, by="ticker")],
         "audits": None if audit_rows is None else [_audit_json(row) for row in audit_rows],
@@ -1028,6 +1020,17 @@ def _balance_amount(value) -> Decimal:
 
 def _decimal(value: Decimal) -> str:
     return format(value, "f")
+
+
+def _trade_rows(fills: list[FillView]) -> list[dict]:
+    realized = final_fill_realized(fills)
+    rows = []
+    for fill in fills:
+        row = _fill_json(fill)
+        amount = realized.get(fill.trade_id)
+        row["realized"] = None if amount is None else _decimal(amount)
+        rows.append(row)
+    return rows
 
 
 def _fill_json(fill: FillView) -> dict:
