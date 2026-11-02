@@ -1,5 +1,5 @@
 # Deploy one Analytics API host from inputs.
-# The caller supplies the core repository, the strategies file, and the checkout token.
+# The caller supplies the core repository, the strategies file, and the venue read token.
 # This file does not name a customer, a host, or a machine.
 
 name: analytics-deploy
@@ -40,7 +40,8 @@ on:
         required: true
         type: string
     secrets:
-      checkout_token:
+      venueadd_read_token:
+        description: Customer fine-grained token with Contents Read on purchased venue repositories
         required: false
       ANALYTICS_SSH_HOST:
         required: true
@@ -97,7 +98,7 @@ jobs:
       core_sha: ${{ inputs.core_sha }}
       venues_manifest: ${{ inputs.venues_manifest }}
     secrets:
-      checkout_token: ${{ secrets.checkout_token }}
+      venueadd_read_token: ${{ secrets.venueadd_read_token }}
 
   deploy:
     needs: venueadd

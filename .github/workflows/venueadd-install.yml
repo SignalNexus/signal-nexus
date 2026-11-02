@@ -16,7 +16,8 @@ on:
         required: true
         type: string
     secrets:
-      checkout_token:
+      venueadd_read_token:
+        description: Customer fine-grained token with Contents Read on purchased venue repositories
         required: false
 
 permissions:
@@ -42,7 +43,7 @@ jobs:
       - name: Resolve purchased venues
         working-directory: core
         env:
-          CHECKOUT_TOKEN: ${{ secrets.checkout_token }}
+          VENUEADD_READ_TOKEN: ${{ secrets.venueadd_read_token }}
           VENUES_MANIFEST: ${{ github.workspace }}/caller/${{ inputs.venues_manifest }}
         run: |
           mkdir -p build/venueadd-out
