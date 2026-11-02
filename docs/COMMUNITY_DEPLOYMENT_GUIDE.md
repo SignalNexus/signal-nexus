@@ -61,7 +61,7 @@ The minimum SHA is `c301cb2f1d76344bb5126dc57efccd704eb74eb3`. That commit runs 
 
 ## 3. Required runtime files
 
-Copy each example to the live name and edit it before the first deploy. All seven must be non-empty. `{}` is rejected.
+Copy each example to the live name before the first deploy. You may edit the values. You do not have to change every field. The sample content can be deployed as it is. What is required is that the seven files exist and pass `confirm`. All seven must be non-empty. `{}` is rejected.
 
 | Example | Live file |
 | --- | --- |
@@ -99,6 +99,8 @@ example-btc-spot:
 | Render | A Web Service on the caller repository, branch `main`. It receives webhooks. It is Live, and `GET /health` returns `{"status":"ok"}`, before you start the deploy workflow |
 | Site | `CADDY_SITE_ADDRESS` is `<public-ip>.sslip.io`, the hostname only. `RENDER_HEALTH_URL` is `https://<render-host>/health`. `ANALYTICS_API_URL` on Render is `https://` plus the site address |
 | Fingerprint | The Actions secret is the `SHA256:` field from `ssh-keygen -lf` on the ed25519 host key. The private key has no passphrase |
+
+In Render, create a Web Service connected to the caller repository's `main` branch. It receives the webhooks. Use the build and start commands in section 5.
 
 `VM.Standard.E2.1.Micro` in Oracle `ap-tokyo-1` is the reference shape. It is not the only host that can run the software. The console clicks are in the Buildbook.
 
@@ -182,13 +184,15 @@ A registry row that names `mexc_spot` does not by itself require spot keys. The 
 ## 9. Initial deploy
 
 1. Pin the three SHA fields to the same public commit, at least the minimum in section 2.
-2. Copy the seven examples to `config/`, edit them, and commit them with `venues: []` and `render-build.sh`.
+2. Copy the seven examples to `config/`. You do not have to edit every field. Commit them with `venues: []` and `render-build.sh`.
 3. Create the Linux host and record the fingerprint.
-4. Create the Render service with the commands in section 5. Wait until `GET /health` is `{"status":"ok"}`.
+4. In Render, create a Web Service connected to the caller repository's `main` branch. Use the commands in section 5. Wait until `GET /health` is `{"status":"ok"}`.
 5. Store the nine secrets, then the five variables. `DEPLOY_ANALYTICS=true` is last.
 6. On GitHub, open Actions, open the workflow named `deploy`, and run it once with `workflow_dispatch`.
 
 The deploy installs PostgreSQL when it is missing, creates `signalnexus`, copies the seven files, and restarts the Analytics API. With `venues: []` it does not fetch a venue repository.
+
+When the workflow finishes, carry out the checks in section 10.
 
 ## 10. Success
 
@@ -224,6 +228,8 @@ Do not read the first success as the only SHA that can be recommended.
 Rollback changes that caller's repository, that caller's host, and that caller's Render service.
 
 On a failed first deploy, set `DEPLOY_ANALYTICS` to false on that repository. Leave `venues: []` and the pin in place. A retry uses a new SSH key and a new database password. The workflow rolls the Render service back to the deploy that was live before the hook.
+
+If a deploy after an update fails, return to the last deploy that passed the checks in section 10. The workflow rolls the Render service back to the deploy that was live before that run. This return is not limited to the first deploy.
 
 Do not edit another caller's repository as part of this rollback.
 

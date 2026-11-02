@@ -65,7 +65,7 @@ pin job は、それらが違うときに止まります。より新しい公開
 
 ## 3. 必要な runtime ファイル
 
-初回 deploy の前に、各例を、`.example` を外したパスへコピーして編集します。7ファイルとも、中身が必要です。`{}` は拒否されます。
+初回 deploy の前に、各例を、`.example` を外したパスへコピーします。値は編集してよいです。全項目を変える必要はありません。サンプルの内容は、そのままでも deploy できます。必要なのは、7ファイルが存在し、`confirm` を通ることです。7ファイルとも、中身が必要です。`{}` は拒否されます。
 
 | 例 | 配置するファイル |
 | --- | --- |
@@ -105,6 +105,8 @@ strategy の会場は有効なカタログ行でなければならないので�
 | Render | 呼び出し元の branch `main` の Web Service。Webhook を受けます。deploy workflow を起動する前に Live で、`GET /health` が `{"status":"ok"}` |
 | Site | `CADDY_SITE_ADDRESS` は `<public-ip>.sslip.io`。ホスト名だけ。`RENDER_HEALTH_URL` は `https://<render-host>/health`。Render 上の `ANALYTICS_API_URL` は、`https://` のあとに site address を続けたもの |
 | Fingerprint | Actions の secret は、ed25519 の host key に対する `ssh-keygen -lf` の `SHA256:` のフィールド。秘密鍵にパスフレーズは無い |
+
+Render では、呼び出し元リポジトリの `main` ブランチを接続した Web Service を作成します。このサービスが Webhook を受けます。build と start は第5節のコマンドです。
 
 Oracle の `ap-tokyo-1` にある `VM.Standard.E2.1.Micro` は、例として挙げる shape です。ソフトウェアが動く唯一のホストではありません。コンソールのクリックは Buildbook にあります。
 
@@ -198,13 +200,15 @@ registry の行が `mexc_spot` を指定するだけでは、spot の鍵は必�
 ## 9. 初回 deploy
 
 1. SHA を書く三か所を、同じ公開 commit に pin します。第2節の最小 SHA と同じか、それより新しい公開 SHA にします。
-2. 七つの例を `config/` へコピーして編集し、`venues: []` と `render-build.sh` と一緒に commit します。
+2. 七つの例を `config/` へコピーします。全項目を編集する必要はありません。`venues: []` と `render-build.sh` と一緒に commit します。
 3. Linux ホストを作り、fingerprint を記録します。
-4. 第 5 節の command で Render のサービスを作ります。`GET /health` が `{"status":"ok"}` になるまで待ちます。
+4. Render では、呼び出し元リポジトリの `main` ブランチを接続した Web Service を作成します。第5節のコマンドを使います。`GET /health` が `{"status":"ok"}` になるまで待ちます。
 5. secret を九つ置き、そのあと variable を五つ置きます。`DEPLOY_ANALYTICS=true` は最後です。
 6. GitHub で Actions を開き、workflow `deploy` を開き、`workflow_dispatch` で一度実行します。
 
 deploy は、PostgreSQL が無ければインストールし、`signalnexus` を作り、七ファイルをコピーし、Analytics API を再起動します。`venues: []` では会場リポジトリを fetch しません。
+
+workflow が完了したら、第10節の確認項目を実施します。
 
 <a id="sec-10"></a>
 
@@ -244,6 +248,8 @@ hash は、配置した七つの path に対して `sha256sum` を実行して�
 rollback の対象は、その呼び出し元のリポジトリ、ホスト、Render サービスです。
 
 初回 deploy が失敗したときは、そのリポジトリの `DEPLOY_ANALYTICS` を false にします。`venues: []` と pin は残します。再試行は新しい SSH 鍵と新しい database パスワードを使います。workflow は、Render のサービスを、hook の前に Live だった deploy へ戻します。
+
+更新後の deploy が失敗した場合も、第10節の確認を最後に通した deploy の状態へ戻します。workflow は、Render のサービスを、その実行の前に Live だった deploy へ戻します。この戻しは、初回 deploy だけのものではありません。
 
 この手順では、ほかの呼び出し元のリポジトリは変更しません。
 
