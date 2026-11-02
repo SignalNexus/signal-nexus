@@ -15,7 +15,7 @@ TradingView がアラートを送ります。Signal Nexus はそれを戦略に�
 - TradingView のシグナル取り込み。アラートは Webhook として届き、`config/strategies.yml` の戦略に割り当てられます。
 - 複数の取引所への実行。一つの運用で、その計画を複数の取引所へ出せます。`dry_run` では注文は出ません。
 - Analytics の収集。アラート、計画、注文を出したときの取引所の結果が、運用の記録として残ります。
-- 監査の通知。監査の行は Postgres に残ります。Discord へ写しを届けられます。
+- 監査の通知。監査の行は Postgres に残ります。Discord へ監査のコピーを届けられます。
 - 一つの運用の流れ。Dashboard、Analytics、Audit は、同じ運用の見え方です。
 
 次に何を変えるかは、自分で決めます。Signal Nexus は記録を残します。
@@ -62,7 +62,7 @@ TradingView がシグナルを出します。Signal Nexus が受け取り、CEX 
 | Analytics | 運用の記録を残す |
 | Postgres | 監査の行を保存する |
 | ポータル | Dashboard、Analytics、Audit を表示する |
-| Discord | 監査の写しを受け取る |
+| Discord | 監査のコピーを受け取る |
 
 ポータルは `PORTAL_PASSWORD` で保護されます。値は環境の設定で渡します。
 
@@ -83,7 +83,7 @@ Webhook のプロセス（`app.main`）が TradingView のアラートを受け�
 - Analytics サービスから届く PostgreSQL
 - Webhook サービスから Analytics API へ、`ANALYTICS_API_URL` で届く接続
 
-Signal Nexus 自体は、Render にも Oracle Cloud にも縛られません。Buildbook が書くその二つは、参照実装であり、必須の購入先ではありません。いまのデプロイ自動化は、GitHub Actions、`ubuntu` として `/home/ubuntu` へ SSH する Linux ホスト、443 で HTTPS を出す Caddy、localhost の PostgreSQL、`RENDER_HEALTH_URL` による health の確認を前提にします。同じ能力が揃っていれば、同等のインフラを使えます。
+Signal Nexus 自体は、Render にも Oracle Cloud にも縛られません。Buildbook が書くその二つは、例として挙げる環境であり、必須の購入先ではありません。いまのデプロイ自動化は、GitHub Actions、`ubuntu` として `/home/ubuntu` へ SSH する Linux ホスト、443 で HTTPS を出す Caddy、localhost の PostgreSQL、`RENDER_HEALTH_URL` による health の確認を前提にします。同じ能力が揃っていれば、同等のインフラを使えます。
 
 ### デプロイの関係
 
@@ -101,9 +101,9 @@ Discord notifications
 Webhook Service
 ```
 
-Webhook サービスがアラートを受けます。Analytics API が運用の記録を残します。Postgres が監査と Analytics のデータを保持します。Discord は、Webhook サービスが作った監査の写しを受け取ります。
+Webhook サービスがアラートを受けます。Analytics API が運用の記録を残します。Postgres が監査と Analytics のデータを保持します。Discord は、Webhook サービスが作った監査のコピーを受け取ります。
 
-caller リポジトリの command は、[Community Deployment Guide](docs/COMMUNITY_DEPLOYMENT_GUIDE_JA.md) にあります。
+呼び出し元リポジトリのコマンドは、[Community Deployment Guide](docs/COMMUNITY_DEPLOYMENT_GUIDE_JA.md) にあります。
 
 - Build command: `bash render-build.sh && pip install -r .core/requirements.txt`
 - Start command: `cd .core && uvicorn app.main:app --host 0.0.0.0 --port $PORT`
@@ -116,9 +116,9 @@ caller リポジトリの command は、[Community Deployment Guide](docs/COMMUN
 
 health が示すのは、そのプロセスが応答したことです。
 
-その経路の公開の正本は [Community Deployment Guide](docs/COMMUNITY_DEPLOYMENT_GUIDE_JA.md) です。公開コアと deploy template を使い、health の確認まで従います。
+health の確認までの公開の手順の正本は、[Community Deployment Guide](docs/COMMUNITY_DEPLOYMENT_GUIDE_JA.md) です。公開コアと deploy template を使って、そこまで進めます。
 
-Starter に含まれる Buildbook は、そのガイドの長い形です。詳細、チェックリスト、画面、FAQ、失敗のメモを足します。必須の事実は足しません。
+Starter の Buildbook は、本ガイドの詳細版です。チェックリスト、画面例、FAQ、失敗を避けるメモを加えます。本ガイドに無い必須事項は加えません。
 
 ## 実行モード
 
@@ -160,7 +160,7 @@ Webhook のプロセスが持ちます。アラートの確認、Analytics API �
 - `ANALYTICS_API_URL` — Webhook が Analytics API に届く先です。URL に秘密は入れません。
 - `ANALYTICS_API_SECRET` — その呼び出しの共有の秘密です。同じ値を Analytics サービスにも置きます。`WEBHOOK_SECRET` とは別です。
 - `PORTAL_PASSWORD` — Webhook のプロセスが出すポータルのパスワードです。
-- `DISCORD_WEBHOOK_URL` — 監査の写しの届け先です。監査の行は Postgres に残ります。
+- `DISCORD_WEBHOOK_URL` — 監査のコピーの届け先です。監査の行は Postgres に残ります。
 - `KILL_SWITCH` — `true` で新しい Webhook の注文を止めます。`false` ではその経路を開いたままにします。仮想マシン上の同じ名前は、発注 API を止めます。
 - `EXECUTION_MODE` — 未設定は `dry_run` です。`live` で注文を出します。
 
@@ -283,7 +283,7 @@ venues:
 
 1 つの戦略は、残数量 1 つ、保護ストップ 1 つ、利食い 1 つを持ちます。これらは戦略に属し、個々の約定には属しません。新しいエントリーが既存の建玉を増やすとき、Signal Nexus は最新のエントリー約定と、その時点の割合で、両方の価格を再アームします。平均建値からは計算しません。新しい公開価格が先に割った方で、残数量全体を閉じます。部分利食い、部分損切り、2 段目はありません。ロングは、価格がストップ以下で損切り、利食い以上で利食いです。ショートはその逆です。1 つの価格が両方を割ったときは、ストップの方で閉じます。
 
-保護決済は、仮想マシン上の内部決済です。TradingView のアラートではありません。アームでは監査行も Discord も作りません。決済の試みは、既存の `ACCEPTED`、`SUCCESS`、`FAILED`、`SKIPPED` だけを使います。`SIGNAL RECEIVED` は作らず、Dashboard の Latest Alert も動きません。損切りの理由は `protective_exit stop=<stop_price> mark=<trigger_price>` です。利食いの理由は `protective_exit take_profit=<take_profit_price> mark=<trigger_price>` です。`FAILED` と `SKIPPED` には会場またはシステムの原因を続けます。仮想マシンが監査行を書き、`AUDIT_COPY_URL` があるときは写しを Render へ渡します。Discord の送信は Render が行います。タイトルは `ORDER ACCEPTED`、`ORDER SUCCESS`、`ORDER FAILED`、`ORDER NOT SENT` です。転送できないときは監査行が残り、写しは Not configured になります。
+保護決済は、仮想マシン上の内部決済です。TradingView のアラートではありません。アームでは監査行も Discord も作りません。決済の試みは、既存の `ACCEPTED`、`SUCCESS`、`FAILED`、`SKIPPED` だけを使います。`SIGNAL RECEIVED` は作らず、Dashboard の Latest Alert も動きません。損切りの理由は `protective_exit stop=<stop_price> mark=<trigger_price>` です。利食いの理由は `protective_exit take_profit=<take_profit_price> mark=<trigger_price>` です。`FAILED` と `SKIPPED` には会場またはシステムの原因を続けます。仮想マシンが監査行を書き、`AUDIT_COPY_URL` があるときは監査のコピーを Render へ渡します。Discord の送信は Render が行います。タイトルは `ORDER ACCEPTED`、`ORDER SUCCESS`、`ORDER FAILED`、`ORDER NOT SENT` です。転送できないときは監査行が残り、コピーは Not configured になります。
 
 アラートの本文に `protective_exit`、`loss_pct`、`profit_pct` は入れません。Analytics API は仮想マシンの `KILL_SWITCH` を読みます。そこが `true` のとき、保護決済を止め、`/api/mexc/order` と `/api/arcus/order` と `/api/venue/order` を拒否します。発注 API は、Webhook と同じ `side` と action の規則も適用します。拒否は HTTP 403 で、監査行を残します。キルスイッチは `order_not_sent`、方向の不一致は `validation_rejected` です。Postgres が落ちているときは監査行をスキップします。注文はそれでも拒否します。
 
@@ -334,7 +334,7 @@ venues:
 | TradingView をどう繋ぐか | [Strategy Integration Guide](docs/integration/STRATEGY_INTEGRATION_GUIDE_JA.md) |
 | 各画面に何が出るか | [Screen Specification](docs/ui/SCREEN_SPECIFICATION_JA.md) |
 | 画面がどう繋がるか | [Screen Relationship Diagram](docs/ui/SCREEN_RELATIONSHIP_DIAGRAM_JA.md) |
-| 一通りのデプロイをどう再現するか | [Community Deployment Guide](docs/COMMUNITY_DEPLOYMENT_GUIDE_JA.md)。Buildbook は任意の長い形 |
+| 一通りのデプロイをどう再現するか | [Community Deployment Guide](docs/COMMUNITY_DEPLOYMENT_GUIDE_JA.md)。Buildbook は任意の詳細版 |
 | 文書がどう分かれるか | [Documentation Structure](docs/DOCUMENTATION_STRUCTURE_JA.md) |
 
 ## 法務

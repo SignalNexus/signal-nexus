@@ -1,8 +1,8 @@
 # AddVenue の配備
 
-このファイルは日本語の写しです。正本は [ADDVENUE_DEPLOY.md](ADDVENUE_DEPLOY.md) です。
+このファイルは英語版の日本語版です。正本は [ADDVENUE_DEPLOY.md](ADDVENUE_DEPLOY.md) です。
 
-公開コアに、有料会場のパッケージは含まれません。呼び出し元が、core の commit、manifest のパス、SSH のホスト、SSH の利用者、コアのディレクトリ、会場のディレクトリを渡します。共有 workflow には、それらの値を書きません。manifest があるとき、その実行はそこに書いた commit だけを導入します。
+公開コアに、有料会場のパッケージは含まれません。呼び出し元リポジトリが、core の commit、manifest のパス、SSH のホスト、SSH の利用者、コアのディレクトリ、会場のディレクトリを渡します。共有 workflow には、それらの値を書きません。manifest があるとき、その実行はそこに書いた commit だけを導入します。
 
 ## Manifest
 
@@ -20,13 +20,13 @@ token は、その顧客の deploy リポジトリの secret にだけ置きま�
 
 空の manifest は、token が無くても完了します。token が読めないリポジトリの行は、`venueadd-install` を失敗させます。`analytics-deploy` は、その job が成功したあとだけ Analytics API を再起動します。失敗した取得は、導入済みのツリーを変えません。
 
-返金は、manifest の行を外して deploy を一度実行します。apply は、manifest がもう名指ししない会場ディレクトリを削除します。そのあと、公開元が Read を外します。行が残ったまま Read を外すと、次の deploy は再起動の前に失敗します。
+返金は、manifest の行を外して deploy を一度実行します。apply は、manifest がもう指定しない会場ディレクトリを削除します。そのあと、公開元が Read を外します。行が残ったまま Read を外すと、次の deploy は再起動の前に失敗します。
 
 ## workflow の分担
 
 `venueadd-install` は、固定した commit を取得し、一つの lock を解き、本番のローダーで確認します。SSH、サービスファイル、再起動は行いません。
 
-caller リポジトリが、リポジトリの変数と secret を `analytics-deploy` へ渡します。lock またはローダーが失敗したときは、再起動まで進みません。会場ディレクトリは、呼び出し元の `venue_directory` です。
+呼び出し元が、リポジトリの変数と secret を `analytics-deploy` へ渡します。lock またはローダーが失敗したときは、再起動まで進みません。会場ディレクトリは、呼び出し元の `venue_directory` です。
 
 ## 依存の解決
 

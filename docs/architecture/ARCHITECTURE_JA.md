@@ -104,7 +104,7 @@ graph TD
 
 これらは、同じワークフローに付きます。階段ではありません。
 
-Starter は Buildbook です。[Community Deployment Guide](../COMMUNITY_DEPLOYMENT_GUIDE_JA.md) が、health の確認までの公開の経路です。Buildbook はそのガイドの長い形です。必須の事実は足しません。
+Starter は Buildbook です。[Community Deployment Guide](../COMMUNITY_DEPLOYMENT_GUIDE_JA.md) が、health の確認までの公開の手順です。Buildbook はそのガイドの詳細版です。本ガイドに無い必須事項は加えません。
 
 Volume Pack と Profit Pack は、別々のリサーチのパッケージです。リサーチは非公開です。Complete は、Starter と、同じ日付の両方のパッケージの束です。どちらのパッケージの上位版でもなく、VenueAdd も含みません。
 
@@ -120,7 +120,7 @@ Webhook は会場の実装を知りません。扱うのは `venue_id` だけで
 
 Analytics VM の workflow は、`venueadd/venues.yaml` があるときだけ、そこに書いた commit を取得します。Core の依存と、その会場の依存を一つの lock に解きます。解けないときは `SIGNAL_NEXUS_VENUEADD` を変えず、Analytics API を再起動しません。配置先は `/opt/signal-nexus/venueadd/<import 名>/` です。`lighter-sdk` 1.1.8 の既知の例外は Core が持ち、manifest には書きません。手順は [AddVenue の配備](ADDVENUE_DEPLOY_JA.md) にあります。
 
-この引き渡しの完了は、Webhook が転送し、Analytics API が受信の監査を保存したときです。取引所の約定は、この引き渡しの出口ではありません。確認の前に、Webhook のサービス、caller リポジトリ、Analytics VM の `strategies.yml` のコミットが同じであることを見ます。世代が違う状態は、確認になりません。
+この引き渡しの完了は、Webhook が転送し、Analytics API が受信の監査を保存したときです。取引所の約定は、この引き渡しの出口ではありません。確認の前に、Webhook のサービス、呼び出し元リポジトリ、Analytics VM の `strategies.yml` のコミットが同じであることを見ます。世代が違う状態は、確認になりません。
 
 各商品が何を含むかは [Product Specification](../product/PRODUCT_SPECIFICATION_JA.md) が定義します。この節は価格を定めません。
 
@@ -150,7 +150,7 @@ Postgres は、Analytics API と同じ仮想マシンで動きます。待ち受
 
 ### Oracle の VM
 
-仮想マシンは、Analytics API、Postgres、そして MEXC と Arcus への発注を置く場所です。この一連の文書でそのマシンの参照環境にしているのは、Ubuntu を動かす Oracle Cloud です。Render は別のホストです。
+仮想マシンは、Analytics API、Postgres、そして MEXC と Arcus への発注を置く場所です。この一連の文書でそのマシンの例として使う環境は、Ubuntu を動かす Oracle Cloud です。Render は別のホストです。
 
 ### GitHub Actions
 
@@ -177,9 +177,9 @@ Arcus は、いまの発注先です。約定の読み取りは `ANALYTICS_ARCUS
 3. 注文額は、その行の `size_quote` である。アラートの本文に `size` も `size_quote` も無い。
 4. `dry_run` では、Render は注文を出さない。
 5. `live` では、Webhook が会場名を Analytics API へ転送する。組み込み会場は既存の注文エンドポイントを使う。それ以外の会場名は `POST /api/venue/order` を使う。注文を実行するのは仮想マシンである。
-6. 監査の行は Postgres に保存される。Render は写しを Discord へ届けられる。
+6. 監査の行は Postgres に保存される。Render は監査のコピーを Discord へ届けられる。
 
-保護決済は、TradingView のアラートが足の確定時にだけ評価されるため、その間の急な価格変化への対応を補うための付加機能です。Signal Nexus は、戦略ごとにストップ 価格1 つと利食い価格 1 つを持ちます。価格は、その戦略の最新エントリー約定に loss_pct と profit_pct を掛けて決めます。仮想マシンが 5 秒ごとに新しい公開価格を見て、先に割れた方で、その戦略の残数量全体を成行で閉じます。アラートの代わりではなく、次の足のアラートが来るまでに想定外の損失を防ぐ、もしくは利益の確保を行うための保護です。約定ごとには保存せず、平均建値からも取りません。MEXC や Arcus のストップ注文でも利食い注文でもありません。決済は既存の監査種別を 1 つ書き、その写しを Render へ渡します。Discord の送信は Render が行います。Dashboard の最新アラート時刻は `SIGNAL RECEIVED` だけを読むため、この決済では動きません。転送に失敗しても、監査行は Postgres に残ります。
+保護決済は、TradingView のアラートが足の確定時にだけ評価されるため、その間の急な価格変化への対応を補うための付加機能です。Signal Nexus は、戦略ごとにストップ 価格1 つと利食い価格 1 つを持ちます。価格は、その戦略の最新エントリー約定に loss_pct と profit_pct を掛けて決めます。仮想マシンが 5 秒ごとに新しい公開価格を見て、先に割れた方で、その戦略の残数量全体を成行で閉じます。アラートの代わりではなく、次の足のアラートが来るまでに想定外の損失を防ぐ、もしくは利益の確保を行うための保護です。約定ごとには保存せず、平均建値からも取りません。MEXC や Arcus のストップ注文でも利食い注文でもありません。決済は既存の監査種別を 1 つ書き、そのコピーを Render へ渡します。Discord の送信は Render が行います。Dashboard の最新アラート時刻は `SIGNAL RECEIVED` だけを読むため、この決済では動きません。転送に失敗しても、監査行は Postgres に残ります。
 
 Render の `GET /health` と Analytics API の `GET /health` は、それぞれ、そのプロセスが応答したことだけを示す。
 
