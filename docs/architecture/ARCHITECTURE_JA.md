@@ -104,7 +104,7 @@ graph TD
 
 これらは、同じワークフローに付きます。階段ではありません。
 
-Starter は Buildbook です。その手順書は、参照するデプロイを何も無い状態から再現します。必要なサービスに慣れていれば、公開の README で足ります。
+Starter は Buildbook です。[Community Deployment Guide](../COMMUNITY_DEPLOYMENT_GUIDE_JA.md) が、health の確認までの公開の経路です。Buildbook はそのガイドの長い形です。必須の事実は足しません。
 
 Volume Pack と Profit Pack は、別々のリサーチのパッケージです。リサーチは非公開です。Complete は、Starter と、同じ日付の両方のパッケージの束です。どちらのパッケージの上位版でもなく、VenueAdd も含みません。
 
@@ -118,7 +118,9 @@ Webhook は会場の実装を知りません。扱うのは `venue_id` だけで
 
 `SIGNAL_NEXUS_VENUEADD` を import し、`execute`、`mark`、`sync_lots`、`open_orders`、`balance`、`apply_leverage` の六つを呼ぶのは、VM のプロセスです。設定が空なら、MEXC 現物、MEXC 先物、Arcus は今のままです。パッケージが予約 ID、重複した ID、または 1 以外のポート版を返すと、そのプロセスは起動時に止まります。有料会場の接続は、このツリーの外に残します。
 
-この引き渡しの完了は、Webhook が転送し、Analytics API が受信の監査を保存したときです。取引所の約定は、この引き渡しの出口ではありません。確認の前に、Webhook、`signal-nexus-dev`、Analytics VM の `strategies.yml` のコミットが同じであることを見ます。世代が違う状態は、確認になりません。
+Analytics VM の workflow は、`venueadd/venues.yaml` があるときだけ、そこに書いた commit を取得します。Core の依存と、その会場の依存を一つの lock に解きます。解けないときは `SIGNAL_NEXUS_VENUEADD` を変えず、Analytics API を再起動しません。配置先は `/opt/signal-nexus/venueadd/<import 名>/` です。`lighter-sdk` 1.1.8 の既知の例外は Core が持ち、manifest には書きません。手順は [AddVenue の配備](ADDVENUE_DEPLOY_JA.md) にあります。
+
+この引き渡しの完了は、Webhook が転送し、Analytics API が受信の監査を保存したときです。取引所の約定は、この引き渡しの出口ではありません。確認の前に、Webhook のサービス、caller リポジトリ、Analytics VM の `strategies.yml` のコミットが同じであることを見ます。世代が違う状態は、確認になりません。
 
 各商品が何を含むかは [Product Specification](../product/PRODUCT_SPECIFICATION_JA.md) が定義します。この節は価格を定めません。
 

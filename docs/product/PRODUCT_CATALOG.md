@@ -18,7 +18,7 @@ Nothing on this page promises profit, points, an airdrop, or a trading result.
 
 ## Product Lineup
 
-- Starter. The public platform, plus the Buildbook. The Buildbook is the playbook for the reference deployment. Starter is not a second program, and it does not include a support contract.
+- Starter. The public platform, plus the Buildbook. The Buildbook is the long form of the [Community Deployment Guide](../COMMUNITY_DEPLOYMENT_GUIDE.md). Starter is not a second program, and it does not include a support contract.
 - Volume Pack. The strategy set of one purchase date, selected with trading volume, venue participation, and point-program opportunity as the axis. The selection uses past data, backtests, and past operation, including operation the author has run in public. You run the set. It is not a research report. It does not include a later date. Past results do not guarantee future points, rewards, profit, or an airdrop.
 - Profit Pack. The strategy set of one purchase date, selected with net result as the axis. The selection uses past data, backtests, and past operation, including operation the author has run in public. You run the set. It is not a research report. It does not include a later date. Past results do not guarantee future profit.
 - Complete. Starter together with the Volume Pack and the Profit Pack of the same date. It does not add a separate support contract. It is not a higher edition of either pack. There is no Complete repository.

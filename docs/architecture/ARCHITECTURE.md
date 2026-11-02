@@ -104,7 +104,7 @@ graph TD
 
 These attach to the same workflow. They are not a ladder.
 
-Starter is Buildbook access. That playbook reproduces the reference deployment from an empty start. The public README remains enough when you already know the services.
+Starter is Buildbook access. The [Community Deployment Guide](../COMMUNITY_DEPLOYMENT_GUIDE.md) is the public path through health validation. The Buildbook is the long form of that guide. It does not add a required fact.
 
 Volume Pack and Profit Pack are separate research packages. Research stays private. Complete is the bundle of Starter and both packages of the same date. It is not a higher edition of either package, and it does not include VenueAdd.
 
@@ -118,7 +118,9 @@ When `ANALYTICS_API_URL` is set, `execute_order` forwards before it imports a ve
 
 The virtual machine is the process that imports `SIGNAL_NEXUS_VENUEADD` and calls `execute`, `mark`, `sync_lots`, `open_orders`, `balance`, and `apply_leverage`. An empty setting leaves MEXC Spot, MEXC Futures, and Arcus as they are. A package that returns a reserved id, a repeated id, or a port version other than 1 stops that process during startup. The connector for a paid venue stays outside this tree.
 
-The handoff is complete when the webhook has forwarded the order and the Analytics API has stored the received audit. A fill at the exchange is not the exit for this handoff. Before that check, the `strategies.yml` commit on the webhook, on `signal-nexus-dev`, and on the Analytics VM must be the same commit. A mismatched generation is not a valid check.
+The Analytics VM workflow reads `venueadd/venues.yaml` when that file is present. It checks out only those commits, solves one lock for the Core requirements and those venue requirements, and places each tree under `/opt/signal-nexus/venueadd/<import_name>/`. The virtual environment is then made to match that lock. A lock that does not solve does not change `SIGNAL_NEXUS_VENUEADD` and does not restart the Analytics API. The reviewed exception for `lighter-sdk` 1.1.8 is owned by the Core, not by the manifest. The deployment steps are in [AddVenue deployment](ADDVENUE_DEPLOY.md).
+
+The handoff is complete when the webhook has forwarded the order and the Analytics API has stored the received audit. A fill at the exchange is not the exit for this handoff. Before that check, the `strategies.yml` commit on the webhook service, on the caller repository, and on the Analytics VM must be the same commit. A mismatched generation is not a valid check.
 
 What each product includes is defined in [Product Specification](../product/PRODUCT_SPECIFICATION.md). This section does not set a price.
 

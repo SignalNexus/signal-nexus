@@ -26,7 +26,7 @@ A refund removes the manifest row and runs deploy once. The apply step deletes a
 
 `venueadd-install` checks out the pinned commits, solves one lock, and runs the production loader. It does not open an SSH session, write a service file, or restart a process.
 
-`analytics-vm` is the caller for Customer #1. It passes repository variables and secrets into `analytics-deploy`. A failed lock or a failed loader skips the restart. The venue directory is the caller's `venue_directory` input.
+The caller repository passes repository variables and secrets into `analytics-deploy`. A failed lock or a failed loader skips the restart. The venue directory is the caller's `venue_directory` input.
 
 ## Dependency resolution
 
@@ -42,4 +42,4 @@ Change the manifest `sha` to the previous commit and run `analytics-vm` again. T
 
 Venue API secrets stay in the environment files the Analytics API already loads. This workflow does not create those secrets. A new machine still needs them, in the same way it needs the Arcus and MEXC keys.
 
-The workflow installs onto the host named by the caller's SSH input. It does not build a container image and it does not configure a second machine. Customer #1 must set `DEPLOY_ANALYTICS`, `ANALYTICS_SSH_USER`, `ANALYTICS_CORE_DIRECTORY`, and `ANALYTICS_VENUE_DIRECTORY` on the caller repository before the next run.
+The workflow installs onto the host named by the caller's SSH input. It does not build a container image and it does not configure a second machine. The caller repository sets `DEPLOY_ANALYTICS`, `ANALYTICS_SSH_USER`, `ANALYTICS_CORE_DIRECTORY`, and `ANALYTICS_VENUE_DIRECTORY` before the run.

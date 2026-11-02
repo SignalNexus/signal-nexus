@@ -103,10 +103,10 @@ Webhook Service
 
 Webhook サービスがアラートを受けます。Analytics API が運用の記録を残します。Postgres が監査と Analytics のデータを保持します。Discord は、Webhook サービスが作った監査の写しを受け取ります。
 
-Webhook のプロセスは次です。
+caller リポジトリの command は、[Community Deployment Guide](docs/COMMUNITY_DEPLOYMENT_GUIDE_JA.md) にあります。
 
-- Build command: `pip install -r requirements.txt`
-- Start command: `uvicorn app.main:app --host 0.0.0.0 --port $PORT`
+- Build command: `bash render-build.sh && pip install -r .core/requirements.txt`
+- Start command: `cd .core && uvicorn app.main:app --host 0.0.0.0 --port $PORT`
 
 次の三つが揃うと、[Strategy Integration Guide](docs/integration/STRATEGY_INTEGRATION_GUIDE_JA.md) へ進めます。
 
@@ -116,9 +116,9 @@ Webhook のプロセスは次です。
 
 health が示すのは、そのプロセスが応答したことです。
 
-GitHub、Render、Linux のマシン、TradingView、secret の扱いに慣れている場合、上のプロセスと、必要な設定、戦略の設定が、公開されているデプロイの入口です。
+その経路の公開の正本は [Community Deployment Guide](docs/COMMUNITY_DEPLOYMENT_GUIDE_JA.md) です。公開コアと deploy template を使い、health の確認まで従います。
 
-何も無い状態からその環境を再現するには、Signal Nexus Buildbook に従います。Buildbook は Starter に含まれます。Buildbook は、完全な構築の手順書です。
+Starter に含まれる Buildbook は、そのガイドの長い形です。詳細、チェックリスト、画面、FAQ、失敗のメモを足します。必須の事実は足しません。
 
 ## 実行モード
 
@@ -233,7 +233,7 @@ Analytics サービス
 
 これらの変数は、Signal Nexus の実行時の設定ではありません。そのため、必要な設定には入れていません。
 
-文書は、Buildbook の別紙にあります。
+文書は [Community Deployment Guide](docs/COMMUNITY_DEPLOYMENT_GUIDE_JA.md) にあります。
 
 - `ANALYTICS_SSH_HOST`、`ANALYTICS_SSH_HOST_FINGERPRINT`、`ANALYTICS_SSH_PRIVATE_KEY` は、GitHub Actions から Analytics の仮想マシンへデプロイするために使います。
 - `RENDER_HEALTH_URL` は、デプロイの確認と health の確認に使います。
@@ -245,7 +245,7 @@ Signal Nexus の業務設定ではありません。
 
 Signal Nexus の実行時の設定は、必要な設定にすべて書いてあります。
 
-デプロイ自動化の変数の正本は、Buildbook です。
+デプロイ自動化の変数の正本は、[Community Deployment Guide](docs/COMMUNITY_DEPLOYMENT_GUIDE_JA.md) です。
 
 ## 戦略の設定
 
@@ -334,7 +334,7 @@ venues:
 | TradingView をどう繋ぐか | [Strategy Integration Guide](docs/integration/STRATEGY_INTEGRATION_GUIDE_JA.md) |
 | 各画面に何が出るか | [Screen Specification](docs/ui/SCREEN_SPECIFICATION_JA.md) |
 | 画面がどう繋がるか | [Screen Relationship Diagram](docs/ui/SCREEN_RELATIONSHIP_DIAGRAM_JA.md) |
-| 一通りのデプロイをどう再現するか | Signal Nexus Buildbook（Starter） |
+| 一通りのデプロイをどう再現するか | [Community Deployment Guide](docs/COMMUNITY_DEPLOYMENT_GUIDE_JA.md)。Buildbook は任意の長い形 |
 | 文書がどう分かれるか | [Documentation Structure](docs/DOCUMENTATION_STRUCTURE_JA.md) |
 
 ## 法務

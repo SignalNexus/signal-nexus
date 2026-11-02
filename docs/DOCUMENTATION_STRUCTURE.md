@@ -13,7 +13,8 @@ English is the canonical text. The Japanese edition is [DOCUMENTATION_STRUCTURE_
 | Document | Access | Purpose | Contains | Does not contain |
 | --- | --- | --- | --- | --- |
 | Architecture | Public | Canonical system layout | Components, data flow, public and private boundary | Install steps, screen fields, product lineup |
-| Buildbook | Starter | Canonical build procedure | Accounts, the virtual machine, secrets, deploy, validation | Portal screens, strategy rules, research |
+| Community Deployment Guide | Public | Canonical deploy path | Caller repository, seven runtime files, secrets, variables, health validation | Console screens, a customer registry, FAQ |
+| Buildbook | Starter | Long form of the Community Deployment Guide | Console clicks, checklists, screens, FAQ, failure notes | A required fact that the guide does not state |
 | Strategy Integration Guide | Public | Canonical TradingView connection | `strategy_id`, alert payload, webhook contract | Signal logic, indicator design, research |
 | Screen Specification | Public | Canonical screen content | Purpose, what the user can learn, displayed information, navigation of each view | API design, database design, build steps |
 | Screen Relationship Diagram | Public | Canonical screen navigation | The view tree and the jumps between views | Field lists, build steps |
@@ -30,15 +31,16 @@ English is the canonical text. The Japanese edition is [DOCUMENTATION_STRUCTURE_
 | RISK_DISCLOSURE | Public | Cryptocurrency and perpetual-market risks | Market, leverage, liquidity, liquidation, venue, contract, infrastructure, operation, regulation, how a stored result can differ | A guarantee of profit |
 | SECURITY | Public | Vulnerability-reporting policy | How to report, scope, disclosure, response | A bug bounty |
 
-Buildbook is the only canonical document that is not part of the public documentation set. Buildbook is included with Starter.
+The Community Deployment Guide is the public authority for deployment. Buildbook is the only canonical document that is not part of the public documentation set. Buildbook is included with Starter.
 
-Buildbook is not required to deploy Signal Nexus. Buildbook exists for operators who need a complete, step-by-step guide to the reference deployment. README is the public entry point and the experienced-operator reference. Buildbook is that reference playbook. It does not establish that any other host can run the current deployment automation.
+Buildbook is not required to deploy Signal Nexus. It is the long form of the Community Deployment Guide. README is the public entry point. The guide is the path through health validation.
 
 ## Documentation availability
 
 Public documentation:
 
 - README
+- Community Deployment Guide
 - Architecture
 - Strategy Integration Guide
 - Screen Specification
@@ -102,24 +104,11 @@ README → Screen Relationship Diagram → Screen Specification
 
 I want to deploy Signal Nexus.
 
-Start with README.
+README → Community Deployment Guide
 
-README is the public entry point for an experienced operator. It includes the deployment entry and the validation flow.
+The guide is the public path through health validation. Architecture is the reference for the component layout.
 
-If README is sufficient for your environment and experience level, no additional documentation is required.
-
-If you need a complete end-to-end deployment guide, including:
-
-- account creation
-- cloud setup
-- networking
-- security configuration
-- secrets management
-- backup configuration
-- deployment validation
-- operational guidance
-
-then Starter is required.
+The Buildbook is optional. It adds detail, checklists, screens, FAQ, and failure notes. It does not add a required fact.
 
 → Buildbook
 
@@ -146,16 +135,10 @@ graph TD
 README
   |
   v
-DOCUMENTATION_STRUCTURE
+COMMUNITY_DEPLOYMENT_GUIDE
   |
   +-- Architecture
-  +-- Buildbook
-  +-- Strategy Integration Guide
-  +-- Product Specification
-  +-- Product Catalog
-  +-- UI
-        +-- Screen Specification
-        +-- Screen Relationship Diagram
+  +-- Buildbook, optional
 ```
 
 ## Documentation responsibility flow
@@ -170,7 +153,7 @@ Architecture answers how it is structured.
 
 Strategy Integration Guide answers how TradingView is connected.
 
-README is the public entry point and the experienced-operator reference. Buildbook answers how the reference deployment is reproduced from an empty start. Access to Buildbook is Starter. Complete is the bundle that includes Starter.
+README is the public entry point. The Community Deployment Guide answers how a deployment reaches health validation. Buildbook is the optional long form. Access to Buildbook is Starter. Complete is the bundle that includes Starter.
 
 Screen Specification answers what the operator sees.
 
@@ -181,7 +164,8 @@ graph TD
   README["README: What is Signal Nexus?"] --> ProductSpecification["Product Specification: What is the product?"]
   ProductSpecification --> Architecture["Architecture: How is it structured?"]
   Architecture --> StrategyIntegrationGuide["Strategy Integration Guide: How is TradingView connected?"]
-  StrategyIntegrationGuide --> Buildbook["Buildbook: How is the reference deployment reproduced?"]
+  StrategyIntegrationGuide --> CommunityDeploymentGuide["Community Deployment Guide: How does a deployment reach health validation?"]
+  CommunityDeploymentGuide --> Buildbook["Buildbook: optional long form"]
   Buildbook --> ScreenSpecification["Screen Specification: What does the operator see?"]
   ScreenSpecification --> ScreenRelationshipDiagram["Screen Relationship Diagram: How does the operator navigate?"]
 ```

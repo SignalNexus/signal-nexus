@@ -1,0 +1,213 @@
+# Community Deployment Guide
+
+English is canonical. The Japanese mirror is [COMMUNITY_DEPLOYMENT_GUIDE_JA.md](COMMUNITY_DEPLOYMENT_GUIDE_JA.md).
+
+This guide is the public authority for deploying Signal Nexus Community Edition through health validation. A skilled operator can follow it with `SignalNexus/signal-nexus` and `SignalNexus/signal-nexus-deploy` only.
+
+[README](../README.md) is the front door. [Architecture](architecture/ARCHITECTURE.md) is the reference. The Buildbook, included with Starter, is the long form: detail, checklists, screens, FAQ, and failure notes. It does not add a required fact.
+
+## 1. Deployment architecture
+
+```text
+TradingView alert
+        |
+        v
+Render Webhook Service
+        |
+        | ANALYTICS_API_URL
+        v
+Analytics API on the Linux host
+        |
+        v
+PostgreSQL on localhost
+
+VenueAdd packages load beside the Analytics API only when the manifest names them.
+An empty manifest loads none.
+```
+
+The webhook receives alerts. The Analytics API stores the operational record. PostgreSQL persists it. VenueAdd stays outside this public core.
+
+The reference webhook host is a Render Web Service. The reference machine is a Linux VM. Signal Nexus is not those two products. The automation requires GitHub Actions, SSH as `ubuntu`, Caddy on TCP 443, PostgreSQL on localhost, and `RENDER_HEALTH_URL`.
+
+## 2. Deploy repository
+
+Generate a private repository from the template `SignalNexus/signal-nexus-deploy`. The core source stays in `SignalNexus/signal-nexus`. The caller does not fork the core.
+
+These three are the same 40-character public SHA:
+
+| Name | Where |
+| --- | --- |
+| `core-pin` | File at the caller root |
+| `uses` | `.github/workflows/deploy.yml` |
+| `core_sha` | The same workflow |
+
+The pin job stops when they differ. A newer core is written in all three places.
+
+The minimum SHA is `c301cb2f1d76344bb5126dc57efccd704eb74eb3`. That commit runs `deploy.futures_read` only when `BUILTIN_VENUES` contains `mexc_futures`. Replace it when a newer public core still contains that gate.
+
+## 3. Required runtime files
+
+Copy each example to the live name and edit it before the first deploy. All seven must be non-empty. `{}` is rejected.
+
+| Example | Live file |
+| --- | --- |
+| `config/examples/locale.yml.example` | `config/locale.yml` |
+| `config/examples/month_target.yml.example` | `config/month_target.yml` |
+| `config/examples/ops_schedule.yml.example` | `config/ops_schedule.yml` |
+| `config/examples/protective_exit.yml.example` | `config/protective_exit.yml` |
+| `config/examples/strategies.yml.example` | `config/strategies.yml` |
+| `config/examples/strategy_results.yml.example` | `config/strategy_results.yml` |
+| `config/examples/venues.yml.example` | `config/venues.yml` |
+
+`locale.yml` is the portal language and clock. `month_target.yml` is the month target. `ops_schedule.yml` is the operating schedule. `protective_exit.yml` is the protective-exit map. `strategies.yml` is the registry. `strategy_results.yml` holds result labels. `venues.yml` is the runtime catalog. A venue with `enabled: false` stays out of the enabled set.
+
+`venueadd/venues.yaml` is not one of the seven. Leave it as `venues: []` until a venue is purchased.
+
+The example registry is valid when copied unchanged:
+
+```yaml
+example-btc-spot:
+  symbol: BTC/USDT
+  side: long
+  venue: mexc_spot
+  size_quote: 10
+```
+
+`mexc_spot` is enabled in the example catalog because a strategy venue must be an enabled row. `mexc_futures` and `arcus` are present and disabled.
+
+## 4. Infrastructure minimum
+
+| Piece | Minimum |
+| --- | --- |
+| Linux host | Canonical Ubuntu 24.04. User `ubuntu`. `sudo -n` succeeds. Home `/home/ubuntu` |
+| Ingress | TCP 22 reachable by GitHub-hosted runners. TCP 443 from the internet. TCP 5432 closed. TCP 80 closed. Caddy uses TLS-ALPN |
+| PostgreSQL | The deploy installs the Ubuntu 24.04 package, PostgreSQL 16. It listens on localhost. `pg_hba.conf` allows `127.0.0.1/32` with `scram-sha-256` or `md5`. The first deploy creates role `signalnexus` and database `signalnexus` |
+| Render | A Web Service on the caller repository, branch `main`. It is Live, and `GET /health` returns `{"status":"ok"}`, before `workflow_dispatch` |
+| Site | `CADDY_SITE_ADDRESS` is `<public-ip>.sslip.io`, the hostname only. `RENDER_HEALTH_URL` is `https://<render-host>/health`. `ANALYTICS_API_URL` on Render is `https://` plus the site address |
+| Fingerprint | The Actions secret is the `SHA256:` field from `ssh-keygen -lf` on the ed25519 host key. The private key has no passphrase |
+
+`VM.Standard.E2.1.Micro` in Oracle `ap-tokyo-1` is the reference shape. It is not the only host that can run the software. The console clicks are in the Buildbook.
+
+## 5. Build and start
+
+These commands are the authority for the caller repository:
+
+| | Command |
+| --- | --- |
+| Build | `bash render-build.sh && pip install -r .core/requirements.txt` |
+| Start | `cd .core && uvicorn app.main:app --host 0.0.0.0 --port $PORT` |
+
+`render-build.sh` reads `core-pin`, fetches that commit of `SignalNexus/signal-nexus` into `.core/`, copies the seven live files into `.core/config/`, and prints one sha256 line per file. The workflow reads those lines from the build log.
+
+Render environment before the first deploy:
+
+| Name | Value |
+| --- | --- |
+| `ANALYTICS_API_URL` | `https://<public-ip>.sslip.io` |
+| `ANALYTICS_API_SECRET` | At least 24 characters. The same value is stored on GitHub |
+| `EXECUTION_MODE` | `dry_run` |
+| `KILL_SWITCH` | `false` |
+
+`WEBHOOK_SECRET`, `PORTAL_PASSWORD`, and `DISCORD_WEBHOOK_URL` may wait. A configured secret shorter than 24 characters stops the process.
+
+## 6. Required secrets
+
+Required before the first `workflow_dispatch`:
+
+| Secret | Meaning |
+| --- | --- |
+| `ANALYTICS_SSH_HOST` | Public IPv4 of the Linux host |
+| `ANALYTICS_SSH_PRIVATE_KEY` | The key file, from `BEGIN` through `END` |
+| `ANALYTICS_SSH_HOST_FINGERPRINT` | The `SHA256:` field |
+| `ANALYTICS_API_SECRET` | Shared with Render |
+| `ANALYTICS_DB_PASSWORD` | Password of role `signalnexus`. It is not stored on Render |
+| `RENDER_HEALTH_URL` | `https://<render-host>/health` |
+| `CADDY_SITE_ADDRESS` | Hostname only |
+| `RENDER_DEPLOY_HOOK` | Deploy hook whose path ends in `srv-...` |
+| `RENDER_API_KEY` | A key that can read that service, its deploys, and its build log |
+
+Set later:
+
+| Secret | When |
+| --- | --- |
+| `VENUEADD_READ_TOKEN` | The manifest gains a row. `venues: []` returns before git |
+| `ANALYTICS_MEXC_API_KEY`, `ANALYTICS_MEXC_API_SECRET` | `BUILTIN_VENUES` contains `mexc_spot` |
+| `ANALYTICS_MEXC_FUTURES_API_KEY`, `ANALYTICS_MEXC_FUTURES_API_SECRET` | `BUILTIN_VENUES` contains `mexc_futures` |
+| Arcus address and signing names | `BUILTIN_VENUES` contains `arcus` |
+| `KILL_SWITCH` | Only to set the flag true. An absent value stays false |
+| Order keys `MEXC_API_*` and `MEXC_FUTURES_API_*` | A later `live` cutover. Not the first health check |
+
+Names without values are listed in the template file `deploy/target.env.example`.
+
+## 7. Required variables
+
+| Variable | Value |
+| --- | --- |
+| `ANALYTICS_SSH_USER` | `ubuntu` |
+| `ANALYTICS_CORE_DIRECTORY` | `/home/ubuntu/signal-nexus` |
+| `ANALYTICS_VENUE_DIRECTORY` | `/opt/signal-nexus/venueadd` |
+| `BUILTIN_VENUES` | `none`, or the built-in set this deployment runs |
+| `DEPLOY_ANALYTICS` | `true`, after the nine secrets and immediately before the one dispatch |
+
+## 8. BUILTIN_VENUES
+
+`none` and the empty string are an empty set. The futures read and the extra secrets follow membership.
+
+| Value | Futures read | Secrets beyond `ANALYTICS_API_SECRET` and `ANALYTICS_DB_PASSWORD` |
+| --- | --- | --- |
+| `none` | Does not run | None |
+| `mexc_spot` | Does not run | The MEXC spot read pair |
+| `mexc_futures` | Runs | The MEXC futures read pair. A missing name stops the deploy |
+| `arcus` | Does not run | The Arcus address |
+| A comma-separated set | Runs only when `mexc_futures` is a member | The union of the selected rows |
+
+A registry row that names `mexc_spot` does not by itself require spot keys. The variable does. The example registry can be deployed with `BUILTIN_VENUES=none`.
+
+## 9. Initial deploy
+
+1. Pin the three SHA fields to the same public commit, at least the minimum in section 2.
+2. Copy the seven examples to `config/`, edit them, and commit them with `venues: []` and `render-build.sh`.
+3. Create the Linux host and record the fingerprint.
+4. Create the Render service with the commands in section 5. Wait until `GET /health` is `{"status":"ok"}`.
+5. Store the nine secrets, then the five variables. `DEPLOY_ANALYTICS=true` is last.
+6. Run the `deploy` workflow once with `workflow_dispatch`.
+
+The deploy installs PostgreSQL when it is missing, creates `signalnexus`, copies the seven files, and restarts the Analytics API. With `venues: []` it does not fetch a venue repository.
+
+## 10. Success
+
+| Check | Expected |
+| --- | --- |
+| Render `GET /health` | `{"status":"ok"}` |
+| Analytics `GET https://<CADDY_SITE_ADDRESS>/health` | `{"status":"ok"}` |
+| Seven config SHA256 values | The caller's files, the deploy log, and the copies under `ANALYTICS_CORE_DIRECTORY/config/` match |
+| `SIGNAL_NEXUS_VENUEADD` | Unset while the manifest is empty |
+| Venue fetch | The log does not name a venue repository |
+| Futures read | With `BUILTIN_VENUES=none`, the log does not contain `futures read credentials are not configured` |
+
+Compute the hashes with `sha256sum` on the seven live paths.
+
+## 11. Recommended SHA
+
+For that caller, the recommended SHA is the public core SHA of its first green `deploy`. It is the value in `core-pin` when section 10 passes. A failed run leaves it unset. Another caller's pin is a different record.
+
+## 12. Rollback
+
+Rollback changes that caller's repository, that caller's host, and that caller's Render service.
+
+On a failed first deploy, set `DEPLOY_ANALYTICS` to false on that repository. Leave `venues: []` and the pin in place. A retry uses a new SSH key and a new database password. The workflow rolls the Render service back to the deploy that was live before the hook.
+
+Do not edit another caller's repository as part of this rollback.
+
+## 13. Starter
+
+| This guide | Buildbook |
+| --- | --- |
+| Authority for this path | Follows this guide |
+| Short requirements and the commands | Console clicks for the reference accounts |
+| Secrets and variables by name | A checklist while pasting |
+| One minimal registry | Commented examples |
+| Success criteria | A filled run |
+| One rollback section | Failure notes |
+
+Starter adds verification, detail, checklists, screens, FAQ, and failure notes. It does not add a required fact.

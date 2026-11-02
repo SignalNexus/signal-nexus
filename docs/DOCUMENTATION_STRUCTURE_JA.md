@@ -13,7 +13,8 @@
 | 文書 | アクセス | 役割 | 含むもの | 含まないもの |
 | --- | --- | --- | --- | --- |
 | Architecture | Public | システム構成の正本 | 部品、データの流れ、公開と非公開の境界 | 導入手順、画面の項目、製品の名前一覧 |
-| Buildbook | Starter | 構築手順の正本 | アカウント、仮想マシン、secret、デプロイ、確認 | ポータルの画面、戦略のルール、リサーチ |
+| Community Deployment Guide | Public | デプロイの正本 | caller リポジトリ、runtime 七ファイル、secret、variable、health の確認 | コンソールの画面、顧客の registry、FAQ |
+| Buildbook | Starter | Community Deployment Guide の長い形 | コンソールのクリック、チェックリスト、画面、FAQ、失敗のメモ | ガイドが述べない必須の事実 |
 | Strategy Integration Guide | Public | TradingView 接続の正本 | `strategy_id`、アラートの本文、Webhook の契約 | シグナルのロジック、インジケーターの設計、リサーチ |
 | Screen Specification | Public | 画面仕様の正本 | 目的、分かること、表示するもの、各画面からの移動 | API 設計、データベース設計、構築手順 |
 | Screen Relationship Diagram | Public | 画面遷移の正本 | 画面のツリーと、画面から画面への移動 | 項目の一覧、構築手順 |
@@ -30,15 +31,16 @@
 | RISK_DISCLOSURE | Public | 暗号資産と無期限市場のリスク | 相場、レバレッジ、流動性、清算、会場、契約、基盤、運用、規制、保存された結果が後日と異なりうること | 利益の保証 |
 | SECURITY | Public | 脆弱性の報告方針 | 報告方法、範囲、開示、対応 | 報奨金 |
 
-Buildbook は、公開文書のセットに入らない唯一の正本です。Buildbook は Starter に含まれます。
+Community Deployment Guide が、デプロイの公開の正本です。Buildbook は、公開文書のセットに入らない唯一の正本です。Buildbook は Starter に含まれます。
 
-Buildbook は Signal Nexus の利用に必須ではありません。Buildbook は、参照するデプロイを手順どおり作りたい利用者向けの完全ガイドです。README は、公開の入口であり、経験のある運用者向けの参照です。Buildbook は、その参照実装の手順書です。いまのデプロイ自動化が、どのホストでも動くとは定めません。
+Buildbook は Signal Nexus の利用に必須ではありません。Community Deployment Guide の長い形です。README は公開の入口です。ガイドが、health の確認までの経路です。
 
 ## 文書の入手
 
 公開文書:
 
 - README
+- Community Deployment Guide
 - Architecture
 - Strategy Integration Guide
 - Screen Specification
@@ -102,24 +104,11 @@ README → Screen Relationship Diagram → Screen Specification
 
 Signal Nexus をデプロイしたい。
 
-まず README を参照してください。
+README → Community Deployment Guide
 
-README は、経験のある運用者向けの公開の入口です。デプロイの入口と確認の流れを含みます。
+ガイドが、health の確認までの公開の経路です。Architecture は、部品の配置の参照です。
 
-既に必要なサービスや環境構築に慣れている場合は、README だけで十分な場合があります。
-
-ただし、
-
-- アカウント作成
-- クラウド構築
-- ネットワーク設定
-- セキュリティ設定
-- シークレット管理
-- バックアップ設定
-- 動作確認
-- 運用上の注意
-
-まで含めた完全な手順が必要な場合は、Starter が必要です。
+Buildbook は任意です。詳細、チェックリスト、画面、FAQ、失敗のメモを足します。必須の事実は足しません。
 
 → Buildbook
 
@@ -146,16 +135,10 @@ graph TD
 README
   |
   v
-DOCUMENTATION_STRUCTURE
+COMMUNITY_DEPLOYMENT_GUIDE
   |
   +-- Architecture
-  +-- Buildbook
-  +-- Strategy Integration Guide
-  +-- Product Specification
-  +-- Product Catalog
-  +-- UI
-        +-- Screen Specification
-        +-- Screen Relationship Diagram
+  +-- Buildbook, optional
 ```
 
 ## 責務の流れ
@@ -170,7 +153,7 @@ Architecture は、どう組まれているかを答えます。
 
 Strategy Integration Guide は、TradingView をどうつなぐかを答えます。
 
-README は、公開の入口であり、経験のある運用者向けの参照です。Buildbook は、参照するデプロイを何も無い状態から再現する手順を答えます。Buildbook を読むには、Starter が必要です。Complete は、Starter を含む束です。
+README は公開の入口です。Community Deployment Guide は、配備が health の確認までどう到達するかを答えます。Buildbook は任意の長い形です。Buildbook を読むには Starter が必要です。Complete は、Starter を含む束です。
 
 Screen Specification は、運用者が何を見るかを答えます。
 
@@ -181,7 +164,8 @@ graph TD
   README["README: Signal Nexus とは何か"] --> ProductSpecification["Product Specification: 製品は何か"]
   ProductSpecification --> Architecture["Architecture: どう組まれているか"]
   Architecture --> StrategyIntegrationGuide["Strategy Integration Guide: TradingView をどうつなぐか"]
-  StrategyIntegrationGuide --> Buildbook["Buildbook: 参照するデプロイをどう再現するか"]
+  StrategyIntegrationGuide --> CommunityDeploymentGuide["Community Deployment Guide: health の確認までどう到達するか"]
+  CommunityDeploymentGuide --> Buildbook["Buildbook: 任意の長い形"]
   Buildbook --> ScreenSpecification["Screen Specification: 運用者は何を見るか"]
   ScreenSpecification --> ScreenRelationshipDiagram["Screen Relationship Diagram: 運用者はどう移動するか"]
 ```

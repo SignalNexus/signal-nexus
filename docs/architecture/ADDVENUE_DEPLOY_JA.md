@@ -26,7 +26,7 @@ token は、その顧客の deploy リポジトリの secret にだけ置きま�
 
 `venueadd-install` は、固定した commit を取得し、一つの lock を解き、本番のローダーで確認します。SSH、サービスファイル、再起動は行いません。
 
-`analytics-vm` は、顧客 #1 の呼び出し元です。リポジトリの変数と secret を `analytics-deploy` へ渡します。lock またはローダーが失敗したときは、再起動まで進みません。会場ディレクトリは、呼び出し元の `venue_directory` です。
+caller リポジトリが、リポジトリの変数と secret を `analytics-deploy` へ渡します。lock またはローダーが失敗したときは、再起動まで進みません。会場ディレクトリは、呼び出し元の `venue_directory` です。
 
 ## 依存の解決
 
