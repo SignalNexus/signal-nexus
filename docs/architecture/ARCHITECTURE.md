@@ -61,13 +61,13 @@ graph TD
   Adapter -->|Execution flow| Venue["MEXC or Arcus"]
   Engine -->|Storage flow| Database["PostgreSQL"]
   Database -->|Storage flow| Portal
-  GitHub -->|Deploy| VM["Oracle VM"]
+  GitHub -->|Deploy| VM["Linux host"]
   Render["Render"] --- Webhook
   VM --- Engine
   VM --- Database
 ```
 
-Alert flow is TradingView to the webhook on Render. Execution flow, when `EXECUTION_MODE` is `live`, continues on the Oracle VM to the venue. In `dry_run` the order stops before the venue. Storage flow keeps the result in PostgreSQL on that VM. The portal reads it.
+Alert flow is TradingView to the webhook on Render. Execution flow, when `EXECUTION_MODE` is `live`, continues on the Linux host to the venue. In `dry_run` the order stops before the venue. Storage flow keeps the result in PostgreSQL on that host. The portal reads it.
 
 ### 3. Public and private boundary
 
@@ -79,7 +79,7 @@ graph LR
     Arcus
   end
   subgraph Private["Your infrastructure"]
-    OracleVM["Oracle VM"]
+    OracleVM["Linux host"]
     Secrets
     Engine["Execution"]
     Database["PostgreSQL"]
@@ -104,7 +104,7 @@ graph TD
 
 These attach to the same workflow. They are not a ladder.
 
-Starter is Buildbook access. The [Community Deployment Guide](../COMMUNITY_DEPLOYMENT_GUIDE.md) is the public path through health validation. The Buildbook is the long form of that guide. It does not add a required fact.
+The [Community Deployment Guide](../COMMUNITY_DEPLOYMENT_GUIDE.md) is the public path through health validation. Starter is Buildbook access. The Buildbook is the detailed edition of that guide. It does not add a required fact.
 
 Volume Pack and Profit Pack are separate research packages. Research stays private. Complete is the bundle of Starter and both packages of the same date. It is not a higher edition of either package, and it does not include VenueAdd.
 
@@ -148,15 +148,15 @@ The Analytics API runs on the virtual machine and listens for the operation reco
 
 Postgres runs on the same virtual machine as the Analytics API. It listens on that machine, not on the public internet. The audit record is stored there. A Discord delivery does not replace that row.
 
-### Oracle VM
+### Linux host
 
-The virtual machine is the host for the Analytics API, Postgres, and the order path to MEXC and Arcus. The Buildbook uses Oracle Cloud, running Ubuntu, as the reference environment for that machine. Render is a separate host.
+The Linux host is the machine for the Analytics API, Postgres, and the order path to MEXC and Arcus. `VM.Standard.E2.1.Micro` in Oracle `ap-tokyo-1` is an example shape. Render is a separate host.
 
 ### GitHub Actions
 
-The workflow `analytics-vm` runs on a push to the deploying repository. Before it logs in, it checks Render health and the SSH host key fingerprint. It then copies the repository and writes secret files on the VM.
+The caller repository starts the workflow named `deploy` with `workflow_dispatch`. That workflow calls the reusable `analytics-deploy` workflow on the public core at the pin. Before it logs in, it checks Render health and the SSH host key fingerprint. It checks out the pinned public core, copies the caller's seven runtime files, and writes secret files on the host.
 
-The job runs only when `github.repository` equals the repository name written in the workflow file. The name shipped in the public source is an example. A deployment replaces that example with its own `account/repo`. The comparison is what stops the workflow from deploying a different repository.
+The pin job stops when `core-pin`, `uses`, and `core_sha` are not the same public SHA.
 
 ### Discord
 
@@ -173,7 +173,7 @@ Arcus is a current order path. Fills are read with `ANALYTICS_ARCUS_ADDRESS` and
 ## Data flow
 
 1. TradingView posts the alert to Render.
-2. Render checks `WEBHOOK_SECRET`, then `strategy_id`, `symbol`, and `action` against `config/strategies.yml`.
+2. Render checks `WEBHOOK_SECRET`, then `strategy_id`, `symbol`, and `action` against the caller's live `config/strategies.yml`.
 3. The order amount is `size_quote` on that row. The alert body does not carry `size` or `size_quote`.
 4. In `dry_run`, Render does not send the order.
 5. In `live`, the webhook forwards the venue name to the Analytics API. Built-in venues use their existing order endpoints. Every other venue name uses `POST /api/venue/order`. The virtual machine executes the order.
@@ -185,6 +185,6 @@ A protective exit is an added function that covers sharp price changes between b
 
 ## Public vs private boundary
 
-Platform is public. The public repository contains the webhook, execution, analytics, portal, and the deploy workflow a deployment runs itself.
+Platform is public. The public repository contains the webhook, execution, analytics, portal, and the reusable workflows `analytics-deploy` and `venueadd-install`. The caller repository, generated from `SignalNexus/signal-nexus-deploy`, holds `deploy.yml`, the pin, and the seven runtime files.
 
 Research is private. How a strategy was found, ranked, or left unpublished is not part of this layout and is not in the public repository.

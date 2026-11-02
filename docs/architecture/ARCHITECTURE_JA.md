@@ -61,13 +61,13 @@ graph TD
   Adapter -->|発注| Venue["MEXC または Arcus"]
   Engine -->|記録| Database["PostgreSQL"]
   Database -->|記録| Portal
-  GitHub -->|載せる| VM["Oracle VM"]
+  GitHub -->|載せる| VM["Linux ホスト"]
   Render["Render"] --- Webhook
   VM --- Engine
   VM --- Database
 ```
 
-アラートは TradingView から Render の Webhook へ進みます。`EXECUTION_MODE` が `live` のとき、発注は Oracle の VM から取引所へ続きます。`dry_run` では、取引所の前で止まります。記録は、その VM の PostgreSQL に残ります。Portal はそれを読みます。
+アラートは TradingView から Render の Webhook へ進みます。`EXECUTION_MODE` が `live` のとき、発注は Linux ホストから取引所へ続きます。`dry_run` では、取引所の前で止まります。記録は、そのホストの PostgreSQL に残ります。Portal はそれを読みます。
 
 ### 3. 外と、自分の環境
 
@@ -79,7 +79,7 @@ graph LR
     Arcus
   end
   subgraph Private["自分の環境"]
-    OracleVM["Oracle VM"]
+    OracleVM["Linux ホスト"]
     Secrets["秘密"]
     Engine["発注"]
     Database["PostgreSQL"]
@@ -104,7 +104,7 @@ graph TD
 
 これらは、同じワークフローに付きます。階段ではありません。
 
-Starter は Buildbook です。[Community Deployment Guide](../COMMUNITY_DEPLOYMENT_GUIDE_JA.md) が、health の確認までの公開の手順です。Buildbook はそのガイドの詳細版です。本ガイドに無い必須事項は加えません。
+[Community Deployment Guide](../COMMUNITY_DEPLOYMENT_GUIDE_JA.md) が、health の確認までの公開の手順です。Starter は Buildbook です。Buildbook はそのガイドの詳細版です。本ガイドに無い必須事項は加えません。
 
 Volume Pack と Profit Pack は、別々のリサーチのパッケージです。リサーチは非公開です。Complete は、Starter と、同じ日付の両方のパッケージの束です。どちらのパッケージの上位版でもなく、VenueAdd も含みません。
 
@@ -148,15 +148,15 @@ Analytics API は仮想マシン上で動きます。運用の記録と、注文
 
 Postgres は、Analytics API と同じ仮想マシンで動きます。待ち受けるのはそのマシンの中で、公開インターネットには出しません。監査の行はここに保存します。Discord への配達は、この行の代わりにはなりません。
 
-### Oracle の VM
+### Linux ホスト
 
-仮想マシンは、Analytics API、Postgres、そして MEXC と Arcus への発注を置く場所です。この一連の文書でそのマシンの例として使う環境は、Ubuntu を動かす Oracle Cloud です。Render は別のホストです。
+Linux ホストは、Analytics API、Postgres、そして MEXC と Arcus への発注を置く場所です。Oracle `ap-tokyo-1` の `VM.Standard.E2.1.Micro` は、例として挙げる shape です。Render は別のホストです。
 
 ### GitHub Actions
 
-ワークフロー `analytics-vm` は、デプロイするリポジトリへの push で動きます。ログインの前に、Render の health と SSH ホスト鍵のフィンガープリントを確認します。そのあと、リポジトリをコピーし、secret のファイルを VM に書きます。
+呼び出し元は、`deploy` という名前の workflow を `workflow_dispatch` で始めます。その workflow は、pin した公開コアの再利用 workflow `analytics-deploy` を呼びます。ログインの前に、Render の health と SSH ホスト鍵のフィンガープリントを確認します。pin した公開コアを checkout し、呼び出し元の runtime 7ファイルをコピーし、secret のファイルをホストに書きます。
 
-ジョブが動くのは、`github.repository` がワークフローに書いたリポジトリ名と一致するときだけです。公開ソースに入っている名前は例です。自分のデプロイでは、その例を自分の `account/repo` に置き換えます。この比較があるので、ワークフローは別のリポジトリを載せません。
+pin の job は、`core-pin`、`uses`、`core_sha` が同じ公開 SHA でないとき止まります。
 
 ### Discord
 
@@ -173,7 +173,7 @@ Arcus は、いまの発注先です。約定の読み取りは `ANALYTICS_ARCUS
 ## データの流れ
 
 1. TradingView がアラートを Render に送る。
-2. Render が `WEBHOOK_SECRET` を確認し、`strategy_id`、`symbol`、`action` を `config/strategies.yml` と照合する。
+2. Render が `WEBHOOK_SECRET` を確認し、`strategy_id`、`symbol`、`action` を呼び出し元の live `config/strategies.yml` と照合する。
 3. 注文額は、その行の `size_quote` である。アラートの本文に `size` も `size_quote` も無い。
 4. `dry_run` では、Render は注文を出さない。
 5. `live` では、Webhook が会場名を Analytics API へ転送する。組み込み会場は既存の注文エンドポイントを使う。それ以外の会場名は `POST /api/venue/order` を使う。注文を実行するのは仮想マシンである。
@@ -185,6 +185,6 @@ Render の `GET /health` と Analytics API の `GET /health` は、それぞれ�
 
 ## 公開と非公開の境界
 
-Platform is Public. 公開リポジトリにあるのは、Webhook、発注、Analytics、ポータル、そして自分で動かすデプロイのワークフローです。
+Platform is Public. 公開リポジトリにあるのは、Webhook、発注、Analytics、ポータル、そして再利用 workflow の `analytics-deploy` と `venueadd-install` です。呼び出し元は `SignalNexus/signal-nexus-deploy` から作り、`deploy.yml`、pin、runtime 7ファイルを持ちます。
 
 Research is Private. 戦略をどう見つけ、どう順位を付け、なぜ公開しなかったかは、この構成には含まれません。公開リポジトリにもありません。

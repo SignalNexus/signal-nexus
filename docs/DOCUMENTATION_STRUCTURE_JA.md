@@ -14,6 +14,17 @@
 | --- | --- | --- | --- | --- |
 | Architecture | Public | システム構成の正本 | 部品、データの流れ、公開と非公開の境界 | 導入手順、画面の項目、製品の名前一覧 |
 | Community Deployment Guide | Public | デプロイの正本 | 呼び出し元リポジトリ、runtime 七ファイル、secret、variable、health の確認 | コンソールの画面、顧客の registry、FAQ |
+| Operations Manual | Public | 十三章のバインダー | 章の表と読む順 | 導入のクリック、顧客の registry |
+| Customer Lifecycle | Public | 1つの環境 | 呼び出し元リポジトリ 1つ、pin 1つ、推奨 SHA 1つ、購入まで空の manifest | ホストのクリック、secret の値 |
+| Customer Creation | Public | 呼び出し元の立ち上げ | template、runtime 7ファイル、`confirm`、`venues: []` | 9つの secret の値、`workflow_dispatch` |
+| Infrastructure Execution | Public | ホストと Render | Linux ホスト、PostgreSQL 16、Render Web Service、9つの secret、5つの variable | `workflow_dispatch` |
+| Deployment Readiness | Public | 最初とあとの dispatch | チェックリスト、health、SHA256 7つ | コンソールの画面 |
+| Launch Gate | Public | 固定した開始状態 | 記録した pin、ハッシュ、ホストと Render アカウントの阻止 | 作済みの VM |
+| Release Management | Public | 公開 tag と pin の移動 | リリースの条件、書き出し、推奨 SHA | 顧客のホスト |
+| Venue License | Public | 有料会場のアクセス | manifest、Read、`VENUEADD_READ_TOKEN` | 最初の health に必須の導入 |
+| AddVenue Operations | Public | 最初の成功のあとの 1 行 | 作業例、返金 | txflow の導入 |
+| Troubleshooting | Public | ガイド経路の失敗 | `none` での futures read、pin の不一致、再起動しない取得 | コンソールの復旧 |
+| Rollback | Public | その呼び出し元だけ | 最初の deploy の失敗、あとの deploy の失敗 | 別の呼び出し元 |
 | Buildbook | Starter | Community Deployment Guide の詳細版 | コンソールのクリック、チェックリスト、画面例、FAQ、失敗を避けるメモ | ガイドが述べない必須の事実 |
 | Strategy Integration Guide | Public | TradingView 接続の正本 | `strategy_id`、アラートの本文、Webhook の契約 | シグナルのロジック、インジケーターの設計、リサーチ |
 | Screen Specification | Public | 画面仕様の正本 | 目的、分かること、表示するもの、各画面からの移動 | API 設計、データベース設計、構築手順 |
@@ -31,9 +42,9 @@
 | RISK_DISCLOSURE | Public | 暗号資産と無期限市場のリスク | 相場、レバレッジ、流動性、清算、会場、契約、基盤、運用、規制、保存された結果が後日と異なりうること | 利益の保証 |
 | SECURITY | Public | 脆弱性の報告方針 | 報告方法、範囲、開示、対応 | 報奨金 |
 
-Community Deployment Guide が、デプロイの公開の正本です。Buildbook は、公開文書のセットに入らない唯一の正本です。Buildbook は Starter に含まれます。
+Community Deployment Guide が、デプロイの公開の正本です。Operations Manual は十三章のバインダーです。第 03、04、05、07、09 章はガイドを展開します。ガイドの代わりにはなりません。Buildbook は、公開文書のセットに入らない唯一の正本です。Buildbook は Starter に含まれます。
 
-Buildbook は Signal Nexus の利用に必須ではありません。Community Deployment Guide の詳細版です。README は最初に読む文書です。ガイドが、health の確認までの手順です。
+Buildbook は Signal Nexus の利用に必須ではありません。Community Deployment Guide の詳細版です。README は最初に読む文書です。ガイドが、health の確認までの手順です。第 13 章は `business/consideration/design/` に残り、書き出しません。
 
 ## 文書の入手
 
@@ -41,6 +52,17 @@ Buildbook は Signal Nexus の利用に必須ではありません。Community D
 
 - README
 - Community Deployment Guide
+- Operations Manual
+- Customer Lifecycle
+- Customer Creation
+- Infrastructure Execution
+- Deployment Readiness
+- Launch Gate
+- Release Management
+- Venue License
+- AddVenue Operations
+- Troubleshooting
+- Rollback
 - Architecture
 - Strategy Integration Guide
 - Screen Specification
@@ -106,7 +128,7 @@ Signal Nexus をデプロイしたい。
 
 README → Community Deployment Guide
 
-ガイドが、health の確認までの公開の手順です。Architecture は、システム構成を確認するための文書です。
+ガイドが、health の確認までの公開の手順です。Architecture は、システム構成を確認するための文書です。Operations Manual が十三章を示します。第 02 章から第 09 章は、あとの手順を展開します。ガイドの代わりにはなりません。
 
 Buildbook は任意です。チェックリスト、画面例、FAQ、失敗を避けるメモを加えます。ガイドに無い必須事項は加えません。
 
@@ -121,6 +143,8 @@ README → Strategy Integration Guide
 ```mermaid
 graph TD
   README --> DOCUMENTATION_STRUCTURE
+  DOCUMENTATION_STRUCTURE --> CommunityDeploymentGuide
+  DOCUMENTATION_STRUCTURE --> OperationsManual
   DOCUMENTATION_STRUCTURE --> Architecture
   DOCUMENTATION_STRUCTURE --> Buildbook
   DOCUMENTATION_STRUCTURE --> StrategyIntegrationGuide

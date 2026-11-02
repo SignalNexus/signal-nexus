@@ -14,6 +14,17 @@ English is the canonical text. The Japanese edition is [DOCUMENTATION_STRUCTURE_
 | --- | --- | --- | --- | --- |
 | Architecture | Public | Canonical system layout | Components, data flow, public and private boundary | Install steps, screen fields, product lineup |
 | Community Deployment Guide | Public | Canonical deploy path | Caller repository, seven runtime files, secrets, variables, health validation | Console screens, a customer registry, FAQ |
+| Operations Manual | Public | Binder of the thirteen chapters | The chapter table and the reading path | Install clicks, a customer registry |
+| Customer Lifecycle | Public | One environment | One caller repository, one pin, one recommended SHA, empty manifest until a purchase | Host clicks, secret values |
+| Customer Creation | Public | Caller bootstrap | Template, seven runtime files, `confirm`, `venues: []` | Nine secret values, `workflow_dispatch` |
+| Infrastructure Execution | Public | Host and Render | Linux host, PostgreSQL 16, Render Web Service, nine secrets, five variables | `workflow_dispatch` |
+| Deployment Readiness | Public | First and later dispatch | Checklist, health, seven SHA256 values | Console screens |
+| Launch Gate | Public | Frozen start state | Recorded pin, hashes, host and Render account blockers | A created VM |
+| Release Management | Public | Public tag and pin move | Release gate, export, recommended SHA | A customer host |
+| Venue License | Public | Paid venue access | Manifest, Read, `VENUEADD_READ_TOKEN` | A required install for first health |
+| AddVenue Operations | Public | One manifest row after first success | Worked case, refund | txflow introduction |
+| Troubleshooting | Public | Failures on the guide path | Futures read on `none`, pin mismatch, fetch that does not restart | Console recovery |
+| Rollback | Public | That caller only | First-deploy failure, later-deploy failure | Another caller repository |
 | Buildbook | Starter | Long form of the Community Deployment Guide | Console clicks, checklists, screens, FAQ, failure notes | A required fact that the guide does not state |
 | Strategy Integration Guide | Public | Canonical TradingView connection | `strategy_id`, alert payload, webhook contract | Signal logic, indicator design, research |
 | Screen Specification | Public | Canonical screen content | Purpose, what the user can learn, displayed information, navigation of each view | API design, database design, build steps |
@@ -31,9 +42,9 @@ English is the canonical text. The Japanese edition is [DOCUMENTATION_STRUCTURE_
 | RISK_DISCLOSURE | Public | Cryptocurrency and perpetual-market risks | Market, leverage, liquidity, liquidation, venue, contract, infrastructure, operation, regulation, how a stored result can differ | A guarantee of profit |
 | SECURITY | Public | Vulnerability-reporting policy | How to report, scope, disclosure, response | A bug bounty |
 
-The Community Deployment Guide is the public authority for deployment. Buildbook is the only canonical document that is not part of the public documentation set. Buildbook is included with Starter.
+The Community Deployment Guide is the public authority for deployment. The Operations Manual is the binder of thirteen chapters. Chapters 03, 04, 05, 07, and 09 expand the guide. They do not replace it. Buildbook is the only canonical document that is not part of the public documentation set. Buildbook is included with Starter.
 
-Buildbook is not required to deploy Signal Nexus. It is the long form of the Community Deployment Guide. README is the public entry point. The guide is the path through health validation.
+Buildbook is not required to deploy Signal Nexus. It is the long form of the Community Deployment Guide. README is the public entry point. The guide is the path through health validation. Chapter 13 stays in `business/consideration/design/` and is not exported.
 
 ## Documentation availability
 
@@ -41,6 +52,17 @@ Public documentation:
 
 - README
 - Community Deployment Guide
+- Operations Manual
+- Customer Lifecycle
+- Customer Creation
+- Infrastructure Execution
+- Deployment Readiness
+- Launch Gate
+- Release Management
+- Venue License
+- AddVenue Operations
+- Troubleshooting
+- Rollback
 - Architecture
 - Strategy Integration Guide
 - Screen Specification
@@ -106,7 +128,7 @@ I want to deploy Signal Nexus.
 
 README → Community Deployment Guide
 
-The guide is the public path through health validation. Architecture is the reference for the component layout.
+The guide is the public path through health validation. Architecture is the reference for the component layout. The Operations Manual names the thirteen chapters. Chapters 02 through 09 expand a later procedure. They do not replace the guide.
 
 The Buildbook is optional. It adds detail, checklists, screens, FAQ, and failure notes. It does not add a required fact.
 
@@ -121,6 +143,8 @@ README → Strategy Integration Guide
 ```mermaid
 graph TD
   README --> DOCUMENTATION_STRUCTURE
+  DOCUMENTATION_STRUCTURE --> CommunityDeploymentGuide
+  DOCUMENTATION_STRUCTURE --> OperationsManual
   DOCUMENTATION_STRUCTURE --> Architecture
   DOCUMENTATION_STRUCTURE --> Buildbook
   DOCUMENTATION_STRUCTURE --> StrategyIntegrationGuide

@@ -8,7 +8,7 @@
 
 Signal Nexus は、自分の環境で動かすリサーチから執行までのプラットフォームです。資金は会場に残ります。鍵は、自分で動かしている環境に残ります。Signal Nexus は資産を預かりません。
 
-公開プラットフォームは Free です。このリポジトリから、商品を買わずにデプロイできます。Free は、下の四つの行には入りません。
+公開プラットフォームは Free です。商品を買わずにデプロイできます。手順は [Community Deployment Guide](../COMMUNITY_DEPLOYMENT_GUIDE_JA.md) です。公開コアと `SignalNexus/signal-nexus-deploy` を使います。Free は、下の四つの行には入りません。
 
 このページの四つの商品は、互いに独立しています。解く課題で選びます。階段ではなく、Complete は他の商品の上位版ではありません。
 
@@ -18,7 +18,7 @@ VenueAdd は、この公開版に無い一つの会場の拡張です。下の�
 
 ## Product Lineup
 
-- Starter。公開プラットフォームに Buildbook が付きます。Buildbook は、[Community Deployment Guide](../COMMUNITY_DEPLOYMENT_GUIDE_JA.md) の長い形です。Starter は別のプログラムではなく、サポート契約を含みません。
+- Starter。公開プラットフォームに Buildbook が付きます。Buildbook は、[Community Deployment Guide](../COMMUNITY_DEPLOYMENT_GUIDE_JA.md) の詳細版です。Starter は別のプログラムではなく、サポート契約を含みません。
 - Volume Pack。一つの購入日の戦略群です。取引量、会場への参加、ポイントプログラムの機会を軸に選定しています。選定の材料は、過去データ、バックテスト、過去の運用であり、作者が公開している運用を含みます。自分で動かす戦略群です。研究レポートではありません。あとからの日付は含みません。過去の結果は、将来のポイント、報酬、利益、エアドロップを保証しません。
 - Profit Pack。一つの購入日の戦略群です。純損益を軸に選定しています。選定の材料は、過去データ、バックテスト、過去の運用であり、作者が公開している運用を含みます。自分で動かす戦略群です。研究レポートではありません。あとからの日付は含みません。過去の結果は、将来の利益を保証しません。
 - Complete。Starter と、同じ日の Volume Pack および Profit Pack です。別のサポート契約は付きません。どちらのパックの上位版でもありません。Complete のリポジトリはありません。
@@ -29,10 +29,10 @@ VenueAdd は、この公開版に無い一つの会場の拡張です。下の�
 | --- | --- | --- | --- | --- |
 | 課題 | TradingView の戦略はある。インフラの構築が難しい | インフラは組める。有効な戦略が無い | インフラは組める。有効な戦略が無い | インフラも戦略も無い |
 | 目的 | 自分のインフラで、TradingView、執行、Analytics まで通す | 一つの日付の戦略を動かす。選定の軸は、取引量、会場への参加、ポイントプログラムの機会 | 一つの日付の戦略を動かす。選定の軸は純損益 | 同じ日の二つの戦略群を動かし、Buildbook を使う |
-| 扱う範囲 | 参照するデプロイの手順書で、公開プラットフォームを動かす | その日付の戦略群を動かす。Buildbook は無い | その日付の戦略群を動かす。Buildbook は無い | 同じ日の二つの戦略群を、手順書とともに動かす |
+| 扱う範囲 | Community Deployment Guide で公開プラットフォームを動かす。Buildbook は任意の詳細版 | その日付の戦略群を動かす。Buildbook は無い | その日付の戦略群を動かす。Buildbook は無い | 同じ日の二つの戦略群を、詳細版とともに動かす |
 | 含まれるもの | Buildbook | その日付の戦略群。sizing-and-capital-planning、sample yml、pine-runtime-spec を含む。あとからの日付は含まない | その日付の戦略群。profit-analysis.md、sample yml、pine-runtime-spec を含む。あとからの日付は含まない | Buildbook と、同じ日の二つの戦略群 |
 | GitHub のアクセス | Starter リポジトリの読み取り | その版のリポジトリの読み取り | その版のリポジトリの読み取り | Starter リポジトリと、同じ日の二つのパックのリポジトリの読み取り。Complete のリポジトリは無い |
-| Buildbook の範囲 | 何も無い状態からの、参照するデプロイ | 含まない | 含まない | 含む。Complete が Starter を含むため。手順書は同じ |
+| Buildbook の範囲 | Community Deployment Guide と同じ経路の画面、チェックリスト、FAQ | 含まない | 含まない | 含む。Complete が Starter を含むため。詳細版は同じ |
 | コミュニティ | Discord の購入者ロール | Discord の購入者ロール | Discord の購入者ロール | Discord の購入者ロール |
 
 Discord のアクセスは、リポジトリを開きません。パックは、その購入日の戦略群のままです。先の購入者が、あとからの日付を受け取ることはありません。選定の材料は、過去データ、バックテスト、過去の運用です。これらの材料は、将来の利益、ポイント、報酬、エアドロップを保証しません。同じ限界は [DISCLAIMER](../../DISCLAIMER_JA.md) にあります。

@@ -12,7 +12,7 @@ The Japanese edition is [README_JA.md](README_JA.md).
 
 TradingView sends an alert. Signal Nexus maps it to a strategy, plans the order, and keeps the operation as a record.
 
-- TradingView signal ingestion. The alert arrives as a webhook and is mapped to a strategy in `config/strategies.yml`.
+- TradingView signal ingestion. The alert arrives as a webhook and is mapped to a strategy in the caller's live `config/strategies.yml`.
 - Multi-venue execution. One workflow can run that plan on more than one venue. In `dry_run`, the order is not sent.
 - Analytics collection. The alert, the plan, and, when an order is sent, the venue result are kept as the operational record.
 - Audit notifications. The audit row stays in Postgres. Discord can receive a copy.
@@ -70,7 +70,7 @@ The Portal is protected by `PORTAL_PASSWORD`, which is supplied through environm
 
 You deploy Signal Nexus on infrastructure you run.
 
-The webhook process (`app.main`) receives TradingView alerts. Analytics, the audit store, and live order delivery run on a virtual machine you administer (`app.analytics.api`). The Buildbook uses Render for the webhook and Oracle Cloud for that machine.
+The webhook process (`app.main`) receives TradingView alerts. Analytics, the audit store, and live order delivery run on a Linux host you administer (`app.analytics.api`). The [Community Deployment Guide](docs/COMMUNITY_DEPLOYMENT_GUIDE.md) states the host minimum. `VM.Standard.E2.1.Micro` in Oracle `ap-tokyo-1` is an example shape. The Buildbook shows the console clicks for that example.
 
 Leave `EXECUTION_MODE` unset until you intend to send orders. Runtime Modes describes `dry_run`, `live`, and the kill switch.
 
@@ -83,7 +83,7 @@ These are the software requirements:
 - A PostgreSQL database reachable by the Analytics Service
 - Connectivity from the Webhook Service to the Analytics API through `ANALYTICS_API_URL`
 
-Signal Nexus itself is not tied to Render or Oracle Cloud. The Buildbook uses those two as the reference environment, not as a required purchase. The current deployment automation assumes GitHub Actions, SSH to a Linux host as `ubuntu` under `/home/ubuntu`, Caddy serving HTTPS on port 443, PostgreSQL on localhost, and health checks through `RENDER_HEALTH_URL`. Equivalent infrastructure may also be used when those capabilities are present.
+Signal Nexus itself is not tied to Render or Oracle Cloud. The Community Deployment Guide names those two as an example shape, not as a required purchase. The current deployment automation assumes GitHub Actions, SSH to a Linux host as `ubuntu` under `/home/ubuntu`, Caddy serving HTTPS on port 443, PostgreSQL on localhost, and health checks through `RENDER_HEALTH_URL`. Equivalent infrastructure may also be used when those capabilities are present.
 
 ### Deployment Relationship
 
@@ -118,7 +118,7 @@ Each health result shows that the process answered.
 
 The public authority for that path is the [Community Deployment Guide](docs/COMMUNITY_DEPLOYMENT_GUIDE.md). Follow it through health validation with the public core and the deploy template.
 
-The Buildbook, included with Starter, is the long form of that guide: detail, checklists, screens, FAQ, and failure notes. It does not add a required fact.
+The Buildbook, included with Starter, is the detailed edition of that guide: checklists, screens, FAQ, and failure notes. It does not add a required fact.
 
 ## Runtime Modes
 
@@ -233,23 +233,23 @@ These names belong to the current deployment automation. Deployment Assumptions 
 
 These variables are not part of Signal Nexus runtime configuration and are therefore not listed in Required Configuration.
 
-They are documented in the [Community Deployment Guide](docs/COMMUNITY_DEPLOYMENT_GUIDE.md).
+The full set is the nine secrets and the five variables in the [Community Deployment Guide](docs/COMMUNITY_DEPLOYMENT_GUIDE.md). The names below are examples from that set, not the set itself.
 
-- `ANALYTICS_SSH_HOST`, `ANALYTICS_SSH_HOST_FINGERPRINT`, and `ANALYTICS_SSH_PRIVATE_KEY` support GitHub Actions deployment to the Analytics VM.
-- `RENDER_HEALTH_URL` supports deployment validation and health verification.
-- `CADDY_SITE_ADDRESS` defines the HTTPS hostname used by the Analytics VM deployment.
+- `ANALYTICS_SSH_HOST`, `ANALYTICS_SSH_HOST_FINGERPRINT`, and `ANALYTICS_SSH_PRIVATE_KEY`
+- `RENDER_HEALTH_URL`
+- `CADDY_SITE_ADDRESS`
 
-These variables are deployment transport and infrastructure variables.
+These names are deployment transport and infrastructure names.
 
 They are not Signal Nexus business configuration.
 
-Signal Nexus runtime configuration is fully documented in Required Configuration.
+The seven runtime files live on the caller repository. The public core does not own them.
 
-The [Community Deployment Guide](docs/COMMUNITY_DEPLOYMENT_GUIDE.md) is the authoritative source for deployment automation variables.
+The [Community Deployment Guide](docs/COMMUNITY_DEPLOYMENT_GUIDE.md) is the authority for deployment automation names.
 
 ## Strategy Configuration
 
-`config/strategies.yml` maps an alert to an order plan. The key is `strategy_id`. The alert's `strategy_id` and `symbol` must match that row. The order amount is `size_quote` on the row. The alert body does not carry `size` or `size_quote`.
+The caller's live `config/strategies.yml` maps an alert to an order plan. Copy it from `config/examples/strategies.yml.example` on `SignalNexus/signal-nexus-deploy`. The key is `strategy_id`. The alert's `strategy_id` and `symbol` must match that row. The order amount is `size_quote` on the row. The alert body does not carry `size` or `size_quote`.
 
 ```yaml
 btc_long_example:
@@ -265,7 +265,7 @@ btc_long_example:
 
 A protective exit is an added function that covers sharp price changes between bars, because a TradingView alert is evaluated only when a bar closes. Signal Nexus keeps one stop price and one take-profit price for each strategy. Those prices are set by applying `loss_pct` and `profit_pct` to that strategy's latest entry fill. Every five seconds, the virtual machine reads a fresh public price and closes that strategy's entire remaining quantity with a market order at the first level the price crosses. It does not replace the alert. It limits an unexpected loss, or secures a profit, until the next bar's alert arrives.
 
-`config/protective_exit.yml` is optional. When the file is absent, no strategy has a protective exit. A `protective_exit` map on a strategy row replaces the venue map in that file, and the venue map replaces the global map. The winning map is used as a whole.
+The caller's live `config/protective_exit.yml` is one of the seven required runtime files. A `protective_exit` map on a strategy row replaces the venue map in that file, and the venue map replaces the global map. The winning map is used as a whole.
 
 ```yaml
 protective_exit:
@@ -334,7 +334,7 @@ A secret mismatch is HTTP 401 and `{"detail":"unauthorized"}`. A rejected alert 
 | How is TradingView connected? | [Strategy Integration Guide](docs/integration/STRATEGY_INTEGRATION_GUIDE.md) |
 | What does each screen show? | [Screen Specification](docs/ui/SCREEN_SPECIFICATION.md) |
 | How do the screens connect? | [Screen Relationship Diagram](docs/ui/SCREEN_RELATIONSHIP_DIAGRAM.md) |
-| How is a full deployment reproduced? | [Community Deployment Guide](docs/COMMUNITY_DEPLOYMENT_GUIDE.md). The Buildbook is the optional long form |
+| How is a full deployment reproduced? | [Community Deployment Guide](docs/COMMUNITY_DEPLOYMENT_GUIDE.md). The Buildbook is the optional detailed edition |
 | How do the documents divide? | [Documentation Structure](docs/DOCUMENTATION_STRUCTURE.md) |
 
 ## Legal

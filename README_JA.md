@@ -12,7 +12,7 @@ Signal Nexus は、自分でホストする取引の運用プラットフォー�
 
 TradingView がアラートを送ります。Signal Nexus はそれを戦略に割り当て、発注の計画を作り、運用の記録として残します。
 
-- TradingView のシグナル取り込み。アラートは Webhook として届き、`config/strategies.yml` の戦略に割り当てられます。
+- TradingView のシグナル取り込み。アラートは Webhook として届き、呼び出し元の live `config/strategies.yml` の戦略に割り当てられます。
 - 複数の取引所への実行。一つの運用で、その計画を複数の取引所へ出せます。`dry_run` では注文は出ません。
 - Analytics の収集。アラート、計画、注文を出したときの取引所の結果が、運用の記録として残ります。
 - 監査の通知。監査の行は Postgres に残ります。Discord へ監査のコピーを届けられます。
@@ -70,7 +70,7 @@ TradingView がシグナルを出します。Signal Nexus が受け取り、CEX 
 
 Signal Nexus は、自分の環境へデプロイします。
 
-Webhook のプロセス（`app.main`）が TradingView のアラートを受けます。Analytics、監査の保存、`live` の発注は、自分で管理する仮想マシン（`app.analytics.api`）で動きます。Buildbook では、Webhook に Render、仮想マシンに Oracle Cloud を使います。
+Webhook のプロセス（`app.main`）が TradingView のアラートを受けます。Analytics、監査の保存、`live` の発注は、自分で管理する Linux ホスト（`app.analytics.api`）で動きます。ホストの下限は [Community Deployment Guide](docs/COMMUNITY_DEPLOYMENT_GUIDE_JA.md) が述べます。Oracle `ap-tokyo-1` の `VM.Standard.E2.1.Micro` は、例として挙げる shape です。Buildbook は、その例のコンソール操作を示します。
 
 注文を出すと決めるまで、`EXECUTION_MODE` は入れません。`dry_run`、`live`、Kill Switch は、実行モードにあります。
 
@@ -83,7 +83,7 @@ Webhook のプロセス（`app.main`）が TradingView のアラートを受け�
 - Analytics サービスから届く PostgreSQL
 - Webhook サービスから Analytics API へ、`ANALYTICS_API_URL` で届く接続
 
-Signal Nexus 自体は、Render にも Oracle Cloud にも縛られません。Buildbook が書くその二つは、例として挙げる環境であり、必須の購入先ではありません。いまのデプロイ自動化は、GitHub Actions、`ubuntu` として `/home/ubuntu` へ SSH する Linux ホスト、443 で HTTPS を出す Caddy、localhost の PostgreSQL、`RENDER_HEALTH_URL` による health の確認を前提にします。同じ能力が揃っていれば、同等のインフラを使えます。
+Signal Nexus 自体は、Render にも Oracle Cloud にも縛られません。Community Deployment Guide が書くその二つは、例として挙げる shape であり、必須の購入先ではありません。いまのデプロイ自動化は、GitHub Actions、`ubuntu` として `/home/ubuntu` へ SSH する Linux ホスト、443 で HTTPS を出す Caddy、localhost の PostgreSQL、`RENDER_HEALTH_URL` による health の確認を前提にします。同じ能力が揃っていれば、同等のインフラを使えます。
 
 ### デプロイの関係
 
@@ -233,23 +233,23 @@ Analytics サービス
 
 これらの変数は、Signal Nexus の実行時の設定ではありません。そのため、必要な設定には入れていません。
 
-文書は [Community Deployment Guide](docs/COMMUNITY_DEPLOYMENT_GUIDE_JA.md) にあります。
+集合の全体は、[Community Deployment Guide](docs/COMMUNITY_DEPLOYMENT_GUIDE_JA.md) の secret 9 と variable 5 です。下の名前はその集合の例であり、集合そのものではありません。
 
-- `ANALYTICS_SSH_HOST`、`ANALYTICS_SSH_HOST_FINGERPRINT`、`ANALYTICS_SSH_PRIVATE_KEY` は、GitHub Actions から Analytics の仮想マシンへデプロイするために使います。
-- `RENDER_HEALTH_URL` は、デプロイの確認と health の確認に使います。
-- `CADDY_SITE_ADDRESS` は、Analytics の仮想マシンのデプロイが使う HTTPS のホスト名です。
+- `ANALYTICS_SSH_HOST`、`ANALYTICS_SSH_HOST_FINGERPRINT`、`ANALYTICS_SSH_PRIVATE_KEY`
+- `RENDER_HEALTH_URL`
+- `CADDY_SITE_ADDRESS`
 
-これらの変数は、デプロイの輸送とインフラの変数です。
+これらの名前は、デプロイの輸送とインフラの名前です。
 
 Signal Nexus の業務設定ではありません。
 
-Signal Nexus の実行時の設定は、必要な設定にすべて書いてあります。
+runtime 7ファイルは、呼び出し元リポジトリにあります。公開コアはそれらを所有しません。
 
-デプロイ自動化の変数の正本は、[Community Deployment Guide](docs/COMMUNITY_DEPLOYMENT_GUIDE_JA.md) です。
+デプロイ自動化の名前の正本は、[Community Deployment Guide](docs/COMMUNITY_DEPLOYMENT_GUIDE_JA.md) です。
 
 ## 戦略の設定
 
-`config/strategies.yml` が、アラートを発注の計画に割り当てます。キーが `strategy_id` です。アラートの `strategy_id` と `symbol` は、その行と一致させます。注文額は、その行の `size_quote` です。アラートの本文に `size` も `size_quote` も入れません。
+呼び出し元の live `config/strategies.yml` が、アラートを発注の計画に割り当てます。`SignalNexus/signal-nexus-deploy` の `config/examples/strategies.yml.example` からコピーします。キーが `strategy_id` です。アラートの `strategy_id` と `symbol` は、その行と一致させます。注文額は、その行の `size_quote` です。アラートの本文に `size` も `size_quote` も入れません。
 
 ```yaml
 btc_long_example:
@@ -265,7 +265,7 @@ btc_long_example:
 
 保護決済は、TradingView のアラートが足の確定時にだけ評価されるため、その間の急な価格変化への対応を補うための付加機能です。Signal Nexus は、戦略ごとにストップ 価格1 つと利食い価格 1 つを持ちます。価格は、その戦略の最新エントリー約定に loss_pct と profit_pct を掛けて決めます。仮想マシンが 5 秒ごとに新しい公開価格を見て、先に割れた方で、その戦略の残数量全体を成行で閉じます。アラートの代わりではなく、次の足のアラートが来るまでに想定外の損失を防ぐ、もしくは利益の確保を行うための保護です。
 
-`config/protective_exit.yml` は任意です。ファイルが無いとき、どの戦略も保護決済を持ちません。戦略行の `protective_exit` は、そのファイルの会場の設定をまとめて上書きします。会場の設定は、全体の設定をまとめて上書きします。
+呼び出し元の live `config/protective_exit.yml` は、必須の runtime 7ファイルの一つです。戦略行の `protective_exit` は、そのファイルの会場の設定をまとめて上書きします。会場の設定は、全体の設定をまとめて上書きします。
 
 ```yaml
 protective_exit:

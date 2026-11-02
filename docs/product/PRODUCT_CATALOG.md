@@ -8,7 +8,7 @@ What each product is, is defined in [Product Specification](PRODUCT_SPECIFICATIO
 
 Signal Nexus is a research-to-execution platform you run on your own infrastructure. Funds stay at the venue. Keys stay on infrastructure you run. Signal Nexus does not custody assets.
 
-The public platform is Free. You can deploy it from this repository without buying a product. Free is not one of the four rows below.
+The public platform is Free. You can deploy it without buying a product, using the [Community Deployment Guide](../COMMUNITY_DEPLOYMENT_GUIDE.md), the public core, and `SignalNexus/signal-nexus-deploy`. Free is not one of the four rows below.
 
 The four products on this page are independent. You choose by the problem you are solving. They are not a ladder, and Complete is not a higher edition of another product.
 
@@ -18,7 +18,7 @@ Nothing on this page promises profit, points, an airdrop, or a trading result.
 
 ## Product Lineup
 
-- Starter. The public platform, plus the Buildbook. The Buildbook is the long form of the [Community Deployment Guide](../COMMUNITY_DEPLOYMENT_GUIDE.md). Starter is not a second program, and it does not include a support contract.
+- Starter. The public platform, plus the Buildbook. The Buildbook is the detailed edition of the [Community Deployment Guide](../COMMUNITY_DEPLOYMENT_GUIDE.md). Starter is not a second program, and it does not include a support contract.
 - Volume Pack. The strategy set of one purchase date, selected with trading volume, venue participation, and point-program opportunity as the axis. The selection uses past data, backtests, and past operation, including operation the author has run in public. You run the set. It is not a research report. It does not include a later date. Past results do not guarantee future points, rewards, profit, or an airdrop.
 - Profit Pack. The strategy set of one purchase date, selected with net result as the axis. The selection uses past data, backtests, and past operation, including operation the author has run in public. You run the set. It is not a research report. It does not include a later date. Past results do not guarantee future profit.
 - Complete. Starter together with the Volume Pack and the Profit Pack of the same date. It does not add a separate support contract. It is not a higher edition of either pack. There is no Complete repository.
@@ -29,10 +29,10 @@ Nothing on this page promises profit, points, an airdrop, or a trading result.
 | --- | --- | --- | --- | --- |
 | Problem | You have a TradingView strategy. Building the infrastructure is difficult | You can build the infrastructure. You do not have an effective strategy | You can build the infrastructure. You do not have an effective strategy | You have neither the infrastructure nor a strategy |
 | Purpose | Reach TradingView, execution, and analytics on infrastructure you run | Run one date's strategies, selected for trading volume, venue participation, and point-program opportunity | Run one date's strategies, selected for net result | Run both strategy sets of the same date, with the Buildbook |
-| Complexity | Run the public platform with the reference deployment playbook | Run that date's strategy set. No Buildbook | Run that date's strategy set. No Buildbook | Run both strategy sets of the same date, with the playbook |
+| Complexity | Run the public platform with the Community Deployment Guide. The Buildbook is the optional detailed edition | Run that date's strategy set. No Buildbook | Run that date's strategy set. No Buildbook | Run both strategy sets of the same date, with the detailed edition |
 | Included assets | Buildbook | That date's strategy set, including sizing-and-capital-planning, sample yml, and pine-runtime-spec. A later date is not included | That date's strategy set, including profit-analysis.md, sample yml, and pine-runtime-spec. A later date is not included | Buildbook, plus both strategy sets of the same date |
 | GitHub access | Read access to the Starter repository | Read access to that edition's repository | Read access to that edition's repository | Read access to the Starter repository and to both pack repositories of the same date. No Complete repository |
-| Buildbook scope | The reference deployment, from an empty start | Not included | Not included | Included, because Complete includes Starter. Same playbook |
+| Buildbook scope | Screens, checklists, and FAQ for the same path as the Community Deployment Guide | Not included | Not included | Included, because Complete includes Starter. Same detailed edition |
 | Community access | Purchaser role on Discord | Purchaser role on Discord | Purchaser role on Discord | Purchaser role on Discord |
 
 Discord access does not grant a repository. A pack stays the strategy set of its purchase date. An earlier buyer does not receive a later date. Selection uses past data, backtests, and past operation. Those inputs do not guarantee future profit, points, rewards, or an airdrop. The same limit is in [DISCLAIMER](../../DISCLAIMER.md).
