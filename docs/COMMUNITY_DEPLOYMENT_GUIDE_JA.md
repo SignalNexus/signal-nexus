@@ -2,12 +2,17 @@
 
 英語版が正本です。このファイルは [COMMUNITY_DEPLOYMENT_GUIDE.md](COMMUNITY_DEPLOYMENT_GUIDE.md) の日本語版です。
 
-このガイドは、Signal Nexus Community Edition を Health Validation（health の確認）までデプロイするための公開の正本です。対象は、GitHub、Linux、Render の基本操作を理解している利用者です。その利用者は、`SignalNexus/signal-nexus` と `SignalNexus/signal-nexus-deploy` だけを読んで、Health Validation まで進めます。
+このガイドは、Signal Nexus Community Edition を Health Validation（health の確認）までデプロイするための公開の正本です。対象は、GitHub Actions、SSH、Linux、Render の基本操作を理解している利用者です。その利用者は、公開されている `SignalNexus/signal-nexus` と `SignalNexus/signal-nexus-deploy` の情報だけで、Health Validation まで進めます。
 
 必須:
 
 - [README](../README_JA.md)
 - このガイド
+- `SignalNexus/signal-nexus-deploy`
+
+実装本体:
+
+- `SignalNexus/signal-nexus`
 
 任意:
 
@@ -55,13 +60,13 @@ webhook はアラートを受けます。Analytics API は運用の記録を保�
 
 ## 2. Deploy リポジトリ
 
-このガイドでは、テンプレート `SignalNexus/signal-nexus-deploy` から作った利用者自身の非公開リポジトリを、呼び出し元リポジトリと呼びます。コアのソースは `SignalNexus/signal-nexus` に残ります。呼び出し元は、コアを fork しません。
+このガイドでは、テンプレート `SignalNexus/signal-nexus-deploy` から作った利用者自身の非公開リポジトリを、呼び出し元リポジトリと呼びます。コアのソースは `SignalNexus/signal-nexus` に残ります。呼び出し元リポジトリは、コアを fork しません。
 
 次の三つは、同じ 40 文字の公開 SHA です。
 
 | 名前 | 場所 |
 | --- | --- |
-| `core-pin` | 呼び出し元のルートのファイル |
+| `core-pin` | 呼び出し元リポジトリのルートのファイル |
 | `uses` | `.github/workflows/deploy.yml` |
 | `core_sha` | 同じ workflow |
 
@@ -110,7 +115,7 @@ strategy の会場は有効なカタログ行でなければならないので�
 | Linux ホスト | Canonical Ubuntu 24.04。ユーザー `ubuntu`。`sudo -n` が成功する。ホームは `/home/ubuntu` |
 | 開けるポート | GitHub-hosted runner が届く TCP 22。インターネットからの TCP 443。TCP 5432 は閉じる。TCP 80 は閉じる。Caddy は TLS-ALPN |
 | PostgreSQL | 初回 deploy が role `signalnexus` と database `signalnexus` を作成します。deploy は Ubuntu 24.04 のパッケージ、PostgreSQL 16 を入れます。localhost で待ち受けます。`pg_hba.conf` は `127.0.0.1/32` を `scram-sha-256` または `md5` で許可します |
-| Render | 呼び出し元の branch `main` の Web Service。Webhook を受けます。deploy workflow を起動する前に Live で、`GET /health` が `{"status":"ok"}` |
+| Render | 呼び出し元リポジトリの `main` ブランチに接続した Web Service。Webhook を受けます。deploy workflow を起動する前に Live で、`GET /health` が `{"status":"ok"}` |
 | Site | `CADDY_SITE_ADDRESS` は `<public-ip>.sslip.io`。ホスト名だけ。`RENDER_HEALTH_URL` は `https://<render-host>/health`。Render 上の `ANALYTICS_API_URL` は、`https://` のあとに site address を続けたもの |
 | Fingerprint | Actions の secret は、ed25519 の host key に対する `ssh-keygen -lf` の `SHA256:` のフィールド。秘密鍵にパスフレーズは無い |
 
@@ -118,13 +123,13 @@ Render では、呼び出し元リポジトリの `main` ブランチを接続�
 
 Oracle の `ap-tokyo-1` にある `VM.Standard.E2.1.Micro` は、例として挙げる shape です。ソフトウェアが動く唯一のホストではありません。コンソールのクリックは Buildbook にあります。
 
-`workflow_dispatch` は、呼び出し元にある GitHub Actions の workflow `deploy` を起動する方法です。その workflow を開き、実行します。画面の画像は要りません。第9節が初回です。第11節が、そのあと毎回です。
+`workflow_dispatch` は、呼び出し元リポジトリにある GitHub Actions の workflow `deploy` を起動する方法です。その workflow を開き、実行します。画面の画像は要りません。第9節が初回です。第11節が、そのあと毎回です。
 
 <a id="sec-5"></a>
 
 ## 5. Build と Start
 
-呼び出し元では、次のコマンドを正本とします。
+呼び出し元リポジトリでは、次のコマンドを正本とします。
 
 | | Command |
 | --- | --- |
@@ -197,7 +202,7 @@ Oracle の `ap-tokyo-1` にある `VM.Standard.E2.1.Micro` は、例として挙
 
 `none` と空文字は空集合です。futures の読み取りと追加の secret は、その名前が `BUILTIN_VENUES` に含まれるかどうかで決まります。
 
-| 値 | Futures の読み取り | `ANALYTICS_API_SECRET` と `ANALYTICS_DB_PASSWORD` 以外 |
+| 値 | futures read を実行するか | 追加で必要な secret |
 | --- | --- | --- |
 | `none` | 実行しない | 無し |
 | `mexc_spot` | 実行しない | MEXC spot の読み取りの対 |
@@ -232,7 +237,7 @@ workflow が完了したら、第10節の確認項目を実施します。
 | --- | --- |
 | Render の `GET /health` | `{"status":"ok"}` |
 | Analytics の `GET https://<CADDY_SITE_ADDRESS>/health` | `{"status":"ok"}` |
-| 七つの config SHA256 | 呼び出し元のファイル、deploy log、`ANALYTICS_CORE_DIRECTORY/config/` のコピーが一致する |
+| 七つの config SHA256 | 呼び出し元リポジトリのファイル、deploy log、`ANALYTICS_CORE_DIRECTORY/config/` のコピーが一致する |
 | `SIGNAL_NEXUS_VENUEADD` | manifest が空のときは、設定しません |
 | Venue fetch | ログに、会場リポジトリの名前は出ません |
 | Futures の読み取り | `BUILTIN_VENUES=none` のとき、log に `futures read credentials are not configured` は無い |
@@ -253,7 +258,7 @@ hash は、配置した七つの path に対して `sha256sum` を実行して�
 - `core_sha`
 - Render の環境変数
 
-初回は第9節です。そのあとの変更も、同じ workflow で deploy します。
+初回の deploy は第9節です。そのあとの変更も、同じ workflow で deploy します。
 
 1. 配置した runtime ファイル七つを更新するか、`core-pin`、`uses`、`core_sha` に新しい公開 SHA を書くか、Render の環境変数を変えます。新しい SHA も、第2節の futures read の条件を含みます。SHA を書く三か所は、同じ値のままです。
 2. Render のサービスは、すでに Live です。起動する前に、`GET /health` は `{"status":"ok"}` のままです。
@@ -263,7 +268,7 @@ hash は、配置した七つの path に対して `sha256sum` を実行して�
 
 ## 12. 推奨 SHA
 
-推奨 SHA は、その環境の最後に成功した deploy が使った公開コアの SHA です。最初の成功した deploy が、それを決めます。そのあとの成功した deploy は、それを置き換えます。失敗した deploy は置き換えず、前の値も消しません。別の呼び出し元の pin は、別の値です。
+推奨 SHA は、その環境の最後に成功した deploy が使った公開コアの SHA です。最初の成功した deploy が、それを決めます。そのあとの成功した deploy は、それを置き換えます。失敗した deploy は置き換えず、前の値も消しません。別の呼び出し元リポジトリの pin は、別の値です。
 
 最初の成功だけが推奨だと読まないでください。
 
@@ -273,7 +278,7 @@ hash は、配置した七つの path に対して `sha256sum` を実行して�
 
 初回 deploy が失敗したときは、そのリポジトリの `DEPLOY_ANALYTICS` を false にします。`venues: []` と pin は残します。再試行は新しい SSH 鍵と新しい database パスワードを使います。workflow は、Render のサービスを、hook の前に Live だった deploy へ戻します。
 
-更新後の deploy が失敗した場合も、最後に成功した deploy の状態へ戻します。workflow は、Render のサービスを、その実行の前に Live だった deploy へ戻します。この戻しは、初回 deploy だけのものではありません。
+更新後の deploy が失敗した場合も、最後に成功した deploy の状態へ戻します。workflow は、Render のサービスを、その実行の前に Live だった deploy へ戻します。この rollback は、初回 deploy に限らず適用されます。
 
 この手順では、ほかの呼び出し元のリポジトリは変更しません。
 
@@ -282,9 +287,10 @@ hash は、配置した七つの path に対して `sha256sum` を実行して�
 | 項目 | このガイド | Buildbook |
 | --- | --- | --- |
 | 手順の正本 | ○ | このガイドに従う |
-| 要件とコマンド | ○。短く書く | 例にした Oracle と Render の画面操作 |
-| secret と variable | 名前 | 値を貼り付けるときのチェックリスト |
+| 要件とコマンド | ○ | 詳細説明 |
 | チェックリスト | — | ○ |
+| FAQ | — | ○ |
+| 失敗を避けるメモ | — | ○ |
 | registry | 最小の registry 一つ | 注釈付きの例 |
 | 成功条件 | ○。第10節の確認 | 記入例つきの実行記録 |
 | rollback | ○。説明 | 失敗のメモ |

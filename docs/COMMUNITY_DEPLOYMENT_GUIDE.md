@@ -2,14 +2,19 @@
 
 English is canonical. The Japanese mirror is [COMMUNITY_DEPLOYMENT_GUIDE_JA.md](COMMUNITY_DEPLOYMENT_GUIDE_JA.md).
 
-This guide is the public authority for deploying Signal Nexus Community Edition through health validation. It is for a reader who already knows the basic operations of GitHub, Linux, and Render. That reader can follow it with `SignalNexus/signal-nexus` and `SignalNexus/signal-nexus-deploy` only.
+This guide is the public authority for deploying Signal Nexus Community Edition through health validation. It is for a reader who already knows the basic operations of GitHub Actions, SSH, Linux, and Render. That reader uses only the published information in `SignalNexus/signal-nexus` and `SignalNexus/signal-nexus-deploy`.
 
 Required:
 
 - [README](../README.md)
 - This guide
+- `SignalNexus/signal-nexus-deploy`
 
-Optional:
+Reference, the implementation itself:
+
+- `SignalNexus/signal-nexus`
+
+Optional reading:
 
 - [Architecture](architecture/ARCHITECTURE.md). It confirms the system layout. It is not required to reach health validation.
 - The Buildbook, included with Starter. It adds detail, checklists, screens, FAQ, and failure notes. It does not add a required fact.
@@ -59,7 +64,7 @@ These three are the same 40-character public SHA:
 
 | Name | Where |
 | --- | --- |
-| `core-pin` | File at the caller root |
+| `core-pin` | File at the root of the caller repository |
 | `uses` | `.github/workflows/deploy.yml` |
 | `core_sha` | The same workflow |
 
@@ -183,7 +188,7 @@ Set these as GitHub repository variables on the caller repository.
 
 `none` and the empty string are an empty set. The futures read and the extra secrets follow membership.
 
-| Value | Futures read | Secrets beyond `ANALYTICS_API_SECRET` and `ANALYTICS_DB_PASSWORD` |
+| Value | Whether futures read runs | Additional secrets |
 | --- | --- | --- |
 | `none` | Does not run | None |
 | `mexc_spot` | Does not run | The MEXC spot read pair |
@@ -233,7 +238,7 @@ Run the deploy workflow again when you change any of the following:
 - `core_sha`
 - Render environment variables
 
-The first deploy is section 9. After that, the same workflow deploys a change.
+The first deploy is in section 9. After that, the same workflow deploys a change.
 
 1. Update the seven live runtime files, or write a new public SHA in `core-pin`, `uses`, and `core_sha`, or change the Render environment variables. A new SHA still has to contain the futures-read gate from section 2. The three SHA fields stay equal.
 2. The Render service is already Live. `GET /health` still returns `{"status":"ok"}` before you start.
@@ -253,7 +258,7 @@ A failure of the checks in section 10 is a rollback. The rollback changes that c
 
 On a failed first deploy, set `DEPLOY_ANALYTICS` to false on that repository. Leave `venues: []` and the pin in place. A retry uses a new SSH key and a new database password. The workflow rolls the Render service back to the deploy that was live before the hook.
 
-If a deploy after an update fails, return to the last successful deploy. The workflow rolls the Render service back to the deploy that was live before that run. This return is not limited to the first deploy.
+If a deploy after an update fails, return to the last successful deploy. The workflow rolls the Render service back to the deploy that was live before that run. This rollback applies to later deploys as well as to the first deploy.
 
 Do not edit another caller's repository as part of this rollback.
 
@@ -262,9 +267,10 @@ Do not edit another caller's repository as part of this rollback.
 | Item | This guide | Buildbook |
 | --- | --- | --- |
 | Authority for this path | Yes | Follows this guide |
-| Requirements and commands | Yes. The short form | Console clicks for the reference accounts |
-| Secrets and variables | The names | A checklist while pasting |
+| Requirements and commands | Yes. The short form | Detailed explanation |
 | Checklist | — | Yes |
+| FAQ | — | Yes |
+| Failure notes | — | Yes |
 | Registry | One minimal registry | Commented examples |
 | Success criteria | Yes. The checks in section 10 | A filled run |
 | Rollback | Yes. One section | Failure notes |
