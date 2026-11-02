@@ -44,29 +44,6 @@ def _fetch_env() -> dict[str, str]:
     return env
 
 
-def _write_local_header(dest: Path, token: str) -> None:
-    config = dest / ".git" / "config"
-    config.parent.mkdir(parents=True, exist_ok=True)
-    with config.open("a", encoding="utf-8") as handle:
-        handle.write(
-            '\n[http "https://github.com"]\n'
-            f"\textraheader = {_basic_header(token)}\n"
-        )
-    config.chmod(0o600)
-
-
-def _strip_local_header(dest: Path) -> None:
-    config = dest / ".git" / "config"
-    if not config.is_file():
-        return
-    kept = [
-        line
-        for line in config.read_text(encoding="utf-8").splitlines(keepends=True)
-        if "extraheader" not in line and "AUTHORIZATION:" not in line
-    ]
-    config.write_text("".join(kept), encoding="utf-8")
-
-
 def fetch(repository: str, sha: str, dest: Path, token: str) -> None:
     if not token:
         raise SystemExit("venue read token is required")
@@ -75,19 +52,25 @@ def fetch(repository: str, sha: str, dest: Path, token: str) -> None:
     dest.mkdir(parents=True)
     _git(["init"], dest)
     _git(["remote", "add", "origin", f"https://github.com/{repository}.git"], dest)
-    _write_local_header(dest, token)
     try:
-        try:
-            _git(
-                ["-c", "credential.helper=", "fetch", "--depth", "1", "origin", sha],
-                dest,
-                _fetch_env(),
-            )
-        except subprocess.CalledProcessError:
-            raise SystemExit(f"venue repository was not fetched: {repository}") from None
-        _git(["checkout", "--detach", "FETCH_HEAD"], dest)
-    finally:
-        _strip_local_header(dest)
+        _git(
+            [
+                "-c",
+                "credential.helper=",
+                "-c",
+                f"http.https://github.com/.extraheader={_basic_header(token)}",
+                "fetch",
+                "--depth",
+                "1",
+                "origin",
+                sha,
+            ],
+            dest,
+            _fetch_env(),
+        )
+    except subprocess.CalledProcessError:
+        raise SystemExit(f"venue repository was not fetched: {repository}") from None
+    _git(["checkout", "--detach", "FETCH_HEAD"], dest)
 
 
 def fetch_manifest(manifest: Path, dest: Path, token: str) -> None:
