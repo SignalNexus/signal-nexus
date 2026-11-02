@@ -11,7 +11,7 @@
 このガイドでは、`SignalNexus/signal-nexus-deploy` から作る利用者自身の非公開リポジトリを、呼び出し元リポジトリと呼びます。作業はこの順です。各手順の詳細は、リンク先の節にあります。
 
 1. テンプレートから呼び出し元リポジトリを作る。[第2節](#sec-2)。
-2. runtime ファイルを七つ作る。[第3節](#sec-3)。
+2. サンプルから runtime ファイルを七つ配置する。[第3節](#sec-3)。
 3. Webhook を受ける Render の Web Service を作る。[第4節](#sec-4)と[第5節](#sec-5)。
 4. Linux ホストを準備する。[第4節](#sec-4)。
 5. secret と variable を設定する。[第6節](#sec-6)、[第7節](#sec-7)、[第8節](#sec-8)。
@@ -81,7 +81,7 @@ pin job は、それらが違うときに止まります。より新しい公開
 
 `venueadd/venues.yaml` は、この7ファイルには含まれません。購入まで `venues: []` のままにします。
 
-`confirm` は、runtime の設定ファイルの内容を検証するチェックです。例の registry は、編集せずコピーしても、そのチェックを通ります。
+`confirm` は、runtime の設定ファイルを検証します。検証に失敗した場合、deploy は進みません。例の registry は、編集せずコピーしても、その検証を通ります。
 
 ```yaml
 example-btc-spot:
@@ -101,7 +101,7 @@ strategy の会場は有効なカタログ行でなければならないので�
 | --- | --- |
 | Linux ホスト | Canonical Ubuntu 24.04。ユーザー `ubuntu`。`sudo -n` が成功する。ホームは `/home/ubuntu` |
 | 開けるポート | GitHub-hosted runner が届く TCP 22。インターネットからの TCP 443。TCP 5432 は閉じる。TCP 80 は閉じる。Caddy は TLS-ALPN |
-| PostgreSQL | deploy が Ubuntu 24.04 のパッケージ、PostgreSQL 16 を入れる。localhost で待ち受ける。`pg_hba.conf` は `127.0.0.1/32` を `scram-sha-256` または `md5` で許可する。初回 deploy が role `signalnexus` と database `signalnexus` を作る |
+| PostgreSQL | 初回 deploy が role `signalnexus` と database `signalnexus` を作成します。deploy は Ubuntu 24.04 のパッケージ、PostgreSQL 16 を入れます。localhost で待ち受けます。`pg_hba.conf` は `127.0.0.1/32` を `scram-sha-256` または `md5` で許可します |
 | Render | 呼び出し元の branch `main` の Web Service。Webhook を受けます。deploy workflow を起動する前に Live で、`GET /health` が `{"status":"ok"}` |
 | Site | `CADDY_SITE_ADDRESS` は `<public-ip>.sslip.io`。ホスト名だけ。`RENDER_HEALTH_URL` は `https://<render-host>/health`。Render 上の `ANALYTICS_API_URL` は、`https://` のあとに site address を続けたもの |
 | Fingerprint | Actions の secret は、ed25519 の host key に対する `ssh-keygen -lf` の `SHA256:` のフィールド。秘密鍵にパスフレーズは無い |
@@ -151,7 +151,7 @@ Oracle の `ap-tokyo-1` にある `VM.Standard.E2.1.Micro` は、例として挙
 | `ANALYTICS_DB_PASSWORD` | role `signalnexus` のパスワード。Render には置かない |
 | `RENDER_HEALTH_URL` | `https://<render-host>/health` |
 | `CADDY_SITE_ADDRESS` | ホスト名だけ |
-| `RENDER_DEPLOY_HOOK` | path が `srv-...` で終わる deploy hook |
+| `RENDER_DEPLOY_HOOK` | Render の Web Service の Deploy Hook URL です。path は `srv-...` で終わります |
 | `RENDER_API_KEY` | そのサービス、deploy、build log を読める鍵 |
 
 あとから設定するもの:
@@ -163,7 +163,7 @@ Oracle の `ap-tokyo-1` にある `VM.Standard.E2.1.Micro` は、例として挙
 | `ANALYTICS_MEXC_FUTURES_API_KEY`、`ANALYTICS_MEXC_FUTURES_API_SECRET` | `BUILTIN_VENUES` が `mexc_futures` を含むとき |
 | Arcus の address と署名の名前 | `BUILTIN_VENUES` が `arcus` を含むとき |
 | `KILL_SWITCH` | flag を true にするときだけ。無い値は false のまま |
-| 発注鍵 `MEXC_API_*` と `MEXC_FUTURES_API_*` | あとの `live` への切替。最初の health の確認ではない |
+| 発注鍵 `MEXC_API_*` と `MEXC_FUTURES_API_*` | `EXECUTION_MODE` を `live` に変更するとき。それまでは `dry_run` で、注文は出ません。最初の health の確認ではありません |
 
 名前だけで、値は書かれていません。置場はテンプレートの `deploy/target.env.example` です。
 
@@ -193,7 +193,7 @@ Oracle の `ap-tokyo-1` にある `VM.Standard.E2.1.Micro` は、例として挙
 | `arcus` | 実行しない | Arcus の address |
 | カンマ区切りの集合 | `mexc_futures` が要素のときだけ実行する | 選んだ行をすべて合わせたもの |
 
-registry の行が `mexc_spot` を指定するだけでは、spot の鍵は必要になりません。鍵を必須にするのは、変数の方です。例の registry は、`BUILTIN_VENUES=none` のまま deploy できます。
+Spot の API 鍵が必要かどうかは、`strategies.yml` ではなく、`BUILTIN_VENUES` の設定で決まります。例の registry は、`BUILTIN_VENUES=none` のまま deploy できます。
 
 <a id="sec-9"></a>
 
@@ -225,9 +225,19 @@ workflow が完了したら、第10節の確認項目を実施します。
 
 hash は、配置した七つの path に対して `sha256sum` を実行して計算します。
 
+この節の確認をすべて通した deploy を、成功した deploy と呼びます。その環境で最も新しい成功した deploy を、最後に成功した deploy と呼びます。
+
 <a id="sec-11"></a>
 
 ## 11. 二回目以降の deploy
+
+次の変更を行った場合は、deploy workflow を再実行します。
+
+- runtime ファイル
+- `core-pin`
+- `uses`
+- `core_sha`
+- Render の環境変数
 
 初回は第9節です。そのあとの変更も、同じ workflow で deploy します。
 
@@ -239,7 +249,7 @@ hash は、配置した七つの path に対して `sha256sum` を実行して�
 
 ## 12. 推奨 SHA
 
-推奨 SHA は、その環境で第10節の確認を最後に通った公開コアの SHA です。最初に確認を通した deploy が、それを決めます。同じ確認を通したあとの deploy は、その deploy が使った公開コアの SHA に置き換えます。失敗した deploy は置き換えず、前の値も消しません。別の呼び出し元の pin は、別の値です。
+推奨 SHA は、その環境の最後に成功した deploy が使った公開コアの SHA です。最初の成功した deploy が、それを決めます。そのあとの成功した deploy は、それを置き換えます。失敗した deploy は置き換えず、前の値も消しません。別の呼び出し元の pin は、別の値です。
 
 最初の成功だけが推奨だと読まないでください。
 
@@ -249,19 +259,19 @@ rollback の対象は、その呼び出し元のリポジトリ、ホスト、Re
 
 初回 deploy が失敗したときは、そのリポジトリの `DEPLOY_ANALYTICS` を false にします。`venues: []` と pin は残します。再試行は新しい SSH 鍵と新しい database パスワードを使います。workflow は、Render のサービスを、hook の前に Live だった deploy へ戻します。
 
-更新後の deploy が失敗した場合も、第10節の確認を最後に通した deploy の状態へ戻します。workflow は、Render のサービスを、その実行の前に Live だった deploy へ戻します。この戻しは、初回 deploy だけのものではありません。
+更新後の deploy が失敗した場合も、最後に成功した deploy の状態へ戻します。workflow は、Render のサービスを、その実行の前に Live だった deploy へ戻します。この戻しは、初回 deploy だけのものではありません。
 
 この手順では、ほかの呼び出し元のリポジトリは変更しません。
 
 ## 14. Starter
 
-| このガイド | Buildbook |
-| --- | --- |
-| この手順の正本 | このガイドに従う |
-| 要件とコマンドを短く示す | 例にした Oracle と Render の画面操作 |
-| secret と variable の名前 | 値を貼り付けるときのチェックリスト |
-| 最小の registry 一つ | 注釈付きの例 |
-| 成功条件 | 記入例つきの実行記録 |
-| rollback の説明 | 失敗のメモ |
+| 項目 | このガイド | Buildbook |
+| --- | --- | --- |
+| 手順の正本 | はい | このガイドに従う |
+| 要件とコマンド | 短く書く | 例にした Oracle と Render の画面操作 |
+| secret と variable | 名前 | 値を貼り付けるときのチェックリスト |
+| registry | 最小の registry 一つ | 注釈付きの例 |
+| 成功条件 | 第10節の確認 | 記入例つきの実行記録 |
+| rollback | 説明 | 失敗のメモ |
 
 Starter が加えるのは、検証、詳細、チェックリスト、画面、FAQ、失敗のメモです。必須の事実は加えません。

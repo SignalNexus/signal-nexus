@@ -11,7 +11,7 @@ This guide is the public authority for deploying Signal Nexus Community Edition 
 In this guide, the private repository you generate from `SignalNexus/signal-nexus-deploy` is the caller repository. Do the work in this order. Each step links to the section that has the detail.
 
 1. Create the caller repository from the template. [Section 2](#2-deploy-repository).
-2. Create the seven runtime files. [Section 3](#3-required-runtime-files).
+2. Place the seven runtime files by copying the samples. [Section 3](#3-required-runtime-files).
 3. Create the Render Web Service that receives webhooks. [Sections 4](#4-infrastructure-minimum) and [5](#5-build-and-start).
 4. Prepare the Linux host. [Section 4](#4-infrastructure-minimum).
 5. Set the secrets and the variables. [Sections 6](#6-required-secrets), [7](#7-required-variables), and [8](#8-builtin_venues).
@@ -77,7 +77,7 @@ Copy each example to the live name before the first deploy. You may edit the val
 
 `venueadd/venues.yaml` is not one of the seven. Leave it as `venues: []` until a venue is purchased.
 
-`confirm` is the check that validates the runtime files. The example registry passes that check when copied unchanged:
+`confirm` validates the runtime files. If that check fails, the deploy does not continue. The example registry passes that check when copied unchanged:
 
 ```yaml
 example-btc-spot:
@@ -95,7 +95,7 @@ example-btc-spot:
 | --- | --- |
 | Linux host | Canonical Ubuntu 24.04. User `ubuntu`. `sudo -n` succeeds. Home `/home/ubuntu` |
 | Ingress | TCP 22 reachable by GitHub-hosted runners. TCP 443 from the internet. TCP 5432 closed. TCP 80 closed. Caddy uses TLS-ALPN |
-| PostgreSQL | The deploy installs the Ubuntu 24.04 package, PostgreSQL 16. It listens on localhost. `pg_hba.conf` allows `127.0.0.1/32` with `scram-sha-256` or `md5`. The first deploy creates role `signalnexus` and database `signalnexus` |
+| PostgreSQL | The first deploy creates role `signalnexus` and database `signalnexus`. The deploy installs the Ubuntu 24.04 package, PostgreSQL 16. It listens on localhost. `pg_hba.conf` allows `127.0.0.1/32` with `scram-sha-256` or `md5` |
 | Render | A Web Service on the caller repository, branch `main`. It receives webhooks. It is Live, and `GET /health` returns `{"status":"ok"}`, before you start the deploy workflow |
 | Site | `CADDY_SITE_ADDRESS` is `<public-ip>.sslip.io`, the hostname only. `RENDER_HEALTH_URL` is `https://<render-host>/health`. `ANALYTICS_API_URL` on Render is `https://` plus the site address |
 | Fingerprint | The Actions secret is the `SHA256:` field from `ssh-keygen -lf` on the ed25519 host key. The private key has no passphrase |
@@ -141,7 +141,7 @@ Required before the first `workflow_dispatch`:
 | `ANALYTICS_DB_PASSWORD` | Password of role `signalnexus`. It is not stored on Render |
 | `RENDER_HEALTH_URL` | `https://<render-host>/health` |
 | `CADDY_SITE_ADDRESS` | Hostname only |
-| `RENDER_DEPLOY_HOOK` | Deploy hook whose path ends in `srv-...` |
+| `RENDER_DEPLOY_HOOK` | The Deploy Hook URL of the Render Web Service. The path ends in `srv-...` |
 | `RENDER_API_KEY` | A key that can read that service, its deploys, and its build log |
 
 Set later:
@@ -153,7 +153,7 @@ Set later:
 | `ANALYTICS_MEXC_FUTURES_API_KEY`, `ANALYTICS_MEXC_FUTURES_API_SECRET` | `BUILTIN_VENUES` contains `mexc_futures` |
 | Arcus address and signing names | `BUILTIN_VENUES` contains `arcus` |
 | `KILL_SWITCH` | Only to set the flag true. An absent value stays false |
-| Order keys `MEXC_API_*` and `MEXC_FUTURES_API_*` | A later `live` cutover. Not the first health check |
+| Order keys `MEXC_API_*` and `MEXC_FUTURES_API_*` | When you change `EXECUTION_MODE` to `live`. Until then the mode is `dry_run` and orders are not sent. Not the first health check |
 
 Names without values are listed in the template file `deploy/target.env.example`.
 
@@ -179,7 +179,7 @@ Names without values are listed in the template file `deploy/target.env.example`
 | `arcus` | Does not run | The Arcus address |
 | A comma-separated set | Runs only when `mexc_futures` is a member | The union of the selected rows |
 
-A registry row that names `mexc_spot` does not by itself require spot keys. The variable does. The example registry can be deployed with `BUILTIN_VENUES=none`.
+Whether the MEXC spot API keys are required is decided by `BUILTIN_VENUES`, not by `strategies.yml`. The example registry can be deployed with `BUILTIN_VENUES=none`.
 
 ## 9. Initial deploy
 
@@ -207,7 +207,17 @@ When the workflow finishes, carry out the checks in section 10.
 
 Compute the hashes with `sha256sum` on the seven live paths.
 
+A deploy that passes every check in this section is a successful deploy. The most recent successful deploy for that environment is the last successful deploy.
+
 ## 11. Ongoing deployments
+
+Run the deploy workflow again when you change any of the following:
+
+- the seven runtime files
+- `core-pin`
+- `uses`
+- `core_sha`
+- Render environment variables
 
 The first deploy is section 9. After that, the same workflow deploys a change.
 
@@ -219,7 +229,7 @@ The first deploy is section 9. After that, the same workflow deploys a change.
 
 ## 12. Recommended SHA
 
-The recommended SHA is the public core SHA that last passed the checks in section 10 for that environment. The first deploy that passes sets it. Each later deploy that passes the same checks replaces it. A failed deploy does not replace it, and it does not clear the previous value. Another caller's pin is a different record.
+The recommended SHA is the public core SHA of the last successful deploy for that environment. The first successful deploy sets it. Each later successful deploy replaces it. A failed deploy does not replace it, and it does not clear the previous value. Another caller's pin is a different record.
 
 Do not read the first success as the only SHA that can be recommended.
 
@@ -229,19 +239,19 @@ Rollback changes that caller's repository, that caller's host, and that caller's
 
 On a failed first deploy, set `DEPLOY_ANALYTICS` to false on that repository. Leave `venues: []` and the pin in place. A retry uses a new SSH key and a new database password. The workflow rolls the Render service back to the deploy that was live before the hook.
 
-If a deploy after an update fails, return to the last deploy that passed the checks in section 10. The workflow rolls the Render service back to the deploy that was live before that run. This return is not limited to the first deploy.
+If a deploy after an update fails, return to the last successful deploy. The workflow rolls the Render service back to the deploy that was live before that run. This return is not limited to the first deploy.
 
 Do not edit another caller's repository as part of this rollback.
 
 ## 14. Starter
 
-| This guide | Buildbook |
-| --- | --- |
-| Authority for this path | Follows this guide |
-| Short requirements and the commands | Console clicks for the reference accounts |
-| Secrets and variables by name | A checklist while pasting |
-| One minimal registry | Commented examples |
-| Success criteria | A filled run |
-| One rollback section | Failure notes |
+| Item | This guide | Buildbook |
+| --- | --- | --- |
+| Authority for this path | Yes | Follows this guide |
+| Requirements and commands | The short form | Console clicks for the reference accounts |
+| Secrets and variables | The names | A checklist while pasting |
+| Registry | One minimal registry | Commented examples |
+| Success criteria | The checks in section 10 | A filled run |
+| Rollback | One section | Failure notes |
 
 Starter adds verification, detail, checklists, screens, FAQ, and failure notes. It does not add a required fact.
