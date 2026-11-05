@@ -230,10 +230,23 @@ def futures_fill_events(orders: list[dict], codes: dict[str, str]):
 def sync_configured_venues() -> None:
     if not configured():
         return
-    _sync_spot()
-    _sync_futures()
-    _sync_arcus()
-    _sync_added()
+    from app.execution.order_executor import public_order_error
+
+    for name, worker in (
+        ("mexc_spot", _sync_spot),
+        ("mexc_futures", _sync_futures),
+        ("arcus", _sync_arcus),
+        ("added", _sync_added),
+    ):
+        try:
+            worker()
+        except Exception as exc:
+            logger.warning(
+                "strategy lots were not synced: %s %s: %s",
+                name,
+                type(exc).__name__,
+                public_order_error(exc),
+            )
 
 
 def _sync_added() -> None:
@@ -263,7 +276,18 @@ def _sync_spot() -> None:
     strategies = load_strategies()
     now = datetime.now(timezone.utc)
     since = int((now - timedelta(days=HISTORY_DAYS)).timestamp() * 1000)
-    symbols = sorted({strategy.symbol for strategy in strategies.values()})
+    symbols = sorted(
+        {
+            strategy.bound(deployment).symbol
+            for strategy in strategies.values()
+            for deployment in strategy.deployments
+            if deployment.enabled and deployment.venue == "mexc_spot"
+        }
+    )
+    if not symbols:
+        mark_synced("mexc_spot")
+        refresh_spot_from_store()
+        return
     orders = []
     for symbol in symbols:
         orders.extend(_with_symbol(exchange.fetch_orders(symbol, since, 1000) or [], symbol))

@@ -155,26 +155,32 @@ def execute_arcus(strategy, action: str, client_order_id: str, client: "ArcusCli
 
     def settle() -> None:
         follow = prepared["follow"]
-        if follow is not None:
-            follow()
-        _apply_lot(strategy.strategy_id, action, prepared["holder"]["result"], client_order_id)
+        try:
+            if follow is not None:
+                follow()
+        finally:
+            _apply_lot(strategy.strategy_id, action, prepared["holder"]["result"], client_order_id)
 
     if prepared["follow"] is not None:
 
         def finish() -> None:
+            failed = None
             try:
                 settle()
             except Exception as exc:
                 from app.execution.order_executor import public_order_error
-                from app.execution.protective_stop import hold_exit
-                from app.notifications.discord import order_failed, send_audit
 
-                reason = public_order_error(exc)
-                if hold_exit(kind="order_failed", reason=reason, average=None, realized=None):
-                    return
-                send_audit(order_failed(strategy.strategy_id, reason, venue=strategy.venue))
+                failed = public_order_error(exc)
+            closed = prepared["holder"]["result"]
+            if failed is None:
+                _report_arcus(strategy, action, closed, client_order_id, venue)
                 return
-            _report_arcus(strategy, action, prepared["holder"]["result"], client_order_id)
+            from app.execution.protective_stop import hold_exit
+            from app.notifications.discord import order_failed, send_audit
+
+            if hold_exit(kind="order_failed", reason=failed, average=None, realized=None):
+                return
+            send_audit(order_failed(strategy.strategy_id, failed, venue=strategy.venue))
 
         return LiveResult("accepted", True, follow_up=finish)
     settle()
@@ -182,6 +188,10 @@ def execute_arcus(strategy, action: str, client_order_id: str, client: "ArcusCli
     filled = closed.get("filled") or Decimal("0")
     if not isinstance(filled, Decimal):
         filled = Decimal(str(filled))
+    if action in ("COVER", "FLAT") and filled <= 0:
+        if _clear_flat_lot(venue, strategy):
+            return LiveResult("not_sent", False, "position already flat")
+        return LiveResult("order_failed", True, "filled base missing")
     return LiveResult(
         "accepted",
         True,
@@ -247,6 +257,51 @@ class ArcusClient:
             market_id, _name = MARKETS[symbol]
             self._set_leverage(market_id, book[symbol])
 
+    def position_size(self, symbol: str) -> Decimal | None:
+        if symbol not in MARKETS:
+            return None
+        market_id, name = MARKETS[symbol]
+        query = urlencode({"address": self.address, "accountIndex": ACCOUNT_INDEX})
+        status, payload = self.transport(
+            "GET",
+            f"{self.base}/v1/account?{query}",
+            None,
+            {"X-API-Key": self.public},
+        )
+        if status == 404:
+            return Decimal("0")
+        if status != 200 or not isinstance(payload, dict):
+            return None
+        positions = payload.get("positions")
+        if not positions:
+            return Decimal("0")
+        row = None
+        if isinstance(positions, dict):
+            row = positions.get(str(market_id)) or positions.get(market_id)
+            if row is None:
+                for item in positions.values():
+                    if isinstance(item, dict) and str(item.get("marketDisplayName") or "") == name:
+                        row = item
+                        break
+        elif isinstance(positions, list):
+            for item in positions:
+                if not isinstance(item, dict):
+                    continue
+                if str(item.get("marketId") or "") == str(market_id) or str(item.get("marketDisplayName") or "") == name:
+                    row = item
+                    break
+        if not isinstance(row, dict):
+            return Decimal("0")
+        for key in ("size", "netSize", "positionSize", "baseSize", "quantity"):
+            raw = row.get(key)
+            if raw in (None, ""):
+                continue
+            try:
+                return abs(Decimal(str(raw)))
+            except Exception:
+                return None
+        return None
+
     def prepare(self, action: str, symbol: str, quantity: Decimal, client_order_id: str, strategy_id: str) -> dict:
         if action not in _ACTIONS:
             raise ArcusError("unsupported action")
@@ -286,6 +341,8 @@ class ArcusClient:
                 "filled": Decimal("0"),
                 "remaining": quantity,
                 "market": None,
+                "fills": [],
+                "prices": [],
             }
         }
 
@@ -294,6 +351,13 @@ class ArcusClient:
             status = self._read(placed["orderId"])
             remaining = Decimal(str(status.get("remainingSize") or quantity))
             filled = Decimal(str(status.get("filledSize") or "0"))
+            extra = 0
+            while remaining <= 0 and filled < quantity and extra < 8:
+                self.sleeper(0.25)
+                status = self._read(placed["orderId"])
+                remaining = Decimal(str(status.get("remainingSize") or "0"))
+                filled = Decimal(str(status.get("filledSize") or filled))
+                extra += 1
             if remaining > 0:
                 self._cancel(market_id, placed["orderId"])
                 status = self._read(placed["orderId"])
@@ -303,6 +367,14 @@ class ArcusClient:
             limit_filled = filled
             fills = [(limit_id, limit_filled)] if limit_filled > 0 else []
             prices = [(limit_filled, _quoted_price(status))] if limit_filled > 0 else []
+            holder["result"] = {
+                "limit_order_id": placed["orderId"],
+                "filled": filled,
+                "remaining": remaining,
+                "market": None,
+                "fills": fills,
+                "prices": prices,
+            }
             if remaining > 0:
                 market = self._market_order(
                     action, strategy_id, client_order_id, name, market_id, spec, side, remaining, reduce_only
@@ -568,22 +640,43 @@ def _combined_price(prices) -> float | None:
     return float(cost / quantity)
 
 
-def _report_arcus(strategy, action: str, result: dict, client_order_id: str) -> None:
-    from app.notifications.discord import order_failed, order_success, send_audit
+def _report_arcus(strategy, action: str, result: dict, client_order_id: str, client) -> None:
+    from app.notifications.discord import order_failed, order_not_sent, order_success, send_audit
 
     filled = result.get("filled") or Decimal("0")
     if not isinstance(filled, Decimal):
         filled = Decimal(str(filled))
+    remaining = result.get("remaining")
+    if remaining is not None and not isinstance(remaining, Decimal):
+        remaining = Decimal(str(remaining))
     price = _combined_price(result.get("prices") or [])
     realized = _arcus_realized(strategy, action, filled, result, client_order_id)
     from app.execution.protective_stop import hold_exit
 
     if filled <= 0:
+        if action in ("COVER", "FLAT") and _clear_flat_lot(client, strategy):
+            if hold_exit(kind="order_not_sent", reason="position already flat", average=None, realized=None):
+                return
+            send_audit(
+                order_not_sent(
+                    strategy.strategy_id,
+                    strategy.symbol,
+                    action,
+                    float(strategy.size_quote),
+                    "position already flat",
+                    venue=strategy.venue,
+                )
+            )
+            return
         if hold_exit(kind="order_failed", reason="filled base missing", average=None, realized=None):
             return
         send_audit(order_failed(strategy.strategy_id, "filled base missing", venue=strategy.venue))
         return
-    if hold_exit(kind="order_success", reason="closed", average=price, realized=realized):
+    status = "closed"
+    if remaining is not None and remaining > 0:
+        text = format(remaining, "f").rstrip("0").rstrip(".")
+        status = f"partial remaining={text or '0'}"
+    if hold_exit(kind="order_success", reason=status, average=price, realized=realized):
         return
     send_audit(
         order_success(
@@ -591,12 +684,45 @@ def _report_arcus(strategy, action: str, result: dict, client_order_id: str) -> 
             strategy.symbol,
             action,
             float(strategy.size_quote),
-            "closed",
+            status,
             price,
             venue=strategy.venue,
             realized=realized,
         )
     )
+
+
+def _venue_position(client, symbol: str) -> Decimal | None:
+    reader = getattr(client, "position_size", None)
+    if not callable(reader):
+        return None
+    try:
+        size = reader(symbol)
+    except Exception:
+        return None
+    if size is None:
+        return None
+    if not isinstance(size, Decimal):
+        try:
+            size = Decimal(str(size))
+        except Exception:
+            return None
+    return abs(size)
+
+
+def _clear_lot(strategy_id: str) -> None:
+    with _lots_guard:
+        _ensure_loaded_locked()
+        _lots.pop(strategy_id, None)
+        _store_lot(strategy_id, Decimal("0"))
+
+
+def _clear_flat_lot(client, strategy) -> bool:
+    size = _venue_position(client, strategy.symbol)
+    if size is None or size > 0:
+        return False
+    _clear_lot(strategy.strategy_id)
+    return True
 
 
 def _arcus_realized(strategy, action: str, filled: Decimal, result: dict, client_order_id: str) -> Decimal | None:
