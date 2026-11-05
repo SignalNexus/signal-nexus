@@ -72,7 +72,7 @@ webhook はアラートを受けます。Analytics API は運用の記録を保�
 
 pin job は、それらが違うときに止まります。より新しい公開 SHA に上げるときは、三か所すべてを書き換えます。
 
-最小の SHA は `c301cb2f1d76344bb5126dc57efccd704eb74eb3` です。その commit は、`BUILTIN_VENUES` に `mexc_futures` が含まれるときだけ `deploy.futures_read` を実行します。同じ条件を持つ、より新しい公開コアができたときに置き換えます。
+最小の SHA は `7b6d8c0a03a6ec1510fa7f786a13ed2e39803523` です。その commit は、`BUILTIN_VENUES` に `mexc_futures` が含まれるときだけ `deploy.futures_read` を実行します。同じ条件を持つ、より新しい公開コアができたときに置き換えます。
 
 <a id="sec-3"></a>
 
