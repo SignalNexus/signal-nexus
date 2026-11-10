@@ -63,7 +63,10 @@ def positions_view(rows: list[dict], now: datetime) -> dict:
         opened = moment(row["opened_at"])
         price = None
         if unrealized is not None and quantity != 0:
-            price = (unrealized + spent) / quantity
+            if str(row.get("side") or "").lower() == "short":
+                price = (spent - unrealized) / quantity
+            else:
+                price = (unrealized + spent) / quantity
         risk = None
         if unrealized is not None and spent != 0:
             risk = unrealized / spent * Decimal("100")

@@ -449,6 +449,11 @@ def load_strategy_lots(connection, venue: str) -> dict[str, Decimal]:
     return {row[0]: _decimal(row[1]) for row in rows}
 
 
+def load_all_strategy_lots(connection) -> dict[tuple[str, str], Decimal]:
+    rows = connection.execute("SELECT venue, strategy_id, quantity FROM strategy_lots").fetchall()
+    return {(row[0], row[1]): _decimal(row[2]) for row in rows}
+
+
 def save_strategy_lot(connection, venue: str, strategy_id: str, quantity: Decimal) -> None:
     if quantity <= 0:
         connection.execute(

@@ -18,6 +18,7 @@ from app.analytics.report import (
     FillView,
     attach_volumes,
     final_fill_realized,
+    held_opens,
     mark_opens,
     month_forecast,
     period_rows,
@@ -33,6 +34,7 @@ from app.analytics.schema import (
     insert_audit,
     link_order,
     load_audits,
+    load_all_strategy_lots,
     load_fills,
     load_ingest_succeeded_at,
     load_latest_signal,
@@ -531,6 +533,7 @@ def trades(authorization: str | None = Header(default=None)) -> dict:
 def positions(authorization: str | None = Header(default=None)) -> dict:
     _require_secret(authorization)
     _closed, opens = reconstruct(_load_fill_views())
+    opens = _held_opens(opens)
     marked = mark_opens(opens, _mark_prices(opens))
     return {"positions": [_position_json(item) for item in marked]}
 
@@ -596,6 +599,7 @@ def _assemble_board(sources: tuple[list[FillView], list | None, datetime | None]
     fills, audit_rows, succeeded_at = sources
     closed, opens = reconstruct(fills)
     now = datetime.now(timezone.utc)
+    opens = _held_opens(opens)
     marked = mark_opens(opens, _mark_prices(opens))
     payload = {
         "pnl": _pnl_json(closed, now, forecast=True),
@@ -1101,6 +1105,19 @@ def _ticker_json(row: dict) -> dict:
     return _metric_json(row, "symbol")
 
 
+def _held_opens(opens):
+    try:
+        from app.execution.strategy_lots import configured, connect
+
+        if not configured():
+            return opens
+        with connect() as connection:
+            create_schema(connection)
+            return held_opens(opens, load_all_strategy_lots(connection))
+    except Exception:
+        return opens
+
+
 def _position_json(item) -> dict:
     return {
         "strategy_name": item.strategy_name,
@@ -1110,6 +1127,7 @@ def _position_json(item) -> dict:
         "quote_spent": _decimal(item.quote_spent),
         "opened_at": item.opened_at.isoformat(),
         "unrealized": None if item.unrealized is None else _decimal(item.unrealized),
+        "side": item.side or "",
     }
 
 

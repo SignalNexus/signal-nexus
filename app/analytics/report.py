@@ -178,6 +178,23 @@ def realized_for_closing_fill(history: list[FillView], closing: FillView) -> Dec
     return match.realized
 
 
+LOT_VENUES = {"arcus", "lighter"}
+
+
+def held_opens(opens: list[OpenPosition], lots: dict[tuple[str, str], Decimal] | None) -> list[OpenPosition]:
+    if lots is None:
+        return opens
+    kept = []
+    for position in opens:
+        if position.venue not in LOT_VENUES:
+            kept.append(position)
+            continue
+        held = lots.get((position.venue, position.strategy_name), Decimal("0"))
+        if held > 0:
+            kept.append(position)
+    return kept
+
+
 def mark_opens(opens: list[OpenPosition], prices: dict) -> list[OpenPosition]:
     marked: list[OpenPosition] = []
     for position in opens:
