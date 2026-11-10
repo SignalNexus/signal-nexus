@@ -70,7 +70,7 @@ These three are the same 40-character public SHA:
 
 The pin job stops when they differ. A newer core is written in all three places.
 
-The minimum SHA is `7b6d8c0a03a6ec1510fa7f786a13ed2e39803523`. That commit runs `deploy.futures_read` only when `BUILTIN_VENUES` contains `mexc_futures`. Replace it when a newer public core still contains that gate.
+The minimum SHA is `2e3cc5ee445c352d88e65a41a37bf7fdc5aa075d`. That commit runs `deploy.futures_read` only when `BUILTIN_VENUES` contains `mexc_futures`. Replace it when a newer public core still contains that gate.
 
 ## 3. Required runtime files
 
