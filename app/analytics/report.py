@@ -182,17 +182,35 @@ LOT_VENUES = {"arcus", "lighter"}
 
 
 def held_opens(opens: list[OpenPosition], lots: dict[tuple[str, str], Decimal] | None) -> list[OpenPosition]:
-    if lots is None:
-        return opens
-    kept = []
-    for position in opens:
-        if position.venue not in LOT_VENUES:
-            kept.append(position)
-            continue
-        held = lots.get((position.venue, position.strategy_name), Decimal("0"))
-        if held > 0:
-            kept.append(position)
-    return kept
+    # Fill reconstruction is the ledger. Lots do not hide a leftover short.
+    return list(opens)
+
+
+def reconstructed_open_quantity(fills: list[FillView], venue: str, strategy_id: str) -> Decimal:
+    _closed, opens = reconstruct(fills)
+    return sum(
+        (position.quantity for position in opens if position.venue == venue and position.strategy_name == strategy_id),
+        Decimal("0"),
+    )
+
+
+def fill_view_from_row(row: tuple) -> FillView:
+    return FillView(
+        trade_id=row[0],
+        symbol=row[1],
+        side=row[2],
+        quantity=row[3],
+        quote_spent=row[4],
+        quote_received=row[5],
+        fee=row[6],
+        filled_at=row[7],
+        strategy_name=row[8],
+        client_order_id=row[9],
+        fill_price=row[10],
+        fee_asset=row[11],
+        venue=row[12] if len(row) > 12 and row[12] else "mexc_spot",
+        exchange_client_order_id=row[13] if len(row) > 13 and row[13] else None,
+    )
 
 
 def mark_opens(opens: list[OpenPosition], prices: dict) -> list[OpenPosition]:

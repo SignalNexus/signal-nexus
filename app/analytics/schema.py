@@ -391,10 +391,7 @@ def load_order_links(connection) -> dict[str, tuple[str, datetime | None, Decima
     return {row[0]: (row[1], row[2], row[3]) for row in rows}
 
 
-def load_fills(connection) -> list[tuple]:
-    return connection.execute(
-        """
-        SELECT
+_FILL_COLUMNS = """
             trade_id,
             symbol,
             side,
@@ -409,9 +406,28 @@ def load_fills(connection) -> list[tuple]:
             fee_asset,
             venue,
             exchange_client_order_id
+"""
+
+
+def load_fills(connection) -> list[tuple]:
+    return connection.execute(
+        f"""
+        SELECT {_FILL_COLUMNS}
         FROM fills
         ORDER BY filled_at, trade_id
         """
+    ).fetchall()
+
+
+def load_strategy_fills(connection, venue: str, strategy_id: str) -> list[tuple]:
+    return connection.execute(
+        f"""
+        SELECT {_FILL_COLUMNS}
+        FROM fills
+        WHERE venue = %(venue)s AND strategy_name = %(strategy_id)s
+        ORDER BY filled_at, trade_id
+        """,
+        {"venue": venue, "strategy_id": strategy_id},
     ).fetchall()
 
 
