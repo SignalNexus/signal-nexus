@@ -205,9 +205,7 @@ def backtest_view(
             continue
         compared.append(_spot_comparison(name, venue, source, attached))
     for venue, name in futures_keys:
-        owners = [item for item in futures_keys if item[1] == name]
-        attached = backtests.get(name) if len(owners) == 1 else None
-        compared.append(_futures_comparison(name, venue, live.get((venue, name)), attached))
+        compared.append(_futures_comparison(name, venue, live.get((venue, name)), backtests.get(name)))
     compared.sort(
         key=lambda item: (
             item["rate_diff"] is None,
