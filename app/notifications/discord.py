@@ -464,6 +464,35 @@ def order_accepted(
     )
 
 
+def position_mismatch(venue: str, symbol: str, venue_size: Decimal, internal: Decimal) -> AuditMessage:
+    reason = f"venue {venue_size} internal {internal}"
+    return AuditMessage(
+        (
+            f"{_title('POSITION MISMATCH')}\n"
+            "Environment:\n"
+            f"{execution_mode()}\n"
+            "\n"
+            f"{_venue_lines(venue)}"
+            "Symbol:\n"
+            f"{symbol}\n"
+            "\n"
+            "Venue size:\n"
+            f"{venue_size}\n"
+            "\n"
+            "Internal size:\n"
+            f"{internal}\n"
+            "\n"
+            "Reason:\n"
+            "venue position is open and signal nexus is flat"
+        ),
+        kind="position_mismatch",
+        strategy="",
+        symbol=symbol,
+        reason=reason,
+        venue=venue,
+    )
+
+
 def order_failed(strategy: str, reason: str, *, venue: str | None = None) -> AuditMessage:
     return AuditMessage(
         (

@@ -129,6 +129,10 @@ def execute_futures(
         raise RuntimeError("unsupported action")
     try:
         load_futures_lots(exchange, strategies)
+        from app.execution.strategy_lots import configured
+
+        if configured():
+            refresh_futures_from_store()
     except Exception:
         return LiveResult("not_sent", False, "position history unavailable")
     exchange_id = exchange_client_order_id(
@@ -417,15 +421,10 @@ def _leverage(strategy: Strategy) -> int:
 
 
 def _arm(exchange, symbol: str, side: str, leverage: int) -> None:
-    # ccxt の MEXC は、証拠金モードと倍率を同じ changeLeverage に載せる。倍率がないと注文の前で止まる。
+    # changeLeverage の成功応答は {success, code} であり、レバレッジ行の配列ではない。
+    # set_margin_mode はその応答を行配列として [0] から読むので、注文の前で落ちる。
+    # 切り替える行はこちらで 1 件指定し、応答は解釈しない。
     short = side == "sell"
-    _call(
-        exchange,
-        "set_margin_mode",
-        "isolated",
-        symbol,
-        {"leverage": leverage, "direction": "short" if short else "long"},
-    )
     _call(
         exchange,
         "set_leverage",

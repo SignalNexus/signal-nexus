@@ -213,7 +213,7 @@ if ! command -v caddy >/dev/null 2>&1; then
   apt_get install -y caddy
 fi
 sudo -n mkdir -p /etc/systemd/system/caddy.service.d
-printf '%s\n' '[Service]' "EnvironmentFile=${SITE_FILE}" | sudo -n tee /etc/systemd/system/caddy.service.d/site.conf >/dev/null
+printf '%s\n' '[Service]' 'EnvironmentFile=/home/ubuntu/site.env' | sudo -n tee /etc/systemd/system/caddy.service.d/site.conf >/dev/null
 sudo -n systemctl daemon-reload
 sudo -n cp deploy/caddy/Caddyfile /etc/caddy/Caddyfile
 sudo -n env CADDY_SITE_ADDRESS="$CADDY_SITE_ADDRESS" caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile

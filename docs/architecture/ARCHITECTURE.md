@@ -170,6 +170,14 @@ MEXC Spot and MEXC Futures are current order paths. Read keys and order keys are
 
 Arcus is a current order path. Fills are read with `ANALYTICS_ARCUS_ADDRESS` and are not signed. Orders use `ARCUS_ADDRESS` and `ARCUS_SIGNING_KEY`. Those are two settings. They are not required to be two different addresses. One wallet can be stored in both names. The signing key is required only for orders.
 
+## Execution contract
+
+Strategy quantity is `strategy_lots`, written by `note_fill`. A venue adapter translates the exchange response. It does not decide that a missing order was filled, and it does not assign one market net to every strategy on that market.
+
+An order is unknown when the submit call might have reached the venue and the fill was not observed. Unknown does not change the lot. A flat venue clears a strategy lot only when that strategy is the only positive lot on the market. That rule lives in `app.execution.contract`.
+
+Arcus finishes the touch order and any remainder before `execute_arcus` returns. The result is accepted, rejected, or `order_failed`. It does not hand the caller a follow-up. MEXC Futures reloads `strategy_lots` at the start of each live order when the analytics database is configured. The in-memory copy is a cache of that read.
+
 ## Data flow
 
 1. TradingView posts the alert to Render.

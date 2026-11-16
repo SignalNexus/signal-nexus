@@ -374,6 +374,17 @@ def _sync_lots_forever() -> None:
             logger.warning("strategy lots were not synced")
 
 
+def _watch_position_gaps_forever() -> None:
+    while True:
+        time.sleep(60)
+        try:
+            from app.execution.position_gap import watch_once
+
+            watch_once()
+        except Exception:
+            logger.warning("position gap was not checked")
+
+
 def _import_venue_fills_forever() -> None:
     global _warm_stamp
     while True:
@@ -438,6 +449,7 @@ async def _lifespan(_app):
     Thread(target=_preload_mexc, daemon=True).start()
     if os.environ.get("ANALYTICS_DATABASE_URL", "").strip():
         Thread(target=_sync_lots_forever, daemon=True).start()
+        Thread(target=_watch_position_gaps_forever, daemon=True).start()
         Thread(target=_import_venue_fills_forever, daemon=True).start()
         if os.environ.get("PROTECTIVE_STOP_WATCH", "1") != "0":
             from app.execution.protective_stop import watch_forever
