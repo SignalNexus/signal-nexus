@@ -46,6 +46,7 @@ _CARD_LINES = {
     "mexc_futures": ("MEXC", "Futures"),
     "arcus": ("Arcus", "Perpetual"),
     "lighter": ("Lighter", "Perpetual"),
+    "qfex": ("QFEX", "Perpetual"),
     "txflow": ("TxFlow", "Perpetual"),
 }
 
@@ -813,7 +814,7 @@ def _orders(view: dict | None, fetched_at: datetime | None) -> str:
 def _order_body(view: dict | None, fetched_at: datetime | None, venue_id: str) -> str:
     if view is None:
         return '<p class="empty">Unable to retrieve</p>'
-    if venue_id in {"arcus", "lighter"}:
+    if venue_id in {"arcus", "lighter", "qfex"}:
         left_name, right_name = count_label("LONG", "orders"), count_label("SHORT", "orders")
         left = sum(1 for row in view["rows"] if row["side"] == "LONG")
         right = sum(1 for row in view["rows"] if row["side"] == "SHORT")
