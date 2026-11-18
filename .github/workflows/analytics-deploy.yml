@@ -81,6 +81,12 @@ on:
         required: false
       MEXC_FUTURES_API_SECRET:
         required: false
+      QFEX_PUBLIC_KEY:
+        required: false
+      QFEX_SECRET_KEY:
+        required: false
+      QFEX_API_VERSION:
+        required: false
       RENDER_DEPLOY_HOOK:
         required: false
       RENDER_API_KEY:
@@ -188,6 +194,9 @@ jobs:
           MEXC_API_SECRET: ${{ secrets.MEXC_API_SECRET }}
           MEXC_FUTURES_API_KEY: ${{ secrets.MEXC_FUTURES_API_KEY }}
           MEXC_FUTURES_API_SECRET: ${{ secrets.MEXC_FUTURES_API_SECRET }}
+          QFEX_PUBLIC_KEY: ${{ secrets.QFEX_PUBLIC_KEY }}
+          QFEX_SECRET_KEY: ${{ secrets.QFEX_SECRET_KEY }}
+          QFEX_API_VERSION: ${{ secrets.QFEX_API_VERSION }}
           PYTHONPATH: ${{ github.workspace }}/core
         run: |
           python3 -m deploy.write_env "$RUNNER_TEMP/analytics.env"

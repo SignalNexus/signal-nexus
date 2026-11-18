@@ -1,7 +1,7 @@
 import os
 import sys
 
-from deploy.envfile import parse_builtin_venues, secret_keys_for, upsert_env
+from deploy.envfile import parse_builtin_venues, qfex_secret_keys, secret_keys_for, upsert_env
 
 
 def main() -> None:
@@ -10,7 +10,12 @@ def main() -> None:
     if not raw.strip():
         print("BUILTIN_VENUES is unset", file=sys.stderr)
         sys.exit(1)
-    keys = secret_keys_for(parse_builtin_venues(raw))
+    try:
+        qfex = qfex_secret_keys()
+    except ValueError as error:
+        print(error, file=sys.stderr)
+        sys.exit(1)
+    keys = secret_keys_for(parse_builtin_venues(raw)) + qfex
     missing = [key for key in keys if not os.environ.get(key)]
     if missing:
         print("missing env names: " + ", ".join(missing), file=sys.stderr)

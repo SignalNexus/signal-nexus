@@ -1,3 +1,6 @@
+import os
+
+
 def env_assignment(key: str, value: str) -> str:
     escaped = value.replace("\\", "\\\\").replace('"', '\\"')
     return f'{key}="{escaped}"'
@@ -86,6 +89,11 @@ MEXC_FUTURES_SECRET_KEYS = (
     "ANALYTICS_MEXC_FUTURES_API_KEY",
     "ANALYTICS_MEXC_FUTURES_API_SECRET",
 )
+QFEX_SECRET_KEYS = (
+    "QFEX_PUBLIC_KEY",
+    "QFEX_SECRET_KEY",
+    "QFEX_API_VERSION",
+)
 SECRET_KEYS = ALWAYS_SECRET_KEYS + ARCUS_SECRET_KEYS + MEXC_SPOT_SECRET_KEYS + MEXC_FUTURES_SECRET_KEYS
 
 
@@ -104,3 +112,14 @@ def secret_keys_for(venues: set[str]) -> tuple[str, ...]:
     if "mexc_futures" in venues:
         keys.extend(MEXC_FUTURES_SECRET_KEYS)
     return tuple(keys)
+
+
+def qfex_secret_keys(source: dict[str, str] | None = None) -> tuple[str, ...]:
+    values = os.environ if source is None else source
+    present = [key for key in QFEX_SECRET_KEYS if values.get(key, "").strip()]
+    if not present:
+        return ()
+    if len(present) != len(QFEX_SECRET_KEYS):
+        missing = [key for key in QFEX_SECRET_KEYS if not values.get(key, "").strip()]
+        raise ValueError("missing env names: " + ", ".join(missing))
+    return QFEX_SECRET_KEYS
