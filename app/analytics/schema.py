@@ -162,8 +162,11 @@ STATEMENTS = (
 
 
 def create_schema(connection) -> None:
-    for statement in STATEMENTS:
-        connection.execute(statement)
+    # A later statement has to change this name. Repeating the DDL takes an exclusive lock and stalls the positions page.
+    ready = connection.execute("SELECT to_regclass('public.strategy_stops')").fetchone()
+    if ready is None or ready[0] is None:
+        for statement in STATEMENTS:
+            connection.execute(statement)
     if connection.execute("SELECT to_regclass('public.arcus_lots')").fetchone()[0] is not None:
         connection.execute(
             """
