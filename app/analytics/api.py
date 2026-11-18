@@ -902,6 +902,7 @@ def _load_summary_sources() -> tuple[list[FillView], list | None, datetime | Non
 
 _mark_lock = Lock()
 _last_marks: dict[tuple[str, str], Decimal] = {}
+MARK_TIMEOUT = 2.5
 
 
 def _clear_mark_cache() -> None:
@@ -937,19 +938,19 @@ def _mark_prices(opens) -> dict:
                 response = httpx.get(
                     "https://contract.mexc.com/api/v1/contract/ticker",
                     params={"symbol": symbol.replace("/", "_")},
-                    timeout=2.5,
+                    timeout=MARK_TIMEOUT,
                 )
             elif venue == "mexc_spot":
                 response = httpx.get(
                     "https://api.mexc.com/api/v3/ticker/price",
                     params={"symbol": symbol.replace("/", "")},
-                    timeout=2.5,
+                    timeout=MARK_TIMEOUT,
                 )
             elif venue == "arcus":
                 response = httpx.get(
                     "https://api.arcus.xyz/v1/markets",
                     params={"market": symbol.replace("/", "-")},
-                    timeout=2.5,
+                    timeout=MARK_TIMEOUT,
                 )
             else:
                 from app.execution.venue_port import port_for
@@ -959,7 +960,13 @@ def _mark_prices(opens) -> dict:
                     return pair, None
                 from app.venues import order_symbol
 
-                return pair, port.mark(order_symbol(symbol, venue))
+                one = ThreadPoolExecutor(max_workers=1)
+                try:
+                    return pair, one.submit(port.mark, order_symbol(symbol, venue)).result(timeout=MARK_TIMEOUT)
+                except Exception:
+                    return pair, None
+                finally:
+                    one.shutdown(wait=False, cancel_futures=True)
             response.raise_for_status()
             return pair, _public_last(response.json(), venue)
         except Exception:
