@@ -403,6 +403,7 @@
 
   function page(model) {
     return (
+      `<div class="pv-lockup"><img class="pv-mark" src="/portal/pnl-logo.png" alt=""><div><div class="pv-lockup-name"><strong>SIGNAL NEXUS</strong><span class="pv-engine">QUANT ENGINE</span></div><p>Automated Strategy P&amp;L &amp; Volume Analytics</p></div></div>` +
       controls() +
       cards(model.kpis) +
       chartCard(model) +

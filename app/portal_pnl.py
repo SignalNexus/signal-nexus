@@ -30,6 +30,12 @@ _STRATEGY_COLORS = ("#14F195", "#FF4D6D", "#80ECFF", "#9945FF", "#FBBF24", "#549
 _SCRIPT = Path(__file__).with_name("portal_pnl.js").read_text(encoding="utf-8")
 _STYLE = """
 .pv { display: grid; gap: 16px; margin-top: 16px; color: #e2e8f0; }
+.pv-lockup { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.pv-mark { width: 56px; height: 56px; flex: none; border-radius: 14px; object-fit: cover; }
+.pv-lockup-name { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.pv-lockup strong { font-size: 18px; letter-spacing: .06em; }
+.pv-engine { border: 1px solid rgba(153,69,255,.75); border-radius: 999px; padding: 2px 8px; color: #d7b3ff; font-size: 11px; letter-spacing: .08em; }
+.pv-lockup p { margin: 4px 0 0; color: #94a3b8; font-size: 13px; }
 .pv-pin { position: sticky; top: var(--pin-h, 0px); z-index: 5; background: #111; }
 .pv-rest { position: sticky; top: calc(var(--pin-h, 0px) + var(--pv-pin-h, 0px)); z-index: 5; background: #111; }
 .pv button, .pv select { background: transparent; color: inherit; border: 0; padding: 0; font-size: 13px; }

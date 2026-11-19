@@ -4,11 +4,12 @@ import os
 import time
 from contextvars import ContextVar
 from datetime import datetime, timezone
+from pathlib import Path
 from threading import Lock
 
 import httpx
 from fastapi import APIRouter, Form, Request
-from fastapi.responses import HTMLResponse, RedirectResponse, Response
+from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse, Response
 
 from app.core.security import portal_password_matches
 from app.execution.mexc_open_orders import restore_open_orders
@@ -18,6 +19,7 @@ from app.portal_pages import STYLE, login_page, render_analytics, render_dashboa
 from app.portal_text import html_lang, t
 
 router = APIRouter()
+_PNL_LOGO = Path(__file__).resolve().parent / "static" / "pnl-logo.png"
 COOKIE = "portal_session"
 MAX_AGE = 30 * 24 * 60 * 60
 _dashboard_summary: ContextVar[bool] = ContextVar("dashboard_summary", default=False)
@@ -53,6 +55,11 @@ def trading_page(request: Request, view: str = "positions") -> HTMLResponse:
     else:
         board = _analytics_slice("/api/positions", "positions")
     return _html(render_trading(view, board, balances, orders, fetched_at))
+
+
+@router.get("/portal/pnl-logo.png", include_in_schema=False)
+def pnl_logo() -> FileResponse:
+    return FileResponse(_PNL_LOGO, media_type="image/png", headers={"Cache-Control": "public, max-age=86400"})
 
 
 @router.get("/portal/analytics")
