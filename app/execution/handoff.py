@@ -1,9 +1,14 @@
+import logging
 import os
+import re
 from decimal import Decimal
 
 import httpx
 
 from app.execution.live import LiveResult
+
+logger = logging.getLogger(__name__)
+_URL = re.compile(r"https?://\S+")
 
 
 class RemoteError(RuntimeError):
@@ -23,8 +28,10 @@ def send(method: str, path: str, body: dict | None, *, timeout: float, label: st
             headers={"Authorization": f"Bearer {secret}"},
             timeout=timeout,
         )
-    except httpx.HTTPError:
-        raise RemoteError(f"{label} executor was not reached") from None
+    except httpx.HTTPError as exc:
+        detail = _transport_detail(exc)
+        logger.warning("%s executor was not reached: %s", label, detail)
+        raise RemoteError(f"{label} executor was not reached: {detail}") from exc
     if response.status_code != 200:
         reason = ""
         try:
@@ -41,6 +48,18 @@ def send(method: str, path: str, body: dict | None, *, timeout: float, label: st
     if not isinstance(payload, dict):
         raise RemoteError(f"{label} executor was not accepted")
     return payload
+
+
+def _transport_detail(exc: BaseException) -> str:
+    text = " ".join(str(exc).split())
+    secret = os.environ.get("ANALYTICS_API_SECRET", "")
+    if secret:
+        text = text.replace(secret, "")
+    text = " ".join(_URL.sub("", text).split())
+    lowered = text.lower()
+    if not text or "secret" in lowered or "apikey" in lowered or "api_key" in lowered:
+        return type(exc).__name__
+    return f"{type(exc).__name__}: {text}"[:160]
 
 
 def live_result(payload: dict, *, with_quote: bool) -> LiveResult:
