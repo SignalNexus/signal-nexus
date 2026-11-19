@@ -88,7 +88,7 @@ Copy each example to the live name before the first deploy. You may edit the val
 
 `locale.yml` is the portal language and clock. `month_target.yml` is the month target. `ops_schedule.yml` is the operating schedule. `protective_exit.yml` is the protective-exit map. `strategies.yml` is the registry. `strategy_results.yml` holds result labels. `venues.yml` is the runtime catalog. A venue with `enabled: false` stays out of the enabled set.
 
-`roi_basis.yml` is optional and is not one of the seven. Copy `config/examples/roi_basis.yml.example` to `config/roi_basis.yml` when ROI (%) should follow a capital schedule. Each row has an inclusive `start`, `end`, and `capital_usd`. Ranges must not overlap. A fill uses the row that covers its portal date.
+`roi_basis.yml` is optional and is not one of the seven. Copy `config/examples/roi_basis.yml.example` to `config/roi_basis.yml` when ROI (%) should follow a capital schedule. Each row has an inclusive `start`, `end`, and `capital_usd`. Ranges must not overlap. A fill uses the row that covers its UTC date, the same cut as dashboard PnL.
 
 `venueadd/venues.yaml` is not one of the seven. Leave it as `venues: []` until a venue is purchased.
 

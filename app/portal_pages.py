@@ -380,6 +380,7 @@ def render_dashboard(board: dict | None) -> str:
     if board is not None:
         parts.append(_pnl(board, now))
         parts.append(_strategy_summary(board))
+        parts.append(_pnl_vol_link())
         parts.append(_fold_script())
     actions = _fold_actions() if board is not None else ""
     return _shell("dashboard", "Dashboard", "", "".join(parts), actions=actions)
@@ -703,6 +704,18 @@ def _strategy_summary(board: dict) -> str:
           {body}
         </table>
         <a class="more" href="/portal/analytics?view=strategies">{t("Strategies を開く")}</a>
+      </div>
+    </section>
+    """
+
+
+def _pnl_vol_link() -> str:
+    return f"""
+    <section class="block" aria-label="PnL・Vol">
+      <p class="eyebrow">PnL・Vol</p>
+      <p class="hint">{t("日次・週次・月次・年次の損益と出来高。日付の区切りは Dashboard の PnL と同じ UTC。")}</p>
+      <div class="panel">
+        <a class="more" href="/portal/analytics">{t("PnL・Vol を開く")}</a>
       </div>
     </section>
     """

@@ -168,7 +168,7 @@ def _payload(rows: list[dict]) -> dict:
     return {
         "now": now.isoformat(),
         "asOf": now.astimezone(zone).strftime("%Y/%m/%d %H:%M"),
-        "zone": getattr(zone, "key", "Asia/Tokyo"),
+        "zone": "UTC",
         "bases": [
             {
                 "start": row["start"].isoformat(),
@@ -180,7 +180,7 @@ def _payload(rows: list[dict]) -> dict:
         "venues": _venues(trades),
         "strategies": _strategies(trades),
         "trades": trades,
-        "copy": _copy(str(getattr(zone, "key", "Asia/Tokyo"))),
+        "copy": _copy(),
     }
 
 
@@ -259,7 +259,7 @@ def _decimal(value) -> Decimal:
     return Decimal(str(value))
 
 
-def _copy(zone: str) -> dict:
+def _copy() -> dict:
     if english():
         return {
             "frames": {"Daily": "Daily", "Weekly": "Weekly", "Monthly": "Monthly", "Annually": "Annually"},
@@ -272,7 +272,7 @@ def _copy(zone: str) -> dict:
             "last7": "Last 7 days",
             "previous": "Previous period",
             "next": "Next period",
-            "roiBasis": "ROI uses {amount} from {start} to {end}. Days follow the portal clock (" + zone + ").",
+            "roiBasis": "ROI uses {amount} from {start} to {end}. Days follow UTC, the same cut as dashboard PnL.",
             "roiMore": "Other ranges apply on their own dates.",
             "roiMissing": "No ROI range covers today. Set start, end, and capital_usd in roi_basis.yml.",
             "roiNone": "ROI basis is not set. Add roi_basis.yml.",
@@ -344,7 +344,7 @@ def _copy(zone: str) -> dict:
         "last7": "直近7日間",
         "previous": "前の期間",
         "next": "次の期間",
-        "roiBasis": "ROI は {start} から {end} まで {amount} です。日付はポータル時計（" + zone + "）です。",
+        "roiBasis": "ROI は {start} から {end} まで {amount} です。日付の区切りは Dashboard の PnL と同じ UTC です。",
         "roiMore": "ほかの期間は、その日付の基準資金を使います。",
         "roiMissing": "今日を含む ROI の期間がありません。roi_basis.yml に start、end、capital_usd を書いてください。",
         "roiNone": "ROI の基準資金が未設定です。roi_basis.yml を追加してください。",
