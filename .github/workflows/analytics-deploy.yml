@@ -559,7 +559,7 @@ jobs:
             roi_sha="$(sha256sum caller/config/roi_basis.yml | awk '{print $1}')"
             echo "roi_basis.yml sha256 ${roi_sha}"
             scp $ssh_opts caller/config/roi_basis.yml "$target:$CORE_DIRECTORY/config/roi_basis.yml.new"
-            remote_roi="$(ssh $ssh_opts "$target" "sha256sum '$CORE_DIRECTORY/config/roi_basis.yml.new'" | awk '{print $1}')
+            remote_roi="$(ssh $ssh_opts "$target" "sha256sum '$CORE_DIRECTORY/config/roi_basis.yml.new'" | awk '{print $1}')"
             if [[ "$remote_roi" != "$roi_sha" ]]; then
               echo "roi_basis.yml.new sha256 ${remote_roi} != ${roi_sha}" >&2
               ssh $ssh_opts "$target" "rm -f '$CORE_DIRECTORY/config/roi_basis.yml.new'"
