@@ -172,6 +172,7 @@
     chartPoints = model.points;
     hotIdx = null;
     mount.innerHTML = page(model);
+    if (window.fitPin) window.fitPin();
   }
 
   function buildModel() {
@@ -427,7 +428,7 @@
     const clear = state.venue !== "ALL" || state.strategy !== "ALL"
       ? `<button type="button" class="pv-clear" data-act="clear">${esc(copy.clear)}</button>`
       : "";
-    return `<section class="pv-card pv-controls">
+    return `<div class="pv-pin"><section class="pv-card pv-controls">
       <div class="pv-row">
         <div class="pv-row-l">
           <div class="pv-seg">${frames}</div>
@@ -443,13 +444,17 @@
       </div>
       <div class="pv-filters">
         <div class="pv-pills"><span class="pv-k">${esc(copy.venues)}</span>${venues}</div>
+      </div>
+    </section></div>
+    <div class="pv-rest"><section class="pv-card pv-controls">
+      <div class="pv-filters">
         <label class="pv-strategy"><span class="pv-k">${esc(copy.strategy)}</span>
           <select data-act="strategy">${strategies}</select>
         </label>
         ${clear}
       </div>
       <p class="pv-basis">${esc(basisNote())}</p>
-    </section>`;
+    </section></div>`;
   }
 
   function periodPicker() {

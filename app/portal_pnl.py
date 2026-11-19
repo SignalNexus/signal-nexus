@@ -30,6 +30,8 @@ _STRATEGY_COLORS = ("#14F195", "#FF4D6D", "#80ECFF", "#9945FF", "#FBBF24", "#549
 _SCRIPT = Path(__file__).with_name("portal_pnl.js").read_text(encoding="utf-8")
 _STYLE = """
 .pv { display: grid; gap: 16px; margin-top: 16px; color: #e2e8f0; }
+.pv-pin { position: sticky; top: var(--pin-h, 0px); z-index: 5; background: #111; }
+.pv-rest { position: sticky; top: calc(var(--pin-h, 0px) + var(--pv-pin-h, 0px)); z-index: 5; background: #111; }
 .pv button, .pv select { background: transparent; color: inherit; border: 0; padding: 0; font-size: 13px; }
 .pv button { cursor: pointer; }
 .pv-card { background: #121822; border: 1px solid rgba(148,163,184,.22); border-radius: 16px; padding: 16px; }
@@ -144,6 +146,9 @@ _STYLE = """
 @media (max-width: 1100px) {
   .pv-kpis { grid-template-columns: 1fr 1fr; }
   .pv-months { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 799px) {
+  .pv-rest { position: static; }
 }
 @media (max-width: 720px) {
   .pv-kpis, .pv-months, .pv-cal-grid, .pv-dow { grid-template-columns: 1fr 1fr; }

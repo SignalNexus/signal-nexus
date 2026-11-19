@@ -108,7 +108,9 @@ STYLE = """
 body { margin: 0; background: #111; color: var(--text); font-family: "Segoe UI", "Hiragino Sans", sans-serif; font-size: 16px; }
 a { color: inherit; text-decoration: none; }
 button, select { background: transparent; color: var(--text); border: 1px solid var(--line); font-size: 16px; padding: 8px 14px; }
-.shell { background: var(--dark); min-height: 100vh; }
+html:has(.shell), body:has(.shell) { height: 100%; }
+body:has(.shell) { overflow: hidden; }
+.shell { background: var(--dark); height: 100%; display: flex; flex-direction: column; }
 .brand {
   display: inline-block; margin: 0 0 24px; font-size: 22px; font-weight: 700;
   background-image: linear-gradient(90deg, #9945ff 0%, #8752f3 24%, #5497d5 46%, #43b4ca 58%, #28e0b9 78%, #14f195 100%);
@@ -137,7 +139,26 @@ h2 { margin: 0; font-size: 20px; }
   background: var(--dark); border-top: 1px solid var(--line); z-index: 2;
 }
 .tabs a { text-align: center; font-size: 11px; padding: 12px 2px; }
-.main { padding: 16px 16px 84px; min-width: 0; }
+.main { --page-pad: 16px; --pin-h: 0px; --pv-pin-h: 0px; padding: 16px 16px 84px; min-width: 0; flex: 1 1 auto; min-height: 0; overflow: auto; }
+.pin {
+  position: sticky; top: 0; z-index: 6; background: var(--dark);
+  margin: 0 calc(var(--page-pad) * -1); padding: 8px var(--page-pad) 10px;
+}
+.pin .switch, .pin .summary, .pin .band { margin-top: 8px; }
+.pin .switch:first-child, .pin .block:first-child { margin-top: 0; }
+.local-pin {
+  position: sticky; top: var(--pin-h); z-index: 4; background: var(--panel); padding-bottom: 8px;
+}
+table.stick { border-collapse: separate; border-spacing: 0; }
+table.stick thead th {
+  position: sticky; top: var(--pin-h); z-index: 3; background: var(--dark);
+}
+[data-pin-scope] table.stick thead th { top: var(--local-top, var(--pin-h)); background: var(--panel); }
+[data-pin-scope]:not(.is-open) .pager { display: none !important; }
+.pager { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: 12px; }
+.pager[hidden] { display: none !important; }
+.pager span { color: var(--muted); font-variant-numeric: tabular-nums; }
+.pager button[disabled] { opacity: .35; }
 .eyebrow { margin: 0 0 10px; color: var(--violet); font-size: 13px; }
 .hint { margin: 8px 0 0; color: var(--muted); font-size: 13px; }
 .hint.stale { color: var(--amber); }
@@ -225,6 +246,8 @@ td.big { font-size: 20px; font-weight: 600; }
 .login input { font-size: 16px; padding: 10px; background: var(--dark); color: var(--text); border: 1px solid var(--line); }
 @media (min-width: 800px) {
   .shell { display: grid; grid-template-columns: 248px minmax(0, 1fr); }
+  .side, .main { min-height: 0; overflow: auto; }
+  .main { --page-pad: 24px; }
   .side { display: block; padding: 24px 16px; border-right: 1px solid var(--line); }
   .side a.brand { font-size: 32px; line-height: 1.15; white-space: nowrap; }
   .tabs { display: none; }
@@ -344,6 +367,13 @@ button.fold:hover, button.fold:focus-visible { color: var(--text); }
 }
 @media (max-width: 799px) {
   .split { grid-template-columns: 1fr; }
+  .pin .today-grid {
+    display: flex; flex-wrap: nowrap; gap: 12px; overflow-x: auto; align-items: flex-end;
+  }
+  .pin .today-grid .metric { flex: 0 0 auto; }
+  .pin .hero { grid-column: auto; }
+  .pin .metric strong { font-size: 16px; }
+  .pin .hero strong { font-size: 22px; }
 }
 """
 
@@ -373,8 +403,10 @@ def render_dashboard(board: dict | None) -> str:
     if schedule:
         ops = [row for row in schedule if row["state"] in {"Upcoming", "Overdue"}]
     parts = [_health(board, now)]
+    pin = ""
     if board is not None:
-        parts.insert(0, _today(board))
+        pin, today_rest = _today(board)
+        parts.insert(0, today_rest)
         parts.insert(1, _risk(board, now))
     parts.insert(2 if board is not None else 0, _operations(ops))
     if board is not None:
@@ -383,7 +415,7 @@ def render_dashboard(board: dict | None) -> str:
         parts.append(_pnl_vol_link())
         parts.append(_fold_script())
     actions = _fold_actions() if board is not None else ""
-    return _shell("dashboard", "Dashboard", "", "".join(parts), actions=actions)
+    return _shell("dashboard", "Dashboard", "", "".join(parts), actions=actions, pin=pin)
 
 
 def render_trading(view: str, board: dict | None, balances, orders, fetched_at: datetime | None) -> str:
@@ -412,7 +444,8 @@ def render_trading(view: str, board: dict | None, balances, orders, fetched_at: 
     elif current == "balances":
         body = _balances(balances, fetched_at)
     else:
-        body = _positions(None if board is None else board.get("positions") or [], now)
+        pin, body = _positions(None if board is None else board.get("positions") or [], now)
+        return _shell("trading", "Trading", switch, body, actions=actions, pin=pin)
     return _shell("trading", "Trading", switch, body, actions=actions)
 
 
@@ -431,15 +464,17 @@ def render_analytics(view: str, board: dict | None, backtests: dict, trades: lis
         "strategies": ("Active Strategies", "Profitable Strategies", "Total Realized PnL", "Average PF"),
         "backtest": ("Compared Strategies", "Live Average PF", "Backtest Average PF", "Largest Gap Strategy"),
     }
+    pin = ""
     if current == "pnl":
         body = render_pnl_vol(trades)
     elif board is None:
-        body = _blank_summary(labels[current])
+        pin = _blank_summary(labels[current])
+        body = ""
     elif current == "backtest":
-        body = _backtests(backtest_view(board["strategy_rows"], backtests))
+        pin, body = _backtests(backtest_view(board["strategy_rows"], backtests))
     else:
-        body = _strategies(strategies_view(board["strategy_rows"]))
-    return _shell("analytics", "Analytics", switch, body)
+        pin, body = _strategies(strategies_view(board["strategy_rows"]))
+    return _shell("analytics", "Analytics", switch, body, pin=pin, stick_switch=True)
 
 
 def render_operations(view: str, audits) -> str:
@@ -452,21 +487,28 @@ def render_operations(view: str, audits) -> str:
         ),
         current,
     )
+    pin = ""
     if current == "audit":
-        body = _audits(audits_view(None if audits is None else audits))
+        pin, body = _audits(audits_view(None if audits is None else audits))
     else:
         today = datetime.now(portal_zone()).date()
         body = _schedule(read_schedule(today))
-    return _shell("operations", "Operations", switch, body)
+    return _shell("operations", "Operations", switch, body, pin=pin, stick_switch=True)
 
 
-def _shell(active: str, title: str, switch: str, body: str, actions: str = "") -> str:
+def _shell(active: str, title: str, switch: str, body: str, actions: str = "", pin: str = "", stick_switch: bool = False) -> str:
     side = []
     tabs = []
     for key, label, href in NAV:
         current = ' aria-current="page"' if key == active else ""
         side.append(f'<a href="{href}"{current}>{label}</a>')
         tabs.append(f'<a href="{href}"{current}>{label}</a>')
+    if stick_switch or pin:
+        pinned = f'<div class="pin" id="page-pin">{switch if stick_switch else ""}{pin}</div>'
+        loose_switch = "" if stick_switch else switch
+    else:
+        pinned = ""
+        loose_switch = switch
     return f"""
     <div class="shell">
       <nav class="side" aria-label="{t("行き先")}"><a class="brand" href="/portal">Signal Nexus</a>{''.join(side)}</nav>
@@ -475,11 +517,13 @@ def _shell(active: str, title: str, switch: str, body: str, actions: str = "") -
           <div class="title"><a class="brand phone-brand" href="/portal">Signal Nexus</a><h2>{escape(title)}</h2></div>
           {actions or '<form method="post" action="/portal/logout"><button type="submit">Logout</button></form>'}
         </header>
-        {switch}
+        {loose_switch}
+        {pinned}
         {body}
       </div>
       <nav class="tabs" aria-label="{t("行き先")}">{''.join(tabs)}</nav>
     </div>
+    {_pin_script()}
     """
 
 
@@ -489,12 +533,15 @@ _CHEVRON = (
 )
 
 
-def _fold(body: str) -> str:
+def _fold_button() -> str:
     return (
         f'<button type="button" class="fold" aria-expanded="false" aria-label="{t("内訳を開く")}">'
         f"{_CHEVRON}</button>"
-        f'<div class="fold-body" hidden>{body}</div>'
     )
+
+
+def _fold(body: str) -> str:
+    return _fold_button() + f'<div class="fold-body" hidden>{body}</div>'
 
 
 def _fold_actions() -> str:
@@ -512,12 +559,20 @@ def _fold_script() -> str:
     (function () {
       var sections = document.querySelectorAll("[data-fold]");
       var all = document.getElementById("fold-all");
+      function foldBody(section) {
+        var key = section.getAttribute("data-fold");
+        if (key) return document.querySelector('[data-fold-for="' + key + '"]');
+        return section.querySelector(".fold-body");
+      }
       function mark(section, open) {
-        var body = section.querySelector(".fold-body");
+        var body = foldBody(section);
         var button = section.querySelector(".fold");
         body.hidden = !open;
         button.setAttribute("aria-expanded", open ? "true" : "false");
         button.setAttribute("aria-label", open ? "内訳を閉じる" : "内訳を開く");
+        var scope = section.closest("[data-pin-scope]");
+        if (scope) scope.classList.toggle("is-open", open);
+        if (window.fitPin) window.fitPin();
       }
       function everyOpen() {
         return Array.prototype.every.call(sections, function (section) {
@@ -552,13 +607,13 @@ def _switch(label: str, items: tuple, current: str) -> str:
     return f'<nav class="switch" aria-label="{escape(label)}">{"".join(links)}</nav>'
 
 
-def _today(board: dict) -> str:
+def _today(board: dict) -> tuple[str, str]:
     forecast = board["pnl"]["forecast"]
     actual = Decimal(str(forecast["actual"]))
     month = str(forecast.get("month") or "")
     total_volume = _month_volume(board.get("volume"), month)
-    return f"""
-    <section class="block" data-fold aria-label="Today">
+    pin = f"""
+    <section class="block" data-fold="today" aria-label="Today">
       <p class="eyebrow">Today</p>
       <div class="band total">
         <h3>Total</h3>
@@ -570,9 +625,11 @@ def _today(board: dict) -> str:
           <div class="metric"><span>{t("月末着地予測")}</span><strong>{_num(forecast.get("forecast"))}</strong></div>
         </div>
       </div>
-      {_fold(_venue_grid(board, "today", month))}
+      {_fold_button()}
     </section>
     """
+    rest = f'<div class="fold-body" hidden data-fold-for="today">{_venue_grid(board, "today", month)}</div>'
+    return pin, rest
 
 
 def _risk(board: dict, now: datetime) -> str:
@@ -721,9 +778,9 @@ def _pnl_vol_link() -> str:
     """
 
 
-def _positions(rows: list[dict] | None, now: datetime) -> str:
+def _positions(rows: list[dict] | None, now: datetime) -> tuple[str, str]:
     if rows is None:
-        return _blank_summary(("Open Positions", "Unrealized PnL"))
+        return _blank_summary(("Open Positions", "Unrealized PnL")), ""
     rows = _enabled_rows(rows)
     moment = now.astimezone(timezone.utc)
     total = _position_summary(positions_view(rows, moment), "USD")
@@ -731,7 +788,7 @@ def _positions(rows: list[dict] | None, now: datetime) -> str:
     def section(_label: str, _venue_id: str, line_rows: list[dict]) -> str:
         return _position_body(positions_view(line_rows, moment))
 
-    return f'<div class="band total"><h3>Total</h3>{total}</div>' + _trading_grid(rows, section)
+    return f'<div class="band total"><h3>Total</h3>{total}</div>', _trading_grid(rows, section)
 
 
 def _trades(rows: list[dict] | None) -> str:
@@ -784,28 +841,35 @@ def _trade_body(view: dict, venue_id: str) -> str:
         when = escape(row["filled_at"].strftime("%Y-%m-%d %H:%M"))
         venue = escape(row.get("venue") or "mexc_spot")
         table.append(
-            f'<tr class="{edge}"><td>{when}</td><td>{strategy}</td><td>{venue}</td><td>{escape(row["symbol"])}</td>'
+            f'<tr class="{edge}" data-page-row="{len(table)}"><td>{when}</td><td>{strategy}</td><td>{venue}</td><td>{escape(row["symbol"])}</td>'
             f"<td>{side}</td><td>{_num(row['quote_received'])}</td><td>{_num(row['quote_spent'])}</td>"
             f"<td>{_qty(row['quantity'])}</td><td class=\"{_tone(row.get('realized'))}\">{_realized_cell(row.get('realized'), money)}</td></tr>"
         )
         cards_html.append(
-            f'<article class="card {edge}"><p class="lead">{when}</p><p>{strategy}</p>'
+            f'<article class="card {edge}" data-page-row="{len(cards_html)}"><p class="lead">{when}</p><p>{strategy}</p>'
             f'<p>{venue} · {escape(row["symbol"])} · {side}</p>'
             f'<p class="meta">{trade_amounts(_num(row["quote_received"]), _num(row["quote_spent"]), _qty(row["quantity"]))}'
             f' · {t("実現損益")} {_realized_cell(row.get("realized"), money)}</p></article>'
         )
-    details = (
-        f'<div class="wide scroll"><table><tr><th>{t("約定時刻")}</th><th>{t("戦略")}</th><th>Venue</th><th>{t("銘柄")}</th><th>{t("売買")}</th>'
-        + f"<th>{received_header(escape(money))}</th><th>{spent_header(escape(money))}</th><th>{t('数量')}</th><th>{t('実現損益')}</th></tr>"
-        + "".join(table)
-        + "</table></div>"
-        + f'<div class="narrow">{"".join(cards_html)}</div>'
+    headers = (
+        f"<th>{t('約定時刻')}</th><th>{t('戦略')}</th><th>Venue</th><th>{t('銘柄')}</th><th>{t('売買')}</th>"
+        f"<th>{received_header(escape(money))}</th><th>{spent_header(escape(money))}</th><th>{t('数量')}</th><th>{t('実現損益')}</th>"
     )
-    return (
-        cards
-        + volume
-        + f'<div data-fold>{_fold(details)}</div>'
-    )
+    return f"""
+    <div data-fold data-pin-scope data-pager data-page-size="20">
+      <div class="local-pin">
+        {cards}
+        {volume}
+        {_fold_button()}
+        {_pager()}
+      </div>
+      <div class="fold-body" hidden>
+        {_sheet(headers, "".join(table))}
+        <div class="narrow">{"".join(cards_html)}</div>
+        {_pager()}
+      </div>
+    </div>
+    """
 
 
 def _orders(view: dict | None, fetched_at: datetime | None) -> str:
@@ -989,8 +1053,9 @@ def _balance_body(view: dict | None, fetched_at: datetime | None) -> str:
     )
 
 
-def _strategies(view: dict) -> str:
-    table = [f'<tr><th>{t("実現損益")}</th><th>{t("出来高")}</th><th>PF</th><th>{t("利益率")}</th><th>{t("勝率")}</th><th>{t("回数")}</th><th>{t("戦略")}</th><th>Venue</th></tr>']
+def _strategies(view: dict) -> tuple[str, str]:
+    headers = f'<th>{t("実現損益")}</th><th>{t("出来高")}</th><th>PF</th><th>{t("利益率")}</th><th>{t("勝率")}</th><th>{t("回数")}</th><th>{t("戦略")}</th><th>Venue</th>'
+    table = []
     cards_html = []
     for venue, rows in _grouped(view["rows"]):
         table.append(f'<tr class="venue-head"><th colspan="8">{escape(venue)}</th></tr>')
@@ -1023,16 +1088,10 @@ def _strategies(view: dict) -> str:
         "cols-4",
         {2: "focus-violet", 3: "focus-violet"},
     )
-    return (
-        cards
-        + '<div class="wide scroll"><table>'
-        + "".join(table)
-        + "</table></div>"
-        + f'<div class="narrow">{"".join(cards_html)}</div>'
-    )
+    return cards, _sheet(headers, "".join(table)) + f'<div class="narrow">{"".join(cards_html)}</div>'
 
 
-def _backtests(view: dict) -> str:
+def _backtests(view: dict) -> tuple[str, str]:
     cards = _summary(
         (
             ("Compared Strategies", str(view["count"]), ""),
@@ -1065,16 +1124,13 @@ def _backtests(view: dict) -> str:
             f'{t("勝率")} {_pct(row["live_win"])} / {_pct(row["back_win"])} / <span class="{_gap_tone(row["win_diff"], Decimal("2"))}">{_points(row["win_diff"])}</span><br>'
             f'{t("回数")} {_blank_count(row["live_count"])} / {_blank_count(row["back_count"])} / {_count_diff(row["count_diff"])}</p></article>'
         )
-    return (
-        cards
-        + f'<div class="wide scroll"><table class="compare"><tr><th class="identity">{t("戦略")}</th><th class="identity">Venue</th>'
-        + f'<th class="set">{t("利益率")}</th><th>BT</th><th>{t("差")}</th>'
-        + f'<th class="set">PF</th><th>BT</th><th>{t("差")}</th><th class="set">{t("勝率")}</th><th>BT</th><th>{t("差")}</th>'
-        + f'<th class="set">{t("回数")}</th><th>BT</th><th>{t("差")}</th><th class="days set">{t("BT期間")}</th></tr>'
-        + "".join(table)
-        + "</table></div>"
-        + f'<div class="narrow">{"".join(cards_html)}</div>'
+    headers = (
+        f'<th class="identity">{t("戦略")}</th><th class="identity">Venue</th>'
+        f'<th class="set">{t("利益率")}</th><th>BT</th><th>{t("差")}</th>'
+        f'<th class="set">PF</th><th>BT</th><th>{t("差")}</th><th class="set">{t("勝率")}</th><th>BT</th><th>{t("差")}</th>'
+        f'<th class="set">{t("回数")}</th><th>BT</th><th>{t("差")}</th><th class="days set">{t("BT期間")}</th>'
     )
+    return cards, _sheet(headers, "".join(table), "compare") + f'<div class="narrow">{"".join(cards_html)}</div>'
 
 
 def _schedule(rows: list[dict] | None) -> str:
@@ -1121,9 +1177,9 @@ def _schedule(rows: list[dict] | None) -> str:
     )
 
 
-def _audits(view: dict | None) -> str:
+def _audits(view: dict | None) -> tuple[str, str]:
     if view is None:
-        return _blank_summary(("Audit Events", "Success", "Failed", "Latest Failure"))
+        return _blank_summary(("Audit Events", "Success", "Failed", "Latest Failure")), ""
     latest = "—" if view["latest_failure"] is None else escape(view["latest_failure"].strftime("%Y-%m-%d %H:%M"))
     cards = _summary(
         (
@@ -1136,7 +1192,7 @@ def _audits(view: dict | None) -> str:
         {1: "focus-teal" if view["success"] else "", 2: "focus-loss" if view["failed"] else ""},
     )
     if view["count"] == 0:
-        return cards + f'<p class="empty">{t("監査イベントはありません")}</p>'
+        return cards, f'<p class="empty">{t("監査イベントはありません")}</p>'
     table = []
     cards_html = []
     for row in view["rows"]:
@@ -1151,20 +1207,105 @@ def _audits(view: dict | None) -> str:
         copy = escape(row["copy"])
         kind = f'<span class="kind {tone}">{_audit_mark(row)}{escape(row["label"])}</span>'
         table.append(
-            f'<tr class="{edge}"><td>{when}</td><td>{venue}</td><td>{strategy}</td><td>{symbol}</td><td>{kind}</td>'
+            f'<tr class="{edge}" data-page-row="{len(table)}"><td>{when}</td><td>{venue}</td><td>{strategy}</td><td>{symbol}</td><td>{kind}</td>'
             f'<td class="big {reason_class}">{reason}</td><td>{copy}</td></tr>'
         )
         cards_html.append(
-            f'<article class="card {edge}"><p>{when}</p><p>{venue}</p><p class="meta">{strategy} · {symbol}</p>'
+            f'<article class="card {edge}" data-page-row="{len(cards_html)}"><p>{when}</p><p>{venue}</p><p class="meta">{strategy} · {symbol}</p>'
             f'<p>{kind}</p><p class="{reason_class}">{reason}</p><p>{copy}</p></article>'
         )
-    return (
-        cards
-        + f'<div class="wide scroll"><table><tr><th>{t("発生時刻")}</th><th>{t("会場")}</th><th>{t("戦略")}</th><th>{t("銘柄")}</th><th>{t("イベント種別")}</th><th>{t("理由")}</th><th>{t("写し")}</th></tr>'
-        + "".join(table)
-        + "</table></div>"
+    headers = f'<th>{t("発生時刻")}</th><th>{t("会場")}</th><th>{t("戦略")}</th><th>{t("銘柄")}</th><th>{t("イベント種別")}</th><th>{t("理由")}</th><th>{t("写し")}</th>'
+    body = (
+        '<div data-pager data-page-size="100">'
+        + _pager()
+        + _sheet(headers, "".join(table))
         + f'<div class="narrow">{"".join(cards_html)}</div>'
+        + _pager()
+        + "</div>"
     )
+    return cards, body
+
+
+def _pager() -> str:
+    return (
+        '<nav class="pager" hidden>'
+        f'<button type="button" data-page="prev">{escape(t("前のページ"))}</button>'
+        '<span data-page-label>1 / 1</span>'
+        f'<button type="button" data-page="next">{escape(t("次のページ"))}</button>'
+        "</nav>"
+    )
+
+
+def _sheet(headers: str, rows: str, kind: str = "") -> str:
+    css = "stick compare" if kind == "compare" else "stick"
+    return f'<div class="wide"><table class="{css}"><thead><tr>{headers}</tr></thead><tbody>{rows}</tbody></table></div>'
+
+
+def _pin_script() -> str:
+    return """
+    <script>
+    (function () {
+      var main = document.querySelector(".main");
+      function fitPin() {
+        if (!main) return;
+        var pin = document.getElementById("page-pin");
+        var height = pin ? pin.offsetHeight : 0;
+        main.style.setProperty("--pin-h", height + "px");
+        var filters = document.querySelector(".pv-pin");
+        main.style.setProperty("--pv-pin-h", (filters ? filters.offsetHeight : 0) + "px");
+        document.querySelectorAll("[data-pin-scope]").forEach(function (scope) {
+          var local = scope.querySelector(".local-pin");
+          var localHeight = local ? local.offsetHeight : 0;
+          scope.style.setProperty("--local-top", (height + localHeight) + "px");
+        });
+      }
+      window.fitPin = fitPin;
+      window.addEventListener("resize", fitPin);
+      if (window.ResizeObserver && document.getElementById("page-pin")) {
+        new ResizeObserver(fitPin).observe(document.getElementById("page-pin"));
+      }
+      document.querySelectorAll("[data-pager]").forEach(function (root) {
+        var size = Number(root.getAttribute("data-page-size")) || 20;
+        var rows = root.querySelectorAll("[data-page-row]");
+        var total = 0;
+        rows.forEach(function (row) {
+          var index = Number(row.getAttribute("data-page-row"));
+          if (index + 1 > total) total = index + 1;
+        });
+        var pages = Math.ceil(total / size);
+        var pagers = root.querySelectorAll(".pager");
+        if (pages <= 1) return;
+        var page = 0;
+        function show() {
+          var start = page * size;
+          var end = start + size;
+          rows.forEach(function (row) {
+            var index = Number(row.getAttribute("data-page-row"));
+            row.hidden = index < start || index >= end;
+          });
+          pagers.forEach(function (nav) {
+            nav.hidden = false;
+            nav.querySelector("[data-page-label]").textContent = (page + 1) + " / " + pages;
+            nav.querySelector("[data-page=prev]").disabled = page === 0;
+            nav.querySelector("[data-page=next]").disabled = page === pages - 1;
+          });
+        }
+        pagers.forEach(function (nav) {
+          nav.addEventListener("click", function (event) {
+            var button = event.target.closest("button");
+            if (!button || button.disabled) return;
+            if (button.getAttribute("data-page") === "prev" && page > 0) page -= 1;
+            if (button.getAttribute("data-page") === "next" && page < pages - 1) page += 1;
+            show();
+            if (window.fitPin) window.fitPin();
+          });
+        });
+        show();
+      });
+      fitPin();
+    })();
+    </script>
+    """
 
 
 def _summary(items: tuple, columns: str, borders: dict | None = None) -> str:

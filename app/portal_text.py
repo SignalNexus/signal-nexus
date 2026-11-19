@@ -92,6 +92,8 @@ _EN = {
     "送信済み": "Sent",
     "未設定": "Not configured",
     "失敗": "Failed",
+    "前のページ": "Previous",
+    "次のページ": "Next",
 }
 
 
