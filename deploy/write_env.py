@@ -1,7 +1,7 @@
 import os
 import sys
 
-from deploy.envfile import parse_builtin_venues, qfex_secret_keys, secret_keys_for, upsert_env
+from deploy.envfile import ondo_secret_keys, parse_builtin_venues, qfex_secret_keys, secret_keys_for, upsert_env
 
 
 def main() -> None:
@@ -12,10 +12,11 @@ def main() -> None:
         sys.exit(1)
     try:
         qfex = qfex_secret_keys()
+        ondo = ondo_secret_keys()
     except ValueError as error:
         print(error, file=sys.stderr)
         sys.exit(1)
-    keys = secret_keys_for(parse_builtin_venues(raw)) + qfex
+    keys = secret_keys_for(parse_builtin_venues(raw)) + qfex + ondo
     missing = [key for key in keys if not os.environ.get(key)]
     if missing:
         print("missing env names: " + ", ".join(missing), file=sys.stderr)

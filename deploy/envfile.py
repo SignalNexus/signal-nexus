@@ -94,6 +94,10 @@ QFEX_SECRET_KEYS = (
     "QFEX_SECRET_KEY",
     "QFEX_API_VERSION",
 )
+ONDO_SECRET_KEYS = (
+    "ONDO_KEY_ID",
+    "ONDO_API_SECRET",
+)
 SECRET_KEYS = ALWAYS_SECRET_KEYS + ARCUS_SECRET_KEYS + MEXC_SPOT_SECRET_KEYS + MEXC_FUTURES_SECRET_KEYS
 
 
@@ -123,3 +127,14 @@ def qfex_secret_keys(source: dict[str, str] | None = None) -> tuple[str, ...]:
         missing = [key for key in QFEX_SECRET_KEYS if not values.get(key, "").strip()]
         raise ValueError("missing env names: " + ", ".join(missing))
     return QFEX_SECRET_KEYS
+
+
+def ondo_secret_keys(source: dict[str, str] | None = None) -> tuple[str, ...]:
+    values = os.environ if source is None else source
+    present = [key for key in ONDO_SECRET_KEYS if values.get(key, "").strip()]
+    if not present:
+        return ()
+    if len(present) != len(ONDO_SECRET_KEYS):
+        missing = [key for key in ONDO_SECRET_KEYS if not values.get(key, "").strip()]
+        raise ValueError("missing env names: " + ", ".join(missing))
+    return ONDO_SECRET_KEYS

@@ -87,6 +87,10 @@ on:
         required: false
       QFEX_API_VERSION:
         required: false
+      ONDO_KEY_ID:
+        required: false
+      ONDO_API_SECRET:
+        required: false
       RENDER_DEPLOY_HOOK:
         required: false
       RENDER_API_KEY:
@@ -197,6 +201,8 @@ jobs:
           QFEX_PUBLIC_KEY: ${{ secrets.QFEX_PUBLIC_KEY }}
           QFEX_SECRET_KEY: ${{ secrets.QFEX_SECRET_KEY }}
           QFEX_API_VERSION: ${{ secrets.QFEX_API_VERSION }}
+          ONDO_KEY_ID: ${{ secrets.ONDO_KEY_ID }}
+          ONDO_API_SECRET: ${{ secrets.ONDO_API_SECRET }}
           PYTHONPATH: ${{ github.workspace }}/core
         run: |
           python3 -m deploy.write_env "$RUNNER_TEMP/analytics.env"
