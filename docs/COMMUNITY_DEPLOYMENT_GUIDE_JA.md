@@ -92,6 +92,8 @@ pin job は、それらが違うときに止まります。より新しい公開
 
 `locale.yml` は Portal の言語と時計です。`month_target.yml` は月の目標です。`ops_schedule.yml` は運用の予定です。`protective_exit.yml` は protective exit の対応です。`strategies.yml` は registry です。`strategy_results.yml` は結果のラベルです。`venues.yml` は runtime のカタログです。`enabled: false` の会場は、有効な会場に含まれません。
 
+`roi_basis.yml` は任意で、この7ファイルには含まれません。ROI (%) を基準資金の期間で変えるときは、`config/examples/roi_basis.yml.example` を `config/roi_basis.yml` へコピーします。各行は含む `start`、`end`、`capital_usd` を持ち、期間は重ねません。約定は、そのポータル日付を含む行の基準資金を使います。
+
 `venueadd/venues.yaml` は、この7ファイルには含まれません。購入まで `venues: []` のままにします。
 
 `confirm` は、runtime の設定ファイルを検証します。検証に失敗した場合、deploy は進みません。例の registry は、編集せずコピーしても、その検証を通ります。

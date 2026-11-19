@@ -10,6 +10,61 @@ from app.portal_text import remaining_label
 ORDER_QUOTE = Decimal("10")
 
 
+def read_roi_bases(path: Path | None = None) -> list[dict[str, date | Decimal]]:
+    """Inclusive capital ranges for ROI (%). Later overlapping rows are ignored."""
+    source = path or config_file("roi_basis.yml")
+    if not source.is_file():
+        return []
+    loaded = yaml.safe_load(source.read_text(encoding="utf-8"))
+    rows = loaded.get("bases") if isinstance(loaded, dict) else None
+    if not isinstance(rows, list):
+        return []
+    parsed: list[dict[str, date | Decimal]] = []
+    for raw in rows:
+        if not isinstance(raw, dict):
+            continue
+        start = _iso_date(raw.get("start"))
+        end = _iso_date(raw.get("end"))
+        capital = _positive_decimal(raw.get("capital_usd"))
+        if start is None or end is None or capital is None or end < start:
+            continue
+        parsed.append({"start": start, "end": end, "capital": capital})
+    parsed.sort(key=lambda row: (row["start"], row["end"]))
+    kept: list[dict[str, date | Decimal]] = []
+    last_end: date | None = None
+    for row in parsed:
+        if last_end is not None and row["start"] <= last_end:
+            continue
+        kept.append(row)
+        last_end = row["end"]
+    return kept
+
+
+def _iso_date(value) -> date | None:
+    if isinstance(value, datetime):
+        return value.date()
+    if isinstance(value, date):
+        return value
+    if isinstance(value, str):
+        try:
+            return date.fromisoformat(value.strip())
+        except ValueError:
+            return None
+    return None
+
+
+def _positive_decimal(value) -> Decimal | None:
+    if isinstance(value, bool) or not isinstance(value, (int, str, float, Decimal)):
+        return None
+    try:
+        amount = Decimal(str(value))
+    except InvalidOperation:
+        return None
+    if amount <= 0:
+        return None
+    return amount
+
+
 def read_month_target(path: Path | None = None) -> Decimal | None:
     source = path or config_file("month_target.yml")
     if not source.is_file():

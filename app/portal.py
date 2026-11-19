@@ -56,12 +56,17 @@ def trading_page(request: Request, view: str = "positions") -> HTMLResponse:
 
 
 @router.get("/portal/analytics")
-def analytics_page(request: Request, view: str = "strategies") -> HTMLResponse:
+def analytics_page(request: Request, view: str = "pnl") -> HTMLResponse:
     if not _session_ok(request):
         return _html(login_page(""))
+    current = view if view in {"pnl", "strategies", "backtest"} else "pnl"
+    trades = None
+    if current == "pnl":
+        loaded = _analytics_slice("/api/trades", "trades")
+        trades = None if loaded is None else list(loaded.get("trades") or [])
     token = _dashboard_summary.set(True)
     try:
-        return _html(render_analytics(view, _board(), read_backtests()))
+        return _html(render_analytics(current, _board(), read_backtests(), trades))
     finally:
         _dashboard_summary.reset(token)
 

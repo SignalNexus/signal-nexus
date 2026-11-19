@@ -13,9 +13,9 @@ from app.portal_model import (
     moment,
     positions_view,
     strategies_view,
-    tickers_view,
     trades_view,
 )
+from app.portal_pnl import render_pnl_vol
 from app.portal_text import (
     actual_label,
     balance_amounts,
@@ -415,28 +415,27 @@ def render_trading(view: str, board: dict | None, balances, orders, fetched_at: 
     return _shell("trading", "Trading", switch, body, actions=actions)
 
 
-def render_analytics(view: str, board: dict | None, backtests: dict) -> str:
-    current = view if view in {"tickers", "backtest"} else "strategies"
+def render_analytics(view: str, board: dict | None, backtests: dict, trades: list[dict] | None = None) -> str:
+    current = view if view in {"pnl", "strategies", "backtest"} else "pnl"
     switch = _switch(
         t("Analytics の切り替え"),
         (
-            ("strategies", "Strategies", "/portal/analytics"),
-            ("tickers", "Tickers", "/portal/analytics?view=tickers"),
+            ("pnl", "PnL・Vol", "/portal/analytics"),
+            ("strategies", "Strategies", "/portal/analytics?view=strategies"),
             ("backtest", "Backtest Comparison", "/portal/analytics?view=backtest"),
         ),
         current,
     )
     labels = {
         "strategies": ("Active Strategies", "Profitable Strategies", "Total Realized PnL", "Average PF"),
-        "tickers": ("Active Tickers", "Profitable Tickers", "Total Realized PnL", "Average PF"),
         "backtest": ("Compared Strategies", "Live Average PF", "Backtest Average PF", "Largest Gap Strategy"),
     }
-    if board is None or (current == "tickers" and board.get("ticker_rows") is None):
+    if current == "pnl":
+        body = render_pnl_vol(trades)
+    elif board is None:
         body = _blank_summary(labels[current])
     elif current == "backtest":
         body = _backtests(backtest_view(board["strategy_rows"], backtests))
-    elif current == "tickers":
-        body = _tickers(tickers_view(board["ticker_rows"]))
     else:
         body = _strategies(strategies_view(board["strategy_rows"]))
     return _shell("analytics", "Analytics", switch, body)
@@ -703,7 +702,7 @@ def _strategy_summary(board: dict) -> str:
           <tr><th>{t("戦略")}</th><th>Venue</th><th>{t("実現損益")}</th><th>{t("出来高")}</th><th>PF</th><th>{t("回数")}</th><th>{t("勝率")}</th></tr>
           {body}
         </table>
-        <a class="more" href="/portal/analytics">{t("Strategies を開く")}</a>
+        <a class="more" href="/portal/analytics?view=strategies">{t("Strategies を開く")}</a>
       </div>
     </section>
     """
@@ -1017,61 +1016,6 @@ def _strategies(view: dict) -> str:
         + "".join(table)
         + "</table></div>"
         + f'<div class="narrow">{"".join(cards_html)}</div>'
-    )
-
-
-def _tickers(view: dict) -> str:
-    shown = _book_realized(view["rows"])
-    cards = _summary(
-        (
-            ("Active Tickers", str(view["active"]), ""),
-            ("Profitable Tickers", str(view["profitable"]), ""),
-            ("Total Realized PnL", _signed(shown, "USD"), _tone(shown)),
-            ("Average PF", _pf(view["average_pf"]), _pf_tone(view["average_pf"])),
-        ),
-        "cols-4",
-        {2: "focus-violet", 3: "focus-violet"},
-    )
-    table = [f'<tr><th>Venue</th><th>{t("銘柄")}</th><th>{t("実現損益")}</th><th>{t("出来高")}</th><th>PF</th><th>{t("利益率")}</th><th>{t("勝率")}</th><th>{t("回数")}</th></tr>']
-    cards_html = []
-    for venue_name, rows in _grouped(view["rows"]):
-        table.append(f'<tr class="venue-head"><th colspan="8">{escape(venue_name)}</th></tr>')
-        for row in rows:
-            link = escape(row["symbol"])
-            venue = escape(row.get("venue") or "mexc_spot")
-            unit = _unit(row.get("venue"))
-            table.append(
-                "<tr>"
-                f"<td>{venue}</td>"
-                f"<td>{link}</td>"
-                f'<td class="big {_tone(row["realized"])}">{_signed(row["realized"], unit)}</td>'
-                f"<td>{_volume_text(row.get('volume') or Decimal('0'), unit)}</td>"
-                f'<td class="big {_pf_tone(row["profit_factor"])}">{_pf(row["profit_factor"])}</td>'
-                f"<td>{_pct(row['profit_rate'])}</td><td>{_pct(row['win_rate'])}</td><td>{row['count']}</td>"
-                "</tr>"
-            )
-            cards_html.append(
-                f'<article class="card"><p class="lead">{venue} · {link}</p>'
-                '<div class="pair">'
-                f'<p class="big {_tone(row["realized"])}">{_signed(row["realized"], unit)}</p>'
-                f'<p class="big {_pf_tone(row["profit_factor"])}">PF {_pf(row["profit_factor"])}</p>'
-                "</div>"
-                f'<p class="vol">{volume_phrase(_volume_text(row.get("volume") or Decimal("0"), unit))}</p>'
-                f'<p class="meta">{rate_meta(_pct(row["profit_rate"]), _pct(row["win_rate"]), str(row["count"]))}</p>'
-                "</article>"
-            )
-    rule = (
-        ""
-        if not view["rows"]
-        else f'<p class="rule">{t("実現損益の大きい順。同額は PF が高い順。決済が 1 件以上の銘柄だけ。")}</p>'
-    )
-    return (
-        cards
-        + '<div class="wide scroll"><table>'
-        + "".join(table)
-        + "</table></div>"
-        + f'<div class="narrow">{"".join(cards_html)}</div>'
-        + rule
     )
 
 
