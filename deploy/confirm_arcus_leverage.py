@@ -7,6 +7,8 @@ from urllib.request import Request, urlopen
 
 from deploy.envfile import read_env
 
+WAIT_SECONDS = 60
+
 
 def main() -> None:
     analytics_path = sys.argv[1]
@@ -33,7 +35,7 @@ def main() -> None:
         headers={"Authorization": f"Bearer {secret}", "Content-Type": "application/json"},
     )
     try:
-        with urlopen(request, timeout=30) as response:
+        with urlopen(request, timeout=WAIT_SECONDS) as response:
             status = response.status
             raw = response.read(500)
     except HTTPError as exc:
