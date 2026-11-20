@@ -50,7 +50,6 @@ Key components.
 - System Health
 - PnL
 - Strategy Summary
-- PnL・Vol
 
 Displayed information.
 
@@ -60,13 +59,12 @@ Some value labels are currently displayed in Japanese. The information described
 - Risk Summary. Count of open positions and unrealized result. A fold shows the same block by venue.
 - Operations. Name, due date, and state for tasks that are upcoming or overdue.
 - System Health. Mode (`dry_run` or `live`), whether new orders are allowed, whether the aggregate is available, whether ingest is current, and the time of the latest alert.
-- PnL. Realized result for the day, the week, the month, and the year. A fold shows the same periods by venue.
+- PnL. Realized result for the day, the week, the month, and the year. A fold shows the same periods by venue. View PnL・Vol sits below the block.
 - Strategy Summary. For each strategy with at least one close: name, venue, realized result, volume, profit factor, count, and win rate.
-- PnL・Vol. A link to Analytics at PnL・Vol. Days are cut in UTC, the same as PnL.
 
-This document does not publish those figures. An empty aggregate leaves Today, Risk Summary, PnL, Strategy Summary, and PnL・Vol off the page. System Health and Operations remain.
+This document does not publish those figures. An empty aggregate leaves Today, Risk Summary, PnL, and Strategy Summary off the page. System Health and Operations remain.
 
-Navigation. Risk Summary opens Trading at Positions. Operations opens the Schedule. Strategy Summary opens Analytics at Strategies. PnL・Vol opens Analytics at PnL・Vol.
+Navigation. Risk Summary opens Trading at Positions. Operations opens the Schedule. Strategy Summary opens Analytics at Strategies. View PnL・Vol under PnL opens Analytics at PnL・Vol.
 
 ## Trading
 
@@ -124,7 +122,7 @@ Displayed information.
 
 This document does not include those figures. The stored reference is data you kept. It is not a result published here.
 
-Navigation. Dashboard's Strategy Summary opens this view at Strategies. Dashboard's PnL・Vol block opens it at PnL・Vol. Trading and Operations remain in the outer navigation.
+Navigation. Dashboard's Strategy Summary opens this view at Strategies. View PnL・Vol under Dashboard's PnL opens it at PnL・Vol. Trading and Operations remain in the outer navigation.
 
 ## Operations
 

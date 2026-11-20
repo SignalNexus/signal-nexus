@@ -38,7 +38,7 @@ Portal の直下の四つは、どの画面からでも選べます。Trading、
 
 - Dashboard の Risk Summary は、Trading の Positions を開きます。
 - Dashboard の Strategy Summary は、Analytics の Strategies を開きます。
-- Dashboard の PnL・Vol は、Analytics の PnL・Vol を開きます。
+- Dashboard の PnL の下の View PnL・Vol は、Analytics の PnL・Vol を開きます。
 - Dashboard の Operations は、Operations の Schedule を開きます。
 
 Trading、Analytics、Operations は、それ以上の飛び先を足しません。外側の移動で、四つの主な画面に戻ります。
@@ -63,7 +63,7 @@ graph TD
   Operations --> AuditLog
   Dashboard -->|Risk Summary| Positions
   Dashboard -->|Strategy Summary| Strategies
-  Dashboard -->|PnL・Vol block| PnLVol
+  Dashboard -->|PnL| PnLVol
   Dashboard -->|Operations block| Schedule
 ```
 
@@ -75,7 +75,7 @@ Portal
   |
   +-- Dashboard ---- Risk Summary ------> Trading / Positions
   |     |       ---- Strategy Summary --> Analytics / Strategies
-  |     |       ---- PnL・Vol block ----> Analytics / PnL・Vol
+  |     |       ---- PnL ---------------> Analytics / PnL・Vol
   |     |       ---- Operations block --> Operations / Schedule
   |
   +-- Trading

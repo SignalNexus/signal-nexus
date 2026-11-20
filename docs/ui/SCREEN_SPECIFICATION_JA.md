@@ -50,7 +50,6 @@ Trades は、会場ごとに 1 ページ 20 行です。Audit Log は 100 行で
 - System Health
 - PnL
 - Strategy Summary
-- PnL・Vol
 
 表示するもの.
 
@@ -60,13 +59,12 @@ Trades は、会場ごとに 1 ページ 20 行です。Audit Log は 100 行で
 - Risk Summary. 建玉の数と、含みの結果。折りたたむと、取引所ごとの内訳が出ます。
 - Operations. これから先の作業と、期限を過ぎた作業の名前、期限、状態。
 - System Health. モード（`dry_run` または `live`）、新しい注文を出せるか、集計が読めるか、取り込みが新しいか、直近のアラートの時刻。
-- PnL. 日、週、月、年の確定した結果。折りたたむと、同じ期間を取引所ごとに見ます。
+- PnL. 日、週、月、年の確定した結果。折りたたむと、同じ期間を取引所ごとに見ます。ブロックの下に View PnL・Vol があります。
 - Strategy Summary. 決済が一件以上ある戦略ごとに、名前、取引所、確定した結果、出来高、プロフィットファクター、回数、勝率。
-- PnL・Vol. Analytics の PnL・Vol へのリンク。日付の区切りは PnL と同じ UTC です。
 
-この文書に、その数値は載せません。集計が無いときは、Today、Risk Summary、PnL、Strategy Summary、PnL・Vol は出ません。System Health と Operations は残ります。
+この文書に、その数値は載せません。集計が無いときは、Today、Risk Summary、PnL、Strategy Summary は出ません。System Health と Operations は残ります。
 
-移動. Risk Summary は Trading の Positions を開きます。Operations は Schedule を開きます。Strategy Summary は Analytics の Strategies を開きます。PnL・Vol は Analytics の PnL・Vol を開きます。
+移動. Risk Summary は Trading の Positions を開きます。Operations は Schedule を開きます。Strategy Summary は Analytics の Strategies を開きます。PnL の下の View PnL・Vol は Analytics の PnL・Vol を開きます。
 
 ## Trading
 
@@ -124,7 +122,7 @@ Trades は、会場ごとに 1 ページ 20 行です。Audit Log は 100 行で
 
 この文書に、その数値は載せません。保存した参照は、自分で残したデータです。ここに公開された結果ではありません。
 
-移動. Dashboard の Strategy Summary は、この画面の Strategies を開きます。Dashboard の PnL・Vol は、この画面の PnL・Vol を開きます。Trading と Operations は外側の移動のままです。
+移動. Dashboard の Strategy Summary は、この画面の Strategies を開きます。Dashboard の PnL の下の View PnL・Vol は、この画面の PnL・Vol を開きます。Trading と Operations は外側の移動のままです。
 
 ## Operations
 

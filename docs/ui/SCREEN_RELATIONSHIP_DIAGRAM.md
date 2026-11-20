@@ -38,7 +38,7 @@ These are the links a screen draws to another view. The switch inside a view is 
 
 - Dashboard opens Trading at Positions, from Risk Summary.
 - Dashboard opens Analytics at Strategies, from Strategy Summary.
-- Dashboard opens Analytics at PnL・Vol, from the PnL・Vol block.
+- Dashboard opens Analytics at PnL・Vol, from View PnL・Vol under PnL.
 - Dashboard opens Operations at Schedule, from the Operations block.
 
 Trading, Analytics, and Operations do not add a further jump. They return to the four primary views through the outer navigation.
@@ -63,7 +63,7 @@ graph TD
   Operations --> AuditLog
   Dashboard -->|Risk Summary| Positions
   Dashboard -->|Strategy Summary| Strategies
-  Dashboard -->|PnL・Vol block| PnLVol
+  Dashboard -->|PnL| PnLVol
   Dashboard -->|Operations block| Schedule
 ```
 
@@ -75,7 +75,7 @@ Portal
   |
   +-- Dashboard ---- Risk Summary ------> Trading / Positions
   |     |       ---- Strategy Summary --> Analytics / Strategies
-  |     |       ---- PnL・Vol block ----> Analytics / PnL・Vol
+  |     |       ---- PnL ---------------> Analytics / PnL・Vol
   |     |       ---- Operations block --> Operations / Schedule
   |
   +-- Trading
