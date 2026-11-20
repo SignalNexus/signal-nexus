@@ -134,7 +134,8 @@ def mark_synced(venue: str) -> None:
 
 
 def apply_spot_history(orders: list[dict], trades: list[dict], codes: dict[str, str]) -> None:
-    for order_key, strategy_id, side, net, symbol, timestamp in spot_fill_events(orders, trades, codes):
+    for order_key, strategy_id, side, net, symbol, timestamp, price in spot_fill_events(orders, trades, codes):
+        opening = side == "buy"
         note_fill(
             "mexc_spot",
             order_key,
@@ -143,16 +144,26 @@ def apply_spot_history(orders: list[dict], trades: list[dict], codes: dict[str, 
             Decimal(str(net)),
             symbol=symbol,
             bought_at_ms=timestamp,
+            fill_price=price,
+            protect=opening and price is not None and price > 0,
         )
 
 
 def apply_futures_history(orders: list[dict], codes: dict[str, str]) -> None:
-    for order_key, strategy_id, closing, filled in futures_fill_events(orders, codes):
-        note_fill("mexc_futures", order_key, strategy_id, closing, Decimal(str(filled)))
+    for order_key, strategy_id, closing, filled, price in futures_fill_events(orders, codes):
+        note_fill(
+            "mexc_futures",
+            order_key,
+            strategy_id,
+            closing,
+            Decimal(str(filled)),
+            fill_price=price,
+            protect=not closing and price is not None and price > 0,
+        )
 
 
 def apply_arcus_fills(fills: list[dict], codes: dict[str, str]) -> None:
-    grouped: dict[str, tuple[str, bool, Decimal]] = {}
+    grouped: dict[str, tuple[str, bool, Decimal, Decimal]] = {}
     for fill in fills:
         client_id = str(fill.get("clientId") or "")
         if len(client_id) != 32 or client_id[10] not in ("h", "c", "l", "f"):
@@ -162,18 +173,29 @@ def apply_arcus_fills(fills: list[dict], codes: dict[str, str]) -> None:
             continue
         try:
             size = Decimal(str(fill.get("size") or "0"))
+            price = Decimal(str(fill.get("price") or "0"))
         except Exception:
             continue
         if size <= 0:
             continue
         closing = client_id[10] in ("c", "f")
+        quote = price * size if price > 0 else Decimal("0")
         current = grouped.get(client_id)
         if current is None:
-            grouped[client_id] = (strategy_id, closing, size)
+            grouped[client_id] = (strategy_id, closing, size, quote)
         else:
-            grouped[client_id] = (strategy_id, closing, current[2] + size)
-    for order_key, (strategy_id, closing, size) in grouped.items():
-        note_fill("arcus", order_key, strategy_id, closing, size)
+            grouped[client_id] = (strategy_id, closing, current[2] + size, current[3] + quote)
+    for order_key, (strategy_id, closing, size, quote) in grouped.items():
+        price = quote / size if quote > 0 and size > 0 else None
+        note_fill(
+            "arcus",
+            order_key,
+            strategy_id,
+            closing,
+            size,
+            fill_price=price,
+            protect=not closing and price is not None and price > 0,
+        )
 
 
 def spot_fill_events(orders: list[dict], trades: list[dict], codes: dict[str, str]):
@@ -183,7 +205,7 @@ def spot_fill_events(orders: list[dict], trades: list[dict], codes: dict[str, st
     seen: set[str] = set()
     for client_id, parsed in _orders_from_trades(trades or [], codes).items():
         timestamp, strategy_id, side, net, symbol = parsed
-        events.append((client_id, strategy_id, side, net, symbol, timestamp))
+        events.append((client_id, strategy_id, side, net, symbol, timestamp, None))
         seen.add(client_id)
     for order in orders:
         client_id = _client_id(order)
@@ -204,7 +226,7 @@ def spot_fill_events(orders: list[dict], trades: list[dict], codes: dict[str, st
         if not isinstance(symbol, str) or not symbol:
             continue
         net = filled * (1 - _taker_fee()) if side == "buy" else filled
-        events.append((client_id, strategy_id, side, net, symbol, _timestamp(order)))
+        events.append((client_id, strategy_id, side, net, symbol, _timestamp(order), _order_price(order)))
     events.sort(key=lambda item: item[5])
     return events
 
@@ -223,8 +245,27 @@ def futures_fill_events(orders: list[dict], codes: dict[str, str]):
         filled = _filled(order)
         if filled <= 0:
             continue
-        events.append((client_id, strategy_id, client_id[10] in ("c", "f"), filled))
+        events.append((client_id, strategy_id, client_id[10] in ("c", "f"), filled, _order_price(order)))
     return events
+
+
+def _order_price(order: dict) -> Decimal | None:
+    sources = [order]
+    info = order.get("info")
+    if isinstance(info, dict):
+        sources.append(info)
+    for source in sources:
+        for key in ("average", "avgPrice", "dealAvgPrice", "price"):
+            value = source.get(key)
+            if value in (None, "", 0, "0"):
+                continue
+            try:
+                price = Decimal(str(value))
+            except Exception:
+                continue
+            if price > 0:
+                return price
+    return None
 
 
 def sync_configured_venues() -> None:
@@ -356,10 +397,11 @@ def _sync_stop(connection, venue: str, strategy_id: str, updated: Decimal, closi
                 from app.execution.protective_stop import cancel_armed
 
                 cancel_armed(connection, venue, strategy_id)
-            elif protect and not closing and filled > 0 and fill_price is not None and fill_price > 0:
-                from app.execution.protective_stop import arm_from_fill
+            elif protect and not closing and fill_price is not None and fill_price > 0:
+                from app.execution.protective_stop import arm_from_fill, stop_is_active
 
-                arm_from_fill(connection, venue, strategy_id, fill_price)
+                if filled > 0 or not stop_is_active(connection, venue, strategy_id):
+                    arm_from_fill(connection, venue, strategy_id, fill_price)
     except Exception:
         logger.warning("protective stop was not updated")
 

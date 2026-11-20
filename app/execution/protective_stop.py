@@ -210,6 +210,17 @@ def holding_exit():
         _held.reset(token)
 
 
+def stop_is_active(connection, venue: str, strategy_id: str) -> bool:
+    row = connection.execute(
+        """
+        SELECT status FROM strategy_stops
+        WHERE venue = %(venue)s AND strategy_id = %(strategy_id)s
+        """,
+        {"venue": venue, "strategy_id": strategy_id},
+    ).fetchone()
+    return row is not None and row[0] in ("armed", "triggering")
+
+
 def arm_from_fill(connection, venue: str, strategy_id: str, fill_price: Decimal) -> None:
     from app.execution.router import RegistryRejection, load_strategies
 
