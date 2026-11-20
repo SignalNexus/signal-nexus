@@ -20,7 +20,7 @@ graph LR
   SN[Signal Nexus]
   CEX[CEXs]
   DEX[DEXs]
-  UI[Dashboard Analytics Audit]
+  UI[Dashboard Trading Analytics Operations]
   TV --> SN
   SN --> CEX
   SN --> DEX
@@ -42,13 +42,13 @@ graph TB
   subgraph Views["What you look at"]
     Portal
     Dashboard
-    Trade
+    Trading
     Analytics
-    Audit
+    Operations
   end
 ```
 
-MEXC Spot, MEXC Futures, and Arcus are the current order paths. A venue outside that public release is not an order path in this layout. Portal, Dashboard, Trade, Analytics, and Audit are views of your own operation. They do not place an order.
+MEXC Spot, MEXC Futures, and Arcus are the current order paths. A venue outside that public release is not an order path in this layout. Portal, Dashboard, Trading, Analytics, and Operations, which holds the Audit Log, are views of your own operation. They do not place an order.
 
 ### 2. System components
 

@@ -52,8 +52,8 @@ The portal reads your operation. Nothing on the screen places an order. It has f
 
 ### Analytics
 
+- Result and volume over time. PnL・Vol shows the realized result and volume by hour, day, and month, in USD or as ROI against the capital in `roi_basis.yml`.
 - Strategy records. Strategies lists each strategy that has activity in the run.
-- Symbol activity. Tickers lists the same run by symbol.
 - Operational history. The time-ordered trail of each alert is the audit trail, shown as the Audit Log under Operations. The Analytics screen summarizes the run. It does not replace that trail. The labels on that screen are defined in the Screen Specification.
 
 ### Performance

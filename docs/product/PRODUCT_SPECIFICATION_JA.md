@@ -58,8 +58,8 @@ Your funds, your keys, your infrastructure.
 
 ### Analytics
 
+- 結果と出来高の推移. PnL・Vol は、確定した結果と出来高を、時間、日、月ごとに見ます。単位は USD か、`roi_basis.yml` の基準資金に対する ROI です。
 - 戦略の記録. Strategies は、動きのあった戦略を一覧します。
-- 銘柄の動き. Tickers は、同じ運用を銘柄ごとに見ます。
 - 運用の履歴. アラートが時刻順にどう処理されたかは、監査の履歴です。ポータルでは Operations の Audit Log として見ます。Analytics の画面は運用の集計であり、この履歴の代わりにはなりません。その画面の表示名は、画面仕様が定義します。
 
 ### Performance

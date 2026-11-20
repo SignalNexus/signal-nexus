@@ -22,8 +22,8 @@ Portal
 │   ├─ Open Orders
 │   └─ Balances
 ├─ Analytics
+│   ├─ PnL・Vol
 │   ├─ Strategies
-│   ├─ Tickers
 │   └─ Backtest Comparison
 └─ Operations
     ├─ Schedule
@@ -38,6 +38,7 @@ Portal の直下の四つは、どの画面からでも選べます。Trading、
 
 - Dashboard の Risk Summary は、Trading の Positions を開きます。
 - Dashboard の Strategy Summary は、Analytics の Strategies を開きます。
+- Dashboard の PnL・Vol は、Analytics の PnL・Vol を開きます。
 - Dashboard の Operations は、Operations の Schedule を開きます。
 
 Trading、Analytics、Operations は、それ以上の飛び先を足しません。外側の移動で、四つの主な画面に戻ります。
@@ -55,13 +56,14 @@ graph TD
   Trading --> Trades
   Trading --> OpenOrders
   Trading --> Balances
+  Analytics --> PnLVol["PnL・Vol"]
   Analytics --> Strategies
-  Analytics --> Tickers
   Analytics --> BacktestComparison
   Operations --> Schedule
   Operations --> AuditLog
   Dashboard -->|Risk Summary| Positions
   Dashboard -->|Strategy Summary| Strategies
+  Dashboard -->|PnL・Vol block| PnLVol
   Dashboard -->|Operations block| Schedule
 ```
 
@@ -72,8 +74,9 @@ Login
 Portal
   |
   +-- Dashboard ---- Risk Summary ------> Trading / Positions
-  |     |                                  Analytics / Strategies
-  |     |                                  Operations / Schedule
+  |     |       ---- Strategy Summary --> Analytics / Strategies
+  |     |       ---- PnL・Vol block ----> Analytics / PnL・Vol
+  |     |       ---- Operations block --> Operations / Schedule
   |
   +-- Trading
   |     |-- Positions
@@ -82,8 +85,8 @@ Portal
   |     +-- Balances
   |
   +-- Analytics
+  |     |-- PnL・Vol
   |     |-- Strategies
-  |     |-- Tickers
   |     +-- Backtest Comparison
   |
   +-- Operations

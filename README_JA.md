@@ -16,7 +16,7 @@ TradingView がアラートを送ります。Signal Nexus はそれを戦略に�
 - 複数の取引所への実行。一つの運用で、その計画を複数の取引所へ出せます。`dry_run` では注文は出ません。
 - Analytics の収集。アラート、計画、注文を出したときの取引所の結果が、運用の記録として残ります。
 - 監査の通知。監査の行は Postgres に残ります。Discord へ監査のコピーを届けられます。
-- 一つの運用の流れ。Dashboard、Analytics、Audit は、同じ運用の見え方です。
+- 一つの運用の流れ。Dashboard、Trading、Analytics、Operations は、同じ運用の見え方です。Audit Log は Operations の中にあります。
 
 次に何を変えるかは、自分で決めます。Signal Nexus は記録を残します。
 
@@ -38,7 +38,7 @@ graph LR
     SN[Signal Nexus]
     CEX[CEX Venues]
     DEX[DEX Venues]
-    UI[Dashboard Analytics Audit]
+    UI[Dashboard Trading Analytics Operations]
 
     TV --> SN
     SN --> CEX
@@ -61,7 +61,7 @@ TradingView がシグナルを出します。Signal Nexus が受け取り、CEX 
 | 取引所アダプター | `live` の注文を MEXC または Arcus へ渡す |
 | Analytics | 運用の記録を残す |
 | Postgres | 監査の行を保存する |
-| ポータル | Dashboard、Analytics、Audit を表示する |
+| ポータル | Dashboard、Trading、Analytics、Operations を表示する |
 | Discord | 監査のコピーを受け取る |
 
 ポータルは `PORTAL_PASSWORD` で保護されます。値は環境の設定で渡します。

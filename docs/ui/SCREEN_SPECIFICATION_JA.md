@@ -23,6 +23,19 @@ Performance は五つ目の画面ではありません。Dashboard で運用を�
 
 各画面の節に、その画面から開く先を書いています。つながりの全体は [SCREEN_RELATIONSHIP_DIAGRAM_JA.md](SCREEN_RELATIONSHIP_DIAGRAM_JA.md) です。四つの主な画面は、どのページからでも選べます。Trading、Analytics、Operations の中の切り替えは、その画面の中に留まります。
 
+## 固定表示とページ送り
+
+ページをスクロールしても、次のブロックは上に残ります。
+
+- Dashboard. Today の Total の帯。
+- Positions. Total。Trading の切り替えはスクロールで流れます。
+- Trades. 開いている会場の要約、出来高、開閉ボタン、ページ送り、表の見出し。
+- PnL・Vol. 期間、単位、会場。広い画面では、戦略の絞り込みと ROI の基準も残ります。
+- Strategies、Backtest Comparison、Audit Log. 切り替え、要約、表の見出し。
+- Schedule. 切り替えだけ。
+
+Trades は、会場ごとに 1 ページ 20 行です。Audit Log は 100 行です。ページ送りは一覧の上と下にあり、1 ページに収まるときは出ません。要約は、そのページの行ではなく全件を数えます。Strategies と Backtest Comparison にページ送りはありません。
+
 ## Dashboard
 
 目的. いまの運用と、アラートが届いているかを見る。
@@ -37,6 +50,7 @@ Performance は五つ目の画面ではありません。Dashboard で運用を�
 - System Health
 - PnL
 - Strategy Summary
+- PnL・Vol
 
 表示するもの.
 
@@ -48,10 +62,11 @@ Performance は五つ目の画面ではありません。Dashboard で運用を�
 - System Health. モード（`dry_run` または `live`）、新しい注文を出せるか、集計が読めるか、取り込みが新しいか、直近のアラートの時刻。
 - PnL. 日、週、月、年の確定した結果。折りたたむと、同じ期間を取引所ごとに見ます。
 - Strategy Summary. 決済が一件以上ある戦略ごとに、名前、取引所、確定した結果、出来高、プロフィットファクター、回数、勝率。
+- PnL・Vol. Analytics の PnL・Vol へのリンク。日付の区切りは PnL と同じ UTC です。
 
-この文書に、その数値は載せません。集計が無いときは、Today、Risk Summary、PnL、Strategy Summary は出ません。System Health と Operations は残ります。
+この文書に、その数値は載せません。集計が無いときは、Today、Risk Summary、PnL、Strategy Summary、PnL・Vol は出ません。System Health と Operations は残ります。
 
-移動. Risk Summary は Trading の Positions を開きます。Operations は Schedule を開きます。Strategy Summary は Analytics の Strategies を開きます。
+移動. Risk Summary は Trading の Positions を開きます。Operations は Schedule を開きます。Strategy Summary は Analytics の Strategies を開きます。PnL・Vol は Analytics の PnL・Vol を開きます。
 
 ## Trading
 
@@ -81,27 +96,35 @@ Performance は五つ目の画面ではありません。Dashboard で運用を�
 
 ## Analytics
 
-目的. 運用を戦略ごと、銘柄ごとに読み、実運用を、自分で保存した数値の横に置く。
+目的. 確定した結果と出来高の推移を読み、運用を戦略ごとに読み、実運用を、自分で保存した数値の横に置く。
 
-分かること. 動きのあった戦略と銘柄はどれか、実運用が保存した参照の横でどう並ぶか。画面は戦略の良し悪しを判定しません。
+分かること. 結果と出来高が時間、日、月でどう動いたか、動きのあった戦略はどれか、実運用が保存した参照の横でどう並ぶか。画面は戦略の良し悪しを判定しません。
 
 主な部品.
 
+- PnL・Vol
 - Strategies
-- Tickers
 - Backtest Comparison
 
-最初に開くのは Strategies です。決済の無い戦略と銘柄は出しません。
+最初に開くのは PnL・Vol です。決済の無い戦略は Strategies に出しません。
 
 表示するもの.
 
+- PnL・Vol. ヘッダは、SIGNAL NEXUS の左の Signal Nexus のマーク、QUANT ENGINE、「Automated Strategy P&L & Volume Analytics」です。
+  - 期間. Daily は直近 24 時間を 1 時間ごとに出します。Weekly は直近 7 日を 1 日ごとに出します。どちらも今から遡る区切りで、Dashboard の PnL の UTC の 1 日や ISO 週とは違います。最初に出る Monthly は、1 か月を 1 日ごとに出します。Annually は、1 年を 1 か月ごとに出します。Monthly と Annually は、前後の期間へ移り、年と月を選べます。先の期間は開けません。
+  - 単位. $ (USD) または % (ROI)。
+  - 絞り込み. All Venues と、`enabled: true` の会場 id ごとの選択です。それぞれに CEX か DEX の印が付きます。戦略でも絞り込めます。無効な会場の約定は数えません。
+  - 要約. Net P&L、Total Volume、Win Rate、Profit Factor、Max Drawdown。
+  - チャート. 損益の棒と出来高に、累積損益の線か、出来高の軸を重ねます。棒にカーソルを置くと、その期間の数値が出ます。
+  - チャートの下. Monthly はカレンダーで、日を開くと、その日の決済が出ます。Annually は月ごとのカードで、月を開くと Monthly に移ります。Daily と Weekly は決済の一覧で、新しい順に最大 100 件です。
+  - 日付の区切りは、Dashboard の PnL と同じ UTC です。
+  - ROI. 約定ごとの確定した結果を、その約定の UTC 日付に当たる `roi_basis.yml` の基準資金で割ります。出来高は USD のままです。ファイルが無いときは、ROI の基準が未設定だと出ます。
 - Strategies. 動いている戦略の数、結果がプラスの戦略の数、確定した結果の合計、プロフィットファクターの平均。各行は、確定した結果、出来高、プロフィットファクター、利益率、勝率、回数、戦略名、取引所です。
-- Tickers. 同じ要約と列を、銘柄ごとに出します。銘柄と一緒に取引所が出ます。
 - Backtest Comparison. 比べた戦略の数、実運用のプロフィットファクターの平均、保存した側の平均、差が最も大きい戦略。各行は、利益率、プロフィットファクター、勝率、回数について、実運用と保存した参照を並べ、保存した期間も出します。
 
 この文書に、その数値は載せません。保存した参照は、自分で残したデータです。ここに公開された結果ではありません。
 
-移動. Dashboard の Strategy Summary は、この画面の Strategies を開きます。Trading と Operations は外側の移動のままです。
+移動. Dashboard の Strategy Summary は、この画面の Strategies を開きます。Dashboard の PnL・Vol は、この画面の PnL・Vol を開きます。Trading と Operations は外側の移動のままです。
 
 ## Operations
 

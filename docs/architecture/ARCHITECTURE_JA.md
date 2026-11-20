@@ -20,7 +20,7 @@ graph LR
   SN[Signal Nexus]
   CEX[CEX]
   DEX[DEX]
-  UI[Dashboard Analytics Audit]
+  UI[Dashboard Trading Analytics Operations]
   TV --> SN
   SN --> CEX
   SN --> DEX
@@ -42,13 +42,13 @@ graph TB
   subgraph Views["見る場所"]
     Portal
     Dashboard
-    Trade
+    Trading
     Analytics
-    Audit
+    Operations
   end
 ```
 
-現在の発注先は、MEXC 現物、MEXC 先物、Arcus です。公開版に無い会場は、この構成の発注先ではありません。Portal、Dashboard、Trade、Analytics、Audit は、自分の運用を見る場所です。そこから注文は出せません。
+現在の発注先は、MEXC 現物、MEXC 先物、Arcus です。公開版に無い会場は、この構成の発注先ではありません。Portal、Dashboard、Trading、Analytics、そして Audit Log を持つ Operations は、自分の運用を見る場所です。そこから注文は出せません。
 
 ### 2. 部品と流れ
 

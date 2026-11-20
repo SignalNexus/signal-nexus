@@ -16,7 +16,7 @@ TradingView sends an alert. Signal Nexus maps it to a strategy, plans the order,
 - Multi-venue execution. One workflow can run that plan on more than one venue. In `dry_run`, the order is not sent.
 - Analytics collection. The alert, the plan, and, when an order is sent, the venue result are kept as the operational record.
 - Audit notifications. The audit row stays in Postgres. Discord can receive a copy.
-- Unified operational workflow. Dashboard, Analytics, and Audit are views of that same run.
+- Unified operational workflow. Dashboard, Trading, Analytics, and Operations are views of that same run. The Audit Log is under Operations.
 
 You choose the next change. Signal Nexus keeps the record.
 
@@ -38,7 +38,7 @@ graph LR
     SN[Signal Nexus]
     CEX[CEX Venues]
     DEX[DEX Venues]
-    UI[Dashboard Analytics Audit]
+    UI[Dashboard Trading Analytics Operations]
 
     TV --> SN
     SN --> CEX
@@ -61,7 +61,7 @@ The full layout is in [Architecture](docs/architecture/ARCHITECTURE.md).
 | Venue adapter | Carries a live order to MEXC or Arcus |
 | Analytics | Keeps the operational record |
 | Postgres | Stores the audit row |
-| Portal | Shows Dashboard, Analytics, and Audit |
+| Portal | Shows Dashboard, Trading, Analytics, and Operations |
 | Discord | Receives an audit copy |
 
 The Portal is protected by `PORTAL_PASSWORD`, which is supplied through environment configuration.

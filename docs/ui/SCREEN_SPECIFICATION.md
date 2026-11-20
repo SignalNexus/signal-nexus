@@ -23,6 +23,19 @@ Performance is not a fifth view. It is the Dashboard reading of the run. Backtes
 
 Each screen below says where it sends you. The map of those links, and the tree of views, is [SCREEN_RELATIONSHIP_DIAGRAM.md](SCREEN_RELATIONSHIP_DIAGRAM.md). The four primary views stay available from every screen. A switch inside Trading, Analytics, or Operations stays inside that view.
 
+## Pinned headers and pages
+
+While a page scrolls, the block named here stays at the top.
+
+- Dashboard. The Total band of Today.
+- Positions. Total. The Trading switch scrolls away.
+- Trades. For the venue that is open: its summary, volume, the fold button, the pager, and the table header.
+- PnL・Vol. Period, unit, and venue. On a wide screen the strategy filter and the ROI basis stay as well.
+- Strategies, Backtest Comparison, and Audit Log. The switch, the summary, and the table header.
+- Schedule. The switch only.
+
+Trades shows 20 rows per venue on a page. The Audit Log shows 100. The pager sits above and below the list and is hidden when the list fits on one page. A summary counts every row, not only the rows on the page. Strategies and Backtest Comparison are not paged.
+
 ## Dashboard
 
 Purpose. See the run as it stands now, and whether alerts are arriving.
@@ -37,6 +50,7 @@ Key components.
 - System Health
 - PnL
 - Strategy Summary
+- PnL・Vol
 
 Displayed information.
 
@@ -48,10 +62,11 @@ Some value labels are currently displayed in Japanese. The information described
 - System Health. Mode (`dry_run` or `live`), whether new orders are allowed, whether the aggregate is available, whether ingest is current, and the time of the latest alert.
 - PnL. Realized result for the day, the week, the month, and the year. A fold shows the same periods by venue.
 - Strategy Summary. For each strategy with at least one close: name, venue, realized result, volume, profit factor, count, and win rate.
+- PnL・Vol. A link to Analytics at PnL・Vol. Days are cut in UTC, the same as PnL.
 
-This document does not publish those figures. An empty aggregate leaves Today, Risk Summary, PnL, and Strategy Summary off the page. System Health and Operations remain.
+This document does not publish those figures. An empty aggregate leaves Today, Risk Summary, PnL, Strategy Summary, and PnL・Vol off the page. System Health and Operations remain.
 
-Navigation. Risk Summary opens Trading at Positions. Operations opens the Schedule. Strategy Summary opens Analytics at Strategies.
+Navigation. Risk Summary opens Trading at Positions. Operations opens the Schedule. Strategy Summary opens Analytics at Strategies. PnL・Vol opens Analytics at PnL・Vol.
 
 ## Trading
 
@@ -81,27 +96,35 @@ Navigation. The four switches stay inside Trading. Dashboard, Analytics, and Ope
 
 ## Analytics
 
-Purpose. Read the run by strategy and by symbol, and set the live run next to figures you stored.
+Purpose. Read the realized result and volume over time, read the run by strategy, and set the live run next to figures you stored.
 
-What the user can learn. Which strategies and symbols have activity, and how the live run sits beside the stored reference. The screen does not judge the strategy.
+What the user can learn. How the result and volume move by hour, day, and month, which strategies have activity, and how the live run sits beside the stored reference. The screen does not judge the strategy.
 
 Key components.
 
+- PnL・Vol
 - Strategies
-- Tickers
 - Backtest Comparison
 
-The switch starts on Strategies. A strategy or symbol with no closed trades is omitted.
+The switch starts on PnL・Vol. A strategy with no closed trades is omitted from Strategies.
 
 Displayed information.
 
+- PnL・Vol. The header shows the Signal Nexus mark beside SIGNAL NEXUS, QUANT ENGINE, and "Automated Strategy P&L & Volume Analytics".
+  - Period. Daily is the last 24 hours by hour. Weekly is the last 7 days by day. Both are rolling windows, not the UTC day and ISO week of Dashboard PnL. Monthly, the default, is one month by day. Annually is one year by month. Monthly and Annually move to the previous or next period and pick a year and month. A later period cannot be opened.
+  - Unit. $ (USD) or % (ROI).
+  - Filters. All Venues and each venue id with `enabled: true`, each marked CEX or DEX, and a strategy filter. Fills on a disabled venue are not counted.
+  - Summary. Net P&L, Total Volume, Win Rate, Profit Factor, and Max Drawdown.
+  - Chart. P&L bars and volume, with either a cumulative P&L line or a volume axis. Hovering a bar shows that period's values.
+  - Below the chart. Monthly shows a calendar, and a day opens its closed trades. Annually shows one card per month, and a month opens Monthly. Daily and Weekly list closed trades, newest first, up to 100.
+  - Days are cut in UTC, the same as Dashboard PnL.
+  - ROI. Each fill's realized result is divided by the capital in `roi_basis.yml` for that fill's UTC date. Volume stays in USD. Without the file, the screen says the ROI basis is not set.
 - Strategies. Summary of how many strategies are active, how many are profitable, total realized result, and average profit factor. Each row: realized result, volume, profit factor, profit rate, win rate, count, strategy name, and venue.
-- Tickers. The same summary and columns, grouped by symbol. Venue is shown with the symbol.
 - Backtest Comparison. Count of compared strategies, live average profit factor, stored average profit factor, and the strategy with the largest gap. Each row places the live run beside the stored reference for profit rate, profit factor, win rate, and count, plus the stored period.
 
 This document does not include those figures. The stored reference is data you kept. It is not a result published here.
 
-Navigation. Dashboard's Strategy Summary opens this view at Strategies. Trading and Operations remain in the outer navigation.
+Navigation. Dashboard's Strategy Summary opens this view at Strategies. Dashboard's PnL・Vol block opens it at PnL・Vol. Trading and Operations remain in the outer navigation.
 
 ## Operations
 

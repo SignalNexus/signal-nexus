@@ -22,8 +22,8 @@ Portal
 │   ├─ Open Orders
 │   └─ Balances
 ├─ Analytics
+│   ├─ PnL・Vol
 │   ├─ Strategies
-│   ├─ Tickers
 │   └─ Backtest Comparison
 └─ Operations
     ├─ Schedule
@@ -38,6 +38,7 @@ These are the links a screen draws to another view. The switch inside a view is 
 
 - Dashboard opens Trading at Positions, from Risk Summary.
 - Dashboard opens Analytics at Strategies, from Strategy Summary.
+- Dashboard opens Analytics at PnL・Vol, from the PnL・Vol block.
 - Dashboard opens Operations at Schedule, from the Operations block.
 
 Trading, Analytics, and Operations do not add a further jump. They return to the four primary views through the outer navigation.
@@ -55,13 +56,14 @@ graph TD
   Trading --> Trades
   Trading --> OpenOrders
   Trading --> Balances
+  Analytics --> PnLVol["PnL・Vol"]
   Analytics --> Strategies
-  Analytics --> Tickers
   Analytics --> BacktestComparison
   Operations --> Schedule
   Operations --> AuditLog
   Dashboard -->|Risk Summary| Positions
   Dashboard -->|Strategy Summary| Strategies
+  Dashboard -->|PnL・Vol block| PnLVol
   Dashboard -->|Operations block| Schedule
 ```
 
@@ -72,8 +74,9 @@ Login
 Portal
   |
   +-- Dashboard ---- Risk Summary ------> Trading / Positions
-  |     |                                  Analytics / Strategies
-  |     |                                  Operations / Schedule
+  |     |       ---- Strategy Summary --> Analytics / Strategies
+  |     |       ---- PnL・Vol block ----> Analytics / PnL・Vol
+  |     |       ---- Operations block --> Operations / Schedule
   |
   +-- Trading
   |     |-- Positions
@@ -82,8 +85,8 @@ Portal
   |     +-- Balances
   |
   +-- Analytics
+  |     |-- PnL・Vol
   |     |-- Strategies
-  |     |-- Tickers
   |     +-- Backtest Comparison
   |
   +-- Operations
