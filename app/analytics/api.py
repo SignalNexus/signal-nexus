@@ -44,7 +44,7 @@ from app.core.security import analytics_secret_matches
 from app.execution.admission import order_block_reason
 from app.execution.arcus import ArcusError, apply_configured_leverage, execute_arcus
 from app.execution.futures import execute_futures
-from app.execution.live import execute_live
+from app.execution.live import execute_live, order_deferred
 from app.execution.mexc_open_orders import open_orders_payload
 from app.execution.order_executor import public_order_error
 from app.execution.router import load_strategies
@@ -194,7 +194,8 @@ def arcus_order(
         raise HTTPException(status_code=404, detail="strategy is unavailable")
     _refuse_blocked_order(strategy, body.action)
     try:
-        result = execute_arcus(strategy, body.action, body.client_order_id)
+        with order_deferred():
+            result = execute_arcus(strategy, body.action, body.client_order_id)
     except ArcusError as exc:
         raise HTTPException(status_code=502, detail=public_order_error(exc)) from None
     deferred = _deferred_response(result)
@@ -246,7 +247,8 @@ def venue_order(
         raise HTTPException(status_code=404, detail="strategy is unavailable")
     _refuse_blocked_order(strategy, body.action)
     try:
-        result = port.execute(strategy, body.action, body.client_order_id)
+        with order_deferred():
+            result = port.execute(strategy, body.action, body.client_order_id)
     except Exception as exc:
         raise HTTPException(status_code=502, detail=public_order_error(exc)) from None
     deferred = _deferred_response(result)
@@ -305,13 +307,14 @@ def mexc_order(
         else:
             from app.execution.exchange import futures_client
 
-            result = execute_futures(
-                futures_client(),
-                strategy,
-                body.action,
-                body.client_order_id,
-                load_strategies(),
-            )
+            with order_deferred():
+                result = execute_futures(
+                    futures_client(),
+                    strategy,
+                    body.action,
+                    body.client_order_id,
+                    load_strategies(),
+                )
     except HTTPException:
         raise
     except Exception as exc:

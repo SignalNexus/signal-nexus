@@ -152,18 +152,29 @@ def execute_arcus(strategy, action: str, client_order_id: str, client: "ArcusCli
         if quantity <= 0:
             return LiveResult("not_sent", False, "quantity below minimum")
     prepared = venue.prepare(action, strategy.symbol, quantity, client_order_id, strategy.strategy_id)
-    failed = None
-    if prepared["follow"] is not None:
-        try:
-            prepared["follow"]()
-        except Exception as exc:
-            from app.execution.order_executor import public_order_error
 
-            failed = public_order_error(exc)
-    _apply_lot(strategy.strategy_id, action, prepared["holder"]["result"], client_order_id)
-    if failed is not None:
-        return LiveResult("order_failed", True, failed)
-    closed = prepared["holder"]["result"]
+    def complete() -> LiveResult:
+        failed = None
+        if prepared["follow"] is not None:
+            try:
+                prepared["follow"]()
+            except Exception as exc:
+                from app.execution.order_executor import public_order_error
+
+                failed = public_order_error(exc)
+        _apply_lot(strategy.strategy_id, action, prepared["holder"]["result"], client_order_id)
+        if failed is not None:
+            return LiveResult("order_failed", True, failed)
+        return _arcus_result(venue, strategy, action, prepared["holder"]["result"], client_order_id)
+
+    if prepared["follow"] is None:
+        return complete()
+    from app.execution.live import handoff_follow_up
+
+    return handoff_follow_up(strategy, action, complete)
+
+
+def _arcus_result(venue, strategy, action: str, closed: dict, client_order_id: str) -> LiveResult:
     filled = closed.get("filled") or Decimal("0")
     if not isinstance(filled, Decimal):
         filled = Decimal(str(filled))

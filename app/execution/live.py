@@ -1,9 +1,11 @@
 import time
+from contextlib import contextmanager
+from contextvars import ContextVar
 from datetime import datetime, timezone
 from dataclasses import dataclass
 from decimal import Decimal
 from threading import Lock
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
 
 from app.execution.order_executor import (
     base_amount_for_quote,
@@ -67,6 +69,67 @@ class LiveResult:
     average: float | None = None
     follow_up: Callable[[], None] | None = None
     realized: Decimal | None = None
+
+
+_order_deferred: ContextVar[bool] = ContextVar("order_deferred", default=False)
+
+
+@contextmanager
+def order_deferred() -> Iterator[None]:
+    token = _order_deferred.set(True)
+    try:
+        yield
+    finally:
+        _order_deferred.reset(token)
+
+
+def orders_are_deferred() -> bool:
+    return _order_deferred.get()
+
+
+def handoff_follow_up(strategy, action: str, follow: Callable[[], "LiveResult"]) -> "LiveResult":
+    if not _order_deferred.get():
+        return follow()
+
+    def run() -> None:
+        try:
+            report_order_result(strategy, action, follow())
+        except Exception as exc:
+            report_order_result(strategy, action, LiveResult("order_failed", True, public_order_error(exc)))
+
+    return LiveResult("accepted", True, follow_up=run)
+
+
+def report_order_result(strategy, action: str, result: "LiveResult") -> None:
+    from app.notifications.discord import order_failed, order_not_sent, order_success, send_audit
+
+    if not result.sent:
+        send_audit(
+            order_not_sent(
+                strategy.strategy_id,
+                strategy.symbol,
+                action,
+                float(strategy.size_quote),
+                result.reason,
+                venue=strategy.venue,
+            )
+        )
+        return
+    if result.status == "order_failed":
+        send_audit(order_failed(strategy.strategy_id, result.reason, venue=strategy.venue))
+        return
+    send_audit(
+        order_success(
+            strategy.strategy_id,
+            strategy.symbol,
+            action,
+            float(strategy.size_quote),
+            result.status,
+            result.average,
+            venue=strategy.venue,
+            realized=result.realized,
+        )
+    )
 
 
 def clear_live_state() -> None:

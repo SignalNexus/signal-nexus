@@ -27,6 +27,7 @@ CONTRACT_SIZE = {
 }
 
 _lock = Lock()
+_working: set[str] = set()
 _lots: dict[str, float] = {}
 _loaded = False
 
@@ -35,6 +36,7 @@ def clear_futures_state() -> None:
     global _loaded
     with _lock:
         _lots.clear()
+        _working.clear()
         _loaded = False
 
 
@@ -139,12 +141,11 @@ def execute_futures(
         strategy.strategy_id, client_order_id, action, venue=strategy.venue
     )
     symbol = swap_symbol(strategy.symbol)
-    with _lock:
-        if action in ("SHORT", "LONG"):
-            side = "sell" if action == "SHORT" else "buy"
-            return _open(exchange, strategy, symbol, exchange_id, client_order_id, side)
-        side = "buy" if action == "COVER" else "sell"
-        return _close(exchange, strategy, symbol, exchange_id, client_order_id, side)
+    if action in ("SHORT", "LONG"):
+        side = "sell" if action == "SHORT" else "buy"
+        return _open(exchange, strategy, symbol, exchange_id, client_order_id, side)
+    side = "buy" if action == "COVER" else "sell"
+    return _close(exchange, strategy, symbol, exchange_id, client_order_id, side)
 
 
 def cancel_open_futures_orders() -> None:
@@ -311,7 +312,7 @@ def _orderable_contracts(exchange, symbol: str, contracts: float) -> float:
 def _open(
     exchange, strategy: Strategy, symbol: str, exchange_id: str, client_order_id: str, side: str
 ) -> LiveResult:
-    current = _lots.get(strategy.strategy_id, 0.0)
+    current = _read_lot(strategy.strategy_id)
     if current > 0 and _orderable_contracts(exchange, symbol, current) > 0:
         return LiveResult("not_sent", False, "position already open")
     margin = strategy.size_quote / _leverage(strategy)
@@ -324,45 +325,72 @@ def _open(
     contracts = _contracts(exchange, symbol, strategy.size_quote)
     if contracts < 1:
         return LiveResult("not_sent", False, "quantity below minimum")
-    _arm(exchange, symbol, side, _leverage(strategy))
-    status, filled, average = _market(
-        exchange, symbol, side, contracts, exchange_id, reduce_only=False, leverage=_leverage(strategy)
-    )
+    if not _claim(strategy.strategy_id):
+        return LiveResult("not_sent", False, "entry already working")
+    try:
+        _arm(exchange, symbol, side, _leverage(strategy))
+        order_id = _submit(
+            exchange, symbol, side, contracts, exchange_id, reduce_only=False, leverage=_leverage(strategy)
+        )
+    except Exception:
+        _release(strategy.strategy_id)
+        raise
     report_order_link(exchange_id, client_order_id)
-    status, filled = _settle_fill(exchange, symbol, exchange_id, status, filled)
-    if filled <= 0:
-        return LiveResult("order_failed", True, "filled quantity missing")
-    _lots[strategy.strategy_id] = _stored_futures(
-        strategy.strategy_id, exchange_id, filled, closing=False, fill_price=average
-    )
-    return LiveResult(status, True, average=average)
+
+    def complete() -> LiveResult:
+        try:
+            status, filled, average = _confirm(exchange, symbol, order_id)
+            if filled <= 0:
+                return LiveResult("order_failed", True, "filled quantity missing")
+            _remember(strategy.strategy_id, _stored_futures(
+                strategy.strategy_id, exchange_id, filled, closing=False, fill_price=average
+            ))
+            return LiveResult(status, True, average=average)
+        finally:
+            _release(strategy.strategy_id)
+
+    from app.execution.live import handoff_follow_up
+
+    return handoff_follow_up(strategy, "SHORT" if side == "sell" else "LONG", complete)
 
 
 def _close(
     exchange, strategy: Strategy, symbol: str, exchange_id: str, client_order_id: str, side: str
 ) -> LiveResult:
-    contracts = _lots.get(strategy.strategy_id, 0.0)
+    contracts = _read_lot(strategy.strategy_id)
     if contracts <= 0:
         return LiveResult("not_sent", False, "position already flat")
     orderable = _orderable_contracts(exchange, symbol, contracts)
     if orderable <= 0:
         return LiveResult("not_sent", False, "remainder below order step")
-    status, filled, average = _market(exchange, symbol, side, orderable, exchange_id, reduce_only=True)
+    if not _claim(strategy.strategy_id):
+        return LiveResult("not_sent", False, "exit already working")
+    try:
+        order_id = _submit(exchange, symbol, side, orderable, exchange_id, reduce_only=True)
+    except Exception:
+        _release(strategy.strategy_id)
+        raise
     report_order_link(exchange_id, client_order_id)
-    status, filled = _settle_fill(exchange, symbol, exchange_id, status, filled)
-    if filled <= 0:
-        return LiveResult("order_failed", True, "filled quantity missing")
-    left = _stored_futures(strategy.strategy_id, exchange_id, filled, closing=True)
-    if left <= 1e-9:
-        _lots.pop(strategy.strategy_id, None)
-    else:
-        _lots[strategy.strategy_id] = left
-    return LiveResult(
-        status,
-        True,
-        average=average,
-        realized=_futures_close_realized(strategy, symbol, filled, average, client_order_id, side),
-    )
+    closing_action = "COVER" if side == "buy" else "FLAT"
+
+    def complete() -> LiveResult:
+        try:
+            status, filled, average = _confirm(exchange, symbol, order_id)
+            if filled <= 0:
+                return LiveResult("order_failed", True, "filled quantity missing")
+            _remember(strategy.strategy_id, _stored_futures(strategy.strategy_id, exchange_id, filled, closing=True))
+            return LiveResult(
+                status,
+                True,
+                average=average,
+                realized=_futures_close_realized(strategy, symbol, filled, average, client_order_id, side),
+            )
+        finally:
+            _release(strategy.strategy_id)
+
+    from app.execution.live import handoff_follow_up
+
+    return handoff_follow_up(strategy, closing_action, complete)
 
 
 def _stored_futures(
@@ -447,32 +475,53 @@ def _call(exchange, method: str, *args) -> None:
         raise
 
 
-def _settle_fill(exchange, symbol: str, exchange_id: str, status: str, filled: float) -> tuple[str, float]:
-    # 直後の照会が 0 でも、履歴に約定があればその数量で建玉を合わせる。
+def _read_lot(strategy_id: str) -> float:
+    with _lock:
+        return _lots.get(strategy_id, 0.0)
+
+
+def _claim(strategy_id: str) -> bool:
+    with _lock:
+        if strategy_id in _working:
+            return False
+        _working.add(strategy_id)
+        return True
+
+
+def _release(strategy_id: str) -> None:
+    with _lock:
+        _working.discard(strategy_id)
+
+
+def _remember(strategy_id: str, quantity: float) -> None:
+    with _lock:
+        if quantity <= 1e-9:
+            _lots.pop(strategy_id, None)
+        else:
+            _lots[strategy_id] = quantity
+
+
+def _confirm(exchange, symbol: str, order_id: str) -> tuple[str, float, float | None]:
+    status, filled, average = _fetch_fill(exchange, symbol, order_id)
     if filled > 0:
-        return status, filled
-    recovered = _recovered_fill(exchange, symbol, exchange_id)
-    if recovered <= 0:
-        return status, filled
-    return "closed", recovered
+        return status, filled, average
+    return _fetch_fill(exchange, symbol, order_id)
 
 
-def _recovered_fill(exchange, symbol: str, exchange_id: str) -> float:
-    since = int((datetime.now(timezone.utc) - timedelta(days=HISTORY_DAYS)).timestamp() * 1000)
+def _fetch_fill(exchange, symbol: str, order_id: str) -> tuple[str, float, float | None]:
     try:
-        orders = fetch_futures_history(exchange, symbol, since)
+        fetched = exchange.fetch_order(order_id, symbol)
     except Exception as exc:
         logger.warning("futures fill was not reread: %s", type(exc).__name__)
-        return 0.0
-    seen = 0.0
-    for order in orders:
-        if _client_id(order) != exchange_id:
-            continue
-        seen = max(seen, _filled(order))
-    return seen
+        return "order_failed", 0.0, None
+    status = str(fetched.get("status") or "")
+    if not status:
+        raise RuntimeError("order status missing")
+    average = fetched.get("average")
+    return status, float(fetched.get("filled") or 0), None if average in (None, "") else float(average)
 
 
-def _market(
+def _submit(
     exchange,
     symbol: str,
     side: str,
@@ -481,7 +530,7 @@ def _market(
     *,
     reduce_only: bool,
     leverage: int | None = None,
-):
+) -> str:
     params = {
         "reduceOnly": reduce_only,
         "clientOrderId": exchange_id,
@@ -494,12 +543,7 @@ def _market(
     order_id = created.get("id")
     if not order_id:
         raise RuntimeError("order id missing")
-    fetched = exchange.fetch_order(order_id, symbol)
-    status = fetched.get("status")
-    if not status:
-        raise RuntimeError("order status missing")
-    average = fetched.get("average")
-    return str(status), float(fetched.get("filled") or 0), None if average in (None, "") else float(average)
+    return str(order_id)
 
 
 def _futures_close_realized(strategy, symbol: str, filled: float, average, client_order_id: str, side: str):
