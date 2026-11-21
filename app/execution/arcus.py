@@ -10,7 +10,7 @@ import httpx
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
 from app.execution.live import LiveResult
-from app.execution.positions import exchange_client_order_id
+from app.execution.positions import framed_client_order_id
 
 MAINNET = "https://api.arcus.xyz"
 ACCOUNT_INDEX = 0
@@ -307,7 +307,7 @@ class ArcusClient:
         market_id, name = MARKETS[symbol]
         spec = self._market(name)
         book = self._bbo(name)
-        limit_id = exchange_client_order_id(strategy_id, client_order_id, action, venue="arcus")
+        limit_id = framed_client_order_id(strategy_id, client_order_id, action, venue="arcus")
         if action == "COVER" and book[1] is not None and ask_beyond_mark(book[1], spec["mark"]):
             return _finished(self._leave_on_ask(market_id, spec, side, quantity, limit_id, book[1]))
         if action == "FLAT" and book[0] is not None and bid_beyond_mark(book[0], spec["mark"]):
@@ -318,7 +318,7 @@ class ArcusClient:
         if touch is None or crossed:
             market = self._market_order(action, strategy_id, client_order_id, name, market_id, spec, side, quantity, reduce_only)
             filled = self._filled_size(market)
-            market_key = exchange_client_order_id(strategy_id, client_order_id, action, "remainder", "arcus")
+            market_key = framed_client_order_id(strategy_id, client_order_id, action, "remainder", "arcus")
             quoted = None
             if filled > 0 and isinstance(market, dict) and market.get("orderId"):
                 quoted = _quoted_price(self._read(str(market["orderId"])))
@@ -385,7 +385,7 @@ class ArcusClient:
                 filled = limit_filled + market_filled
                 remaining = max(quantity - filled, Decimal("0"))
                 if market_filled > 0:
-                    market_key = exchange_client_order_id(
+                    market_key = framed_client_order_id(
                         strategy_id, client_order_id, action, "remainder", "arcus"
                     )
                     fills.append((market_key, market_filled))
@@ -472,7 +472,7 @@ class ArcusClient:
         if mark <= 0:
             raise ArcusError("mark price missing")
         price = protective_price(side, mark, spec["tick"])
-        client_id = exchange_client_order_id(strategy_id, client_order_id, action, "remainder", "arcus")
+        client_id = framed_client_order_id(strategy_id, client_order_id, action, "remainder", "arcus")
         return self._place(market_id, spec, side, "IOC", price, quantity, reduce_only, client_id)
 
     def _cancel(self, market_id, order_id):

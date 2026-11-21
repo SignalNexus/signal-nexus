@@ -82,22 +82,25 @@ def invalidate() -> None:
         _loaded = False
 
 
+_ORDER_MARKS = {
+    "BUY": "b",
+    "SELL": "s",
+    "STOP": "s",
+    "SHORT": "h",
+    "COVER": "c",
+    "LONG": "l",
+    "FLAT": "f",
+}
+_FRAMED_MARKS = {"LONG": "l", "SHORT": "h", "FLAT": "f", "COVER": "c"}
+
+
 def exchange_client_order_id(
     strategy_id: str, client_order_id: str, action: str, leg: str = "", venue: str = ""
 ) -> str:
-    marks = {
-        "BUY": "b",
-        "SELL": "s",
-        "STOP": "s",
-        "SHORT": "h",
-        "COVER": "c",
-        "LONG": "l",
-        "FLAT": "f",
-    }
-    if action not in marks:
+    if action not in _ORDER_MARKS:
         raise ValueError("unsupported action")
     code = strategy_code(strategy_id)
-    mark = marks[action]
+    mark = _ORDER_MARKS[action]
     material = f"{strategy_id}\n{client_order_id}\n{action}"
     if venue:
         material = f"{material}\n{venue}"
@@ -105,6 +108,52 @@ def exchange_client_order_id(
         material = f"{material}\n{leg}"
     digest = hashlib.sha256(material.encode()).hexdigest()
     return f"{code}{mark}{digest[:21]}"
+
+
+def framed_client_order_id(
+    strategy_id: str, client_order_id: str, action: str, leg: str = "", venue: str = ""
+) -> str:
+    if action not in _FRAMED_MARKS:
+        raise ValueError("unsupported action")
+    if len(strategy_id) == 28 or leg:
+        return exchange_client_order_id(strategy_id, client_order_id, action, leg, venue)
+    return f"{len(strategy_id)}-{strategy_id}{_FRAMED_MARKS[action]}"
+
+
+def parse_framed_client_order_id(client_id: str) -> tuple[str, str] | None:
+    if len(client_id) == 32:
+        return None
+    index = 0
+    while index < len(client_id) and client_id[index].isdigit():
+        index += 1
+    if index == 0 or index >= len(client_id) or client_id[index] != "-":
+        return None
+    digits = client_id[:index]
+    if len(digits) > 1 and digits[0] == "0":
+        return None
+    length = int(digits)
+    body = client_id[index + 1 :]
+    if length < 1 or len(body) != length + 1:
+        return None
+    mark = body[length]
+    if mark not in ("l", "h", "f", "c"):
+        return None
+    return body[:length], mark
+
+
+def strategy_of(client_id: str, codes: dict[str, str], marks: str = "hclf") -> tuple[str, str] | None:
+    framed = parse_framed_client_order_id(client_id)
+    if framed is not None:
+        strategy_id, mark = framed
+        if mark not in marks or strategy_id not in codes.values():
+            return None
+        return strategy_id, mark
+    if len(client_id) != 32 or client_id[10] not in marks:
+        return None
+    strategy_id = codes.get(client_id[:10])
+    if strategy_id is None:
+        return None
+    return strategy_id, client_id[10]
 
 
 def strategy_code(strategy_id: str) -> str:

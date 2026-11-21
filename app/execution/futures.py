@@ -12,9 +12,10 @@ from app.execution.positions import (
     _client_id,
     _filled,
     _timestamp,
-    exchange_client_order_id,
+    framed_client_order_id,
     free_usdt,
     strategy_codes,
+    strategy_of,
 )
 from app.execution.router import Strategy, load_strategies
 from app.notifications.analytics import report_order_link
@@ -137,7 +138,7 @@ def execute_futures(
             refresh_futures_from_store()
     except Exception:
         return LiveResult("not_sent", False, "position history unavailable")
-    exchange_id = exchange_client_order_id(
+    exchange_id = framed_client_order_id(
         strategy.strategy_id, client_order_id, action, venue=strategy.venue
     )
     symbol = swap_symbol(strategy.symbol)
@@ -158,9 +159,7 @@ def cancel_open_futures_orders() -> None:
     for symbol in symbols:
         for order in exchange.fetch_open_orders(symbol) or []:
             client_id = _client_id(order)
-            if len(client_id) != 32 or client_id[10] not in ("h", "c", "l", "f"):
-                continue
-            if codes.get(client_id[:10]) is None:
+            if not _known_futures_order(client_id, codes):
                 continue
             order_id = order.get("id")
             if order_id:
@@ -236,22 +235,29 @@ def _tracked_futures(strategies: dict[str, Strategy]) -> dict[str, Strategy]:
     return selected
 
 
+def _known_futures_order(client_id: str, codes: dict[str, str]) -> bool:
+    return strategy_of(client_id, codes) is not None
+
+
+def _futures_identity(client_id: str, codes: dict[str, str]) -> tuple[str, str] | None:
+    return strategy_of(client_id, codes)
+
+
 def lots_from_orders(orders: list[dict], codes: dict[str, str]) -> dict[str, float]:
     events: list[tuple[int, str, str, float]] = []
     for order in orders:
         client_id = _client_id(order)
-        if len(client_id) != 32 or client_id[10] not in ("h", "c", "l", "f"):
+        identified = _futures_identity(client_id, codes)
+        if identified is None:
             continue
-        strategy_id = codes.get(client_id[:10])
-        if strategy_id is None:
-            continue
+        strategy_id, mark = identified
         status = str(order.get("status") or "").lower()
         if status not in ("closed", "filled"):
             continue
         filled = _filled(order)
         if filled <= 0:
             continue
-        events.append((_timestamp(order), strategy_id, client_id[10], filled))
+        events.append((_timestamp(order), strategy_id, mark, filled))
     events.sort(key=lambda item: item[0])
     lots: dict[str, float] = {}
     for _timestamp_ms, strategy_id, mark, filled in events:
@@ -335,7 +341,8 @@ def _open(
     except Exception:
         _release(strategy.strategy_id)
         raise
-    report_order_link(exchange_id, client_order_id)
+    if len(exchange_id) == 32:
+        report_order_link(exchange_id, client_order_id)
 
     def complete() -> LiveResult:
         try:
@@ -370,7 +377,8 @@ def _close(
     except Exception:
         _release(strategy.strategy_id)
         raise
-    report_order_link(exchange_id, client_order_id)
+    if len(exchange_id) == 32:
+        report_order_link(exchange_id, client_order_id)
     closing_action = "COVER" if side == "buy" else "FLAT"
 
     def complete() -> LiveResult:

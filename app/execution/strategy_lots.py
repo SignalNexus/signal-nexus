@@ -163,14 +163,15 @@ def apply_futures_history(orders: list[dict], codes: dict[str, str]) -> None:
 
 
 def apply_arcus_fills(fills: list[dict], codes: dict[str, str]) -> None:
+    from app.execution.positions import strategy_of
+
     grouped: dict[str, tuple[str, bool, Decimal, Decimal]] = {}
     for fill in fills:
         client_id = str(fill.get("clientId") or "")
-        if len(client_id) != 32 or client_id[10] not in ("h", "c", "l", "f"):
+        identified = strategy_of(client_id, codes)
+        if identified is None:
             continue
-        strategy_id = codes.get(client_id[:10])
-        if strategy_id is None:
-            continue
+        strategy_id, mark = identified
         try:
             size = Decimal(str(fill.get("size") or "0"))
             price = Decimal(str(fill.get("price") or "0"))
@@ -178,7 +179,7 @@ def apply_arcus_fills(fills: list[dict], codes: dict[str, str]) -> None:
             continue
         if size <= 0:
             continue
-        closing = client_id[10] in ("c", "f")
+        closing = mark in ("c", "f")
         quote = price * size if price > 0 else Decimal("0")
         current = grouped.get(client_id)
         if current is None:
@@ -232,20 +233,19 @@ def spot_fill_events(orders: list[dict], trades: list[dict], codes: dict[str, st
 
 
 def futures_fill_events(orders: list[dict], codes: dict[str, str]):
-    from app.execution.positions import _client_id, _filled
+    from app.execution.positions import _client_id, _filled, strategy_of
 
     events = []
     for order in orders:
         client_id = _client_id(order)
-        if len(client_id) != 32 or client_id[10] not in ("h", "c", "l", "f"):
+        identified = strategy_of(client_id, codes)
+        if identified is None:
             continue
-        strategy_id = codes.get(client_id[:10])
-        if strategy_id is None:
-            continue
+        strategy_id, mark = identified
         filled = _filled(order)
         if filled <= 0:
             continue
-        events.append((client_id, strategy_id, client_id[10] in ("c", "f"), filled, _order_price(order)))
+        events.append((client_id, strategy_id, mark in ("c", "f"), filled, _order_price(order)))
     return events
 
 

@@ -443,7 +443,14 @@ def _remember_futures_lot(connection, row: dict) -> None:
     from app.analytics.schema import load_applied_fill, load_strategy_lots, save_applied_fill, save_strategy_lot
 
     client_id = row.get("exchange_client_order_id") or ""
-    if len(client_id) != 32 or client_id[10] not in ("h", "c", "l", "f"):
+    from app.execution.positions import parse_framed_client_order_id
+
+    framed = parse_framed_client_order_id(client_id)
+    if framed is not None:
+        mark = framed[1]
+    elif len(client_id) == 32 and client_id[10] in ("h", "c", "l", "f"):
+        mark = client_id[10]
+    else:
         return
     size = _contract_size(row["symbol"])
     if size <= 0:
@@ -456,7 +463,7 @@ def _remember_futures_lot(connection, row: dict) -> None:
         contracts = previous
     delta = contracts - previous
     current = load_strategy_lots(connection, "mexc_futures").get(row["strategy_name"], Decimal("0"))
-    updated = current - delta if client_id[10] in ("c", "f") else current + delta
+    updated = current - delta if mark in ("c", "f") else current + delta
     if updated <= 0:
         updated = Decimal("0")
     save_strategy_lot(connection, "mexc_futures", row["strategy_name"], updated)
@@ -819,8 +826,11 @@ def _strategy_name(
     venue: str = "mexc_spot",
 ) -> str:
     client_id = exchange_client_order_id or ""
-    if filled_at < CLASSIFIED_FROM or len(client_id) != 32:
+    if filled_at < CLASSIFIED_FROM:
         return UNCLASSIFIED
+    from app.execution.positions import parse_framed_client_order_id
+
+    framed = parse_framed_client_order_id(client_id)
     kind = asset_class_of(venue)
     if kind == "futures":
         marks = ("c", "l") if side == "buy" else ("h", "f")
@@ -828,7 +838,12 @@ def _strategy_name(
         marks = ("b",) if side == "buy" else ("s",)
     else:
         return UNCLASSIFIED
-    if client_id[10] not in marks:
+    if framed is not None:
+        strategy_id, mark = framed
+        if mark not in marks:
+            return UNCLASSIFIED
+        return strategy_id
+    if len(client_id) != 32 or client_id[10] not in marks:
         return UNCLASSIFIED
     return codes.get(client_id[:10], UNCLASSIFIED)
 

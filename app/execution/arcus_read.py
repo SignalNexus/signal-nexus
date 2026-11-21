@@ -96,12 +96,20 @@ def _order_row(row: dict, codes: dict[str, str], now: datetime) -> dict:
 
 
 def _strategy_name(client_id: str, codes: dict[str, str]) -> str:
-    if len(client_id) != 32 or client_id[10] not in {"b", "s", "h", "c", "l", "f"}:
+    from app.execution.positions import strategy_of
+
+    identified = strategy_of(client_id, codes, "bshclf")
+    if identified is None:
         return "未分類"
-    return codes.get(client_id[:10], "未分類")
+    return identified[0]
 
 
 def _side(side: str, reduce_only: bool, client_id: str) -> str:
+    from app.execution.positions import parse_framed_client_order_id
+
+    framed = parse_framed_client_order_id(client_id)
+    if framed is not None:
+        return {"h": "SHORT", "c": "COVER", "l": "LONG", "f": "FLAT"}[framed[1]]
     if len(client_id) == 32:
         mark = {"h": "SHORT", "c": "COVER", "l": "LONG", "f": "FLAT"}.get(client_id[10])
         if mark:

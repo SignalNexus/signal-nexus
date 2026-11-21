@@ -479,13 +479,24 @@ def _client_id(order: dict) -> str:
 
 
 def _strategy_name(client_id: str, codes: dict[str, str]) -> str:
-    if len(client_id) != 32 or client_id[10] not in {"b", "s", "h", "c"}:
+    from app.execution.positions import parse_framed_client_order_id, strategy_of
+
+    if parse_framed_client_order_id(client_id) is not None:
+        identified = strategy_of(client_id, codes, "hclf")
+    else:
+        identified = strategy_of(client_id, codes, "bshc")
+    if identified is None:
         return "未分類"
-    return codes.get(client_id[:10], "未分類")
+    return identified[0]
 
 
 def _display_side(order: dict) -> str:
+    from app.execution.positions import parse_framed_client_order_id
+
     client_id = _client_id(order)
+    framed = parse_framed_client_order_id(client_id)
+    if framed is not None:
+        return {"h": "SHORT", "c": "COVER", "l": "LONG", "f": "FLAT"}[framed[1]]
     if len(client_id) == 32 and client_id[10] == "h":
         return "SHORT"
     if len(client_id) == 32 and client_id[10] == "c":
