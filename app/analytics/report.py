@@ -102,13 +102,45 @@ def effective_buy_quantity(fill: FillView) -> Decimal:
     return fill.quantity
 
 
-def _arcus_long(rows: list[FillView]) -> bool:
+def _risex_sides(fills: list[FillView], given: dict[str, str] | None) -> dict[str, str]:
+    if given is not None:
+        return given
+    wanted = [
+        fill.exchange_client_order_id
+        for fill in fills
+        if fill.venue == "risex" and (fill.exchange_client_order_id or "").isdecimal()
+    ]
+    if not wanted:
+        return {}
+    try:
+        from app.analytics.schema import create_schema, load_risex_reference_sides
+        from app.execution.strategy_lots import connect
+    except Exception:
+        return {}
+    connection = connect()
+    if connection is None:
+        return {}
+    try:
+        create_schema(connection)
+        return load_risex_reference_sides(connection, wanted)
+    except Exception:
+        return {}
+    finally:
+        connection.close()
+
+
+def _arcus_long(rows: list[FillView], risex_sides: dict[str, str] | None = None) -> bool:
     from app.execution.positions import parse_framed_client_order_id
 
+    sides = risex_sides or {}
     for fill in rows:
         if fill.venue not in {"arcus", "lighter", "qfex", "ondo", "risex"}:
             return False
         client = fill.exchange_client_order_id or ""
+        if fill.venue == "risex" and client.isdecimal():
+            if sides.get(client) in {"LONG", "FLAT"}:
+                return True
+            continue
         framed = parse_framed_client_order_id(client)
         if framed is not None and framed[1] in ("l", "f"):
             return True
@@ -117,7 +149,10 @@ def _arcus_long(rows: list[FillView]) -> bool:
     return False
 
 
-def reconstruct(fills: list[FillView]) -> tuple[list[ClosedTrade], list[OpenPosition]]:
+def reconstruct(
+    fills: list[FillView], risex_sides: dict[str, str] | None = None
+) -> tuple[list[ClosedTrade], list[OpenPosition]]:
+    risex_sides = _risex_sides(fills, risex_sides)
     grouped: dict[tuple[str, str, str], list[FillView]] = defaultdict(list)
     for fill in fills:
         grouped[(fill.strategy_name, fill.symbol, fill.venue)].append(fill)
@@ -129,7 +164,7 @@ def reconstruct(fills: list[FillView]) -> tuple[list[ClosedTrade], list[OpenPosi
             continue
         lots: list[_Lot] = []
         pending: _Pending | None = None
-        short = is_futures(venue) and not _arcus_long(rows)
+        short = is_futures(venue) and not _arcus_long(rows, risex_sides)
         for fill in rows:
             if short:
                 if fill.side == "sell":
