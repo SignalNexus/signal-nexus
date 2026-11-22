@@ -91,6 +91,12 @@ on:
         required: false
       ONDO_API_SECRET:
         required: false
+      RISEX_ACCOUNT:
+        required: false
+      RISEX_SIGNER_PRIVATE_KEY:
+        required: false
+      RISEX_API_URL:
+        required: false
       RENDER_DEPLOY_HOOK:
         required: false
       RENDER_API_KEY:
@@ -203,6 +209,9 @@ jobs:
           QFEX_API_VERSION: ${{ secrets.QFEX_API_VERSION }}
           ONDO_KEY_ID: ${{ secrets.ONDO_KEY_ID }}
           ONDO_API_SECRET: ${{ secrets.ONDO_API_SECRET }}
+          RISEX_ACCOUNT: ${{ secrets.RISEX_ACCOUNT }}
+          RISEX_SIGNER_PRIVATE_KEY: ${{ secrets.RISEX_SIGNER_PRIVATE_KEY }}
+          RISEX_API_URL: ${{ secrets.RISEX_API_URL }}
           PYTHONPATH: ${{ github.workspace }}/core
         run: |
           python3 -m deploy.write_env "$RUNNER_TEMP/analytics.env"

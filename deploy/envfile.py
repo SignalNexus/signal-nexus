@@ -98,6 +98,11 @@ ONDO_SECRET_KEYS = (
     "ONDO_KEY_ID",
     "ONDO_API_SECRET",
 )
+RISEX_SECRET_KEYS = (
+    "RISEX_ACCOUNT",
+    "RISEX_SIGNER_PRIVATE_KEY",
+    "RISEX_API_URL",
+)
 SECRET_KEYS = ALWAYS_SECRET_KEYS + ARCUS_SECRET_KEYS + MEXC_SPOT_SECRET_KEYS + MEXC_FUTURES_SECRET_KEYS
 
 
@@ -138,3 +143,14 @@ def ondo_secret_keys(source: dict[str, str] | None = None) -> tuple[str, ...]:
         missing = [key for key in ONDO_SECRET_KEYS if not values.get(key, "").strip()]
         raise ValueError("missing env names: " + ", ".join(missing))
     return ONDO_SECRET_KEYS
+
+
+def risex_secret_keys(source: dict[str, str] | None = None) -> tuple[str, ...]:
+    values = os.environ if source is None else source
+    present = [key for key in RISEX_SECRET_KEYS if values.get(key, "").strip()]
+    if not present:
+        return ()
+    if len(present) != len(RISEX_SECRET_KEYS):
+        missing = [key for key in RISEX_SECRET_KEYS if not values.get(key, "").strip()]
+        raise ValueError("missing env names: " + ", ".join(missing))
+    return RISEX_SECRET_KEYS
