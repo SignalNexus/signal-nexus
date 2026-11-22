@@ -7,7 +7,7 @@ from app.portal_data import read_roi_bases
 from app.portal_text import english, portal_zone, show_text
 from app.venues import enabled_venues
 
-_DEX = {"arcus", "lighter", "txflow", "hyperliquid", "paradex", "vertex", "grvt", "qfex", "ondo"}
+_DEX = {"arcus", "lighter", "txflow", "hyperliquid", "paradex", "vertex", "grvt", "qfex", "ondo", "risex"}
 _LABELS = {
     "mexc_spot": "MEXC Spot",
     "mexc_futures": "MEXC Futures",
@@ -16,6 +16,7 @@ _LABELS = {
     "qfex": "QFEX",
     "ondo": "Ondo",
     "txflow": "TxFlow",
+    "risex": "RISEx",
 }
 _COLORS = {
     "mexc_spot": "#80ECFF",

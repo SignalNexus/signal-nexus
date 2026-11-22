@@ -48,8 +48,16 @@ _CARD_LINES = {
     "lighter": ("Lighter", "Perpetual"),
     "qfex": ("QFEX", "Perpetual"),
     "ondo": ("Ondo", "Perpetual"),
+    "risex": ("RISEx", "Perpetual"),
     "txflow": ("TxFlow", "Perpetual"),
 }
+
+
+def _shown_venue(venue: str | None, blank: str = "mexc_spot") -> str:
+    key = venue or blank
+    if key == "risex":
+        return "RISEx"
+    return key
 
 
 def venue_cards() -> tuple[dict, ...]:
@@ -742,7 +750,7 @@ def _strategy_summary(board: dict) -> str:
     body = "".join(
         "<tr>"
         f"<td>{escape(show_text(row['strategy_name']))}</td>"
-        f"<td>{escape(row.get('venue') or 'mexc_spot')}</td>"
+        f"<td>{escape(_shown_venue(row.get('venue')))}</td>"
         f"<td class=\"{_tone(row['realized'])}\">{_signed(row['realized'], _unit(row.get('venue')))}</td>"
         f"<td>{_volume_text(row.get('volume') or Decimal('0'), _unit(row.get('venue')))}</td>"
         f"<td class=\"{_pf_tone(row['profit_factor'])}\">{_pf(row['profit_factor'])}</td>"
@@ -827,7 +835,7 @@ def _trade_body(view: dict, venue_id: str) -> str:
         action = row.get("action") or row["side"]
         side = f'<span class="{"buy" if action in {"BUY", "COVER"} else ""}">{escape(action)}</span>'
         when = escape(row["filled_at"].strftime("%Y-%m-%d %H:%M"))
-        venue = escape(row.get("venue") or "mexc_spot")
+        venue = escape(_shown_venue(row.get("venue")))
         table.append(
             f'<tr class="{edge}" data-page-row="{len(table)}"><td>{when}</td><td>{strategy}</td><td>{venue}</td><td>{escape(row["symbol"])}</td>'
             f"<td>{side}</td><td>{_num(row['quote_received'])}</td><td>{_num(row['quote_spent'])}</td>"
@@ -879,7 +887,7 @@ def _orders(view: dict | None, fetched_at: datetime | None) -> str:
 def _order_body(view: dict | None, fetched_at: datetime | None, venue_id: str) -> str:
     if view is None:
         return '<p class="empty">Unable to retrieve</p>'
-    if venue_id in {"arcus", "lighter", "qfex", "ondo"}:
+    if venue_id in {"arcus", "lighter", "qfex", "ondo", "risex"}:
         left_name, right_name = count_label("LONG", "orders"), count_label("SHORT", "orders")
         left = sum(1 for row in view["rows"] if row["side"] == "LONG")
         right = sum(1 for row in view["rows"] if row["side"] == "SHORT")
@@ -1046,7 +1054,7 @@ def _strategies(view: dict) -> tuple[str, str]:
     table = []
     cards_html = []
     for venue, rows in _grouped(view["rows"]):
-        table.append(f'<tr class="venue-head"><th colspan="8">{escape(venue)}</th></tr>')
+        table.append(f'<tr class="venue-head"><th colspan="8">{escape(_shown_venue(venue))}</th></tr>')
         for row in rows:
             unit = _unit(row.get("venue"))
             table.append(
@@ -1055,11 +1063,11 @@ def _strategies(view: dict) -> tuple[str, str]:
                 f"<td>{_volume_text(row.get('volume') or Decimal('0'), unit)}</td>"
                 f"<td class=\"{_pf_tone(row['profit_factor'])}\">{_pf(row['profit_factor'])}</td>"
                 f"<td>{_pct(row['profit_rate'])}</td><td>{_pct(row['win_rate'])}</td><td>{row['count']}</td>"
-                f"<td>{escape(show_text(row['strategy_name']))}</td><td>{escape(row.get('venue') or 'mexc_spot')}</td></tr>"
+                f"<td>{escape(show_text(row['strategy_name']))}</td><td>{escape(_shown_venue(row.get('venue')))}</td></tr>"
             )
             cards_html.append(
                 f'<article class="card"><p class="lead">{escape(show_text(row["strategy_name"]))}</p>'
-                f'<p class="meta">{escape(venue)}</p>'
+                f'<p class="meta">{escape(_shown_venue(venue))}</p>'
                 f'<p class="sub {_tone(row["realized"])}">{_signed(row["realized"], unit)}</p>'
                 f'<p class="vol">{volume_phrase(_volume_text(row.get("volume") or Decimal("0"), unit))}</p>'
                 f'<p class="{_pf_tone(row["profit_factor"])}">PF {_pf(row["profit_factor"])}</p>'
@@ -1095,7 +1103,7 @@ def _backtests(view: dict) -> tuple[str, str]:
     for row in _enabled_rows(view["rows"]):
         table.append(
             "<tr>"
-            f"<td class=\"identity\">{escape(show_text(row['strategy_name']))}</td><td class=\"identity\">{escape(row.get('venue') or 'mexc_spot')}</td>"
+            f"<td class=\"identity\">{escape(show_text(row['strategy_name']))}</td><td class=\"identity\">{escape(_shown_venue(row.get('venue')))}</td>"
             f"<td class=\"set\">{_pct(row['live_rate'])}</td><td>{_pct(row['back_rate'])}</td><td class=\"{_gap_tone(row['rate_diff'], Decimal('2'))}\">{_points(row['rate_diff'])}</td>"
             f"<td class=\"set\">{_pf(row['live_pf'])}</td><td>{_pf(row['back_pf'])}</td><td class=\"{_gap_tone(row['pf_diff'], Decimal('0.20'))}\">{_plain_signed(row['pf_diff'])}</td>"
             f"<td class=\"set\">{_pct(row['live_win'])}</td><td>{_pct(row['back_win'])}</td><td class=\"{_gap_tone(row['win_diff'], Decimal('2'))}\">{_points(row['win_diff'])}</td>"
@@ -1105,7 +1113,7 @@ def _backtests(view: dict) -> tuple[str, str]:
         )
         cards_html.append(
             f'<article class="card"><p class="lead">{escape(show_text(row["strategy_name"]))}</p>'
-            f'<p class="meta">{escape(row.get("venue") or "mexc_spot")} · {escape(_period_text(row))}</p>'
+            f'<p class="meta">{escape(_shown_venue(row.get("venue")))} · {escape(_period_text(row))}</p>'
             f'<p class="sub {_gap_tone(row["rate_diff"], Decimal("2"))}">{_points(row["rate_diff"])}</p>'
             f'<p class="meta">{t("利益率")} {_pct(row["live_rate"])} / {_pct(row["back_rate"])}<br>'
             f'PF {_pf(row["live_pf"])} / {_pf(row["back_pf"])} / <span class="{_gap_tone(row["pf_diff"], Decimal("0.20"))}">{_plain_signed(row["pf_diff"])}</span><br>'
@@ -1190,7 +1198,7 @@ def _audits(view: dict | None) -> tuple[str, str]:
         reason = "—" if not row["reason"] else escape(row["reason"])
         strategy = "—" if not row["strategy"] else escape(row["strategy"])
         symbol = "—" if not row["symbol"] else escape(row["symbol"])
-        venue = "—" if not row.get("venue") else escape(row["venue"])
+        venue = "—" if not row.get("venue") else escape(_shown_venue(row["venue"], ""))
         when = escape(row["at"].strftime("%Y-%m-%d %H:%M"))
         copy = escape(row["copy"])
         kind = f'<span class="kind {tone}">{_audit_mark(row)}{escape(row["label"])}</span>'
@@ -1633,7 +1641,7 @@ def _position_body(view: dict) -> str:
             f"<div class=\"metric hold\"><span>{t('保有時間')}</span><strong>{escape(row['hold'])}</strong></div>"
             f"<div class=\"metric qty\"><span>{t('残数量')}</span><strong>{_qty(row['quantity'])} {escape(row['base'])}</strong></div>"
             "</div>"
-            f"<p class=\"meta\">{escape(show_text(row['strategy_name']))} · {escape(row['symbol'])} · {escape(row.get('venue') or 'mexc_spot')} · "
+            f"<p class=\"meta\">{escape(show_text(row['strategy_name']))} · {escape(row['symbol'])} · {escape(_shown_venue(row.get('venue')))} · "
             f"{opened_phrase(escape(row['opened_at'].astimezone(portal_zone()).strftime('%Y-%m-%d %H:%M')))} · "
             f"{price_phrase(_price(row['price']), escape(unit))}</p></article>"
         )
