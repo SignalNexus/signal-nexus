@@ -34,7 +34,7 @@ Performance は五つ目の画面ではありません。Dashboard で運用を�
 - Strategies、Backtest Comparison、Audit Log. 切り替え、要約、表の見出し。
 - Schedule. 切り替えだけ。
 
-Trades は、会場ごとに 1 ページ 20 行です。Audit Log は 100 行です。ページ送りは一覧の上と下にあり、1 ページに収まるときは出ません。要約は、そのページの行ではなく全件を数えます。Strategies と Backtest Comparison にページ送りはありません。
+Trades は、会場ごとに 1 ページ 20 行です。Audit Log は 100 行です。ページ送りはサーバー側です。HTML には今のページだけ入ります。ページ送りは一覧の上と下にあり、1 ページに収まるときは出ません。要約は、そのページの行ではなく全件を数えます。Strategies と Backtest Comparison にページ送りはありません。
 
 ## Dashboard
 

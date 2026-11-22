@@ -187,6 +187,15 @@ def create_schema(connection) -> None:
             ON CONFLICT (venue, strategy_id) DO NOTHING
             """
         )
+    connection.execute(
+        "CREATE INDEX IF NOT EXISTS fills_venue_filled_at_idx ON fills (venue, filled_at DESC, trade_id DESC)"
+    )
+    connection.execute(
+        "CREATE INDEX IF NOT EXISTS fills_venue_strategy_idx ON fills (venue, strategy_name)"
+    )
+    connection.execute(
+        "CREATE INDEX IF NOT EXISTS audits_recorded_at_idx ON audits (recorded_at DESC, id DESC)"
+    )
 
 
 _RISEX_SIDES = frozenset({"LONG", "SHORT", "FLAT", "COVER"})
@@ -501,6 +510,137 @@ def load_fills(connection) -> list[tuple]:
         ORDER BY filled_at, trade_id
         """
     ).fetchall()
+
+
+def load_fill_venues(connection) -> list[str]:
+    rows = connection.execute(
+        """
+        SELECT DISTINCT COALESCE(NULLIF(venue, ''), 'mexc_spot')
+        FROM fills
+        ORDER BY 1
+        """
+    ).fetchall()
+    return [row[0] for row in rows]
+
+
+def load_fill_page(connection, venue: str, *, limit: int, offset: int) -> list[tuple]:
+    return connection.execute(
+        f"""
+        SELECT {_FILL_COLUMNS}
+        FROM fills
+        WHERE COALESCE(NULLIF(venue, ''), 'mexc_spot') = %(venue)s
+        ORDER BY filled_at DESC, trade_id DESC
+        LIMIT %(limit)s OFFSET %(offset)s
+        """,
+        {"venue": venue, "limit": limit, "offset": offset},
+    ).fetchall()
+
+
+def load_trade_summary(connection, venue: str, today) -> dict:
+    row = connection.execute(
+        """
+        SELECT count(*)::integer,
+               count(*) FILTER (WHERE filled_at >= %(today)s)::integer,
+               count(*) FILTER (WHERE side = 'buy')::integer,
+               count(*) FILTER (WHERE side = 'sell')::integer,
+               count(*) FILTER (WHERE strategy_name = '未分類')::integer,
+               COALESCE(SUM(quote_spent + quote_received), 0)
+        FROM fills
+        WHERE COALESCE(NULLIF(venue, ''), 'mexc_spot') = %(venue)s
+        """,
+        {"venue": venue, "today": today},
+    ).fetchone()
+    return {
+        "count": row[0],
+        "today": row[1],
+        "buy": row[2],
+        "sell": row[3],
+        "unclassified": row[4],
+        "volume": row[5],
+    }
+
+
+def load_fills_for_names(connection, venue: str, names: list[str]) -> list[tuple]:
+    if not names:
+        return []
+    return connection.execute(
+        f"""
+        SELECT {_FILL_COLUMNS}
+        FROM fills
+        WHERE COALESCE(NULLIF(venue, ''), 'mexc_spot') = %(venue)s
+          AND strategy_name = ANY(%(names)s)
+        ORDER BY filled_at, trade_id
+        """,
+        {"venue": venue, "names": names},
+    ).fetchall()
+
+
+def load_open_fill_keys(connection) -> list[tuple[str, str]]:
+    rows = connection.execute(
+        """
+        SELECT venue, strategy_name FROM (
+            SELECT COALESCE(NULLIF(venue, ''), 'mexc_spot') AS venue,
+                   strategy_name,
+                   SUM(CASE WHEN side = 'sell' THEN quantity ELSE 0 END) AS sold,
+                   SUM(CASE WHEN side = 'buy' THEN quantity ELSE 0 END) AS bought
+            FROM fills
+            GROUP BY 1, 2
+        ) AS totals
+        WHERE sold <> bought
+        UNION
+        SELECT venue, strategy_id
+        FROM strategy_lots
+        WHERE quantity > 0
+        """
+    ).fetchall()
+    return [(row[0], row[1]) for row in rows]
+
+
+def load_fills_for_keys(connection, keys: list[tuple[str, str]]) -> list[tuple]:
+    if not keys:
+        return []
+    return connection.execute(
+        f"""
+        SELECT {_FILL_COLUMNS}
+        FROM fills
+        WHERE (COALESCE(NULLIF(venue, ''), 'mexc_spot'), strategy_name) IN (
+            SELECT * FROM unnest(%(venues)s::text[], %(names)s::text[])
+                AS keyed(venue, strategy_name)
+        )
+        ORDER BY filled_at, trade_id
+        """,
+        {"venues": [key[0] for key in keys], "names": [key[1] for key in keys]},
+    ).fetchall()
+
+
+def load_audit_page(connection, *, limit: int, offset: int) -> list[tuple]:
+    return connection.execute(
+        """
+        SELECT recorded_at, kind, strategy, symbol, reason, discord_status, discord_detail, venue
+        FROM audits
+        ORDER BY recorded_at DESC, id DESC
+        LIMIT %(limit)s OFFSET %(offset)s
+        """,
+        {"limit": limit, "offset": offset},
+    ).fetchall()
+
+
+def load_audit_summary(connection) -> dict:
+    row = connection.execute(
+        """
+        SELECT count(*)::integer,
+               count(*) FILTER (WHERE kind = 'order_success')::integer,
+               count(*) FILTER (WHERE kind = 'order_failed')::integer,
+               MAX(recorded_at) FILTER (WHERE kind = 'order_failed')
+        FROM audits
+        """
+    ).fetchone()
+    return {
+        "count": row[0],
+        "success": row[1],
+        "failed": row[2],
+        "latest_failure": row[3],
+    }
 
 
 def load_strategy_fills(connection, venue: str, strategy_id: str) -> list[tuple]:

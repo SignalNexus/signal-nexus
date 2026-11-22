@@ -166,7 +166,8 @@ table.stick thead th {
 .pager { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: 12px; }
 .pager[hidden] { display: none !important; }
 .pager span { color: var(--muted); font-variant-numeric: tabular-nums; }
-.pager button[disabled] { opacity: .35; }
+.pager button[disabled], .pager a.disabled { opacity: .35; pointer-events: none; }
+.pager a { color: inherit; text-decoration: none; border: 1px solid var(--line); padding: 6px 10px; border-radius: 8px; }
 .eyebrow { margin: 0 0 10px; color: var(--violet); font-size: 13px; }
 .hint { margin: 8px 0 0; color: var(--muted); font-size: 13px; }
 .hint.stale { color: var(--amber); }
@@ -440,11 +441,10 @@ def render_trading(view: str, board: dict | None, balances, orders, fetched_at: 
     now = datetime.now(timezone.utc)
     actions = ""
     if current == "trades":
-        rows = None if board is None else board.get("trades")
-        if rows is None:
+        if board is None:
             body = _trades(None)
         else:
-            body = _trades(rows) + _fold_script()
+            body = _trades(board) + _fold_script()
             actions = _fold_actions()
     elif current == "orders":
         body = _orders(orders, fetched_at)
@@ -496,7 +496,7 @@ def render_operations(view: str, audits) -> str:
     )
     pin = ""
     if current == "audit":
-        pin, body = _audits(audits_view(None if audits is None else audits))
+        pin, body = _audits(_audit_board(audits))
     else:
         today = datetime.now(portal_zone()).date()
         body = _schedule(read_schedule(today))
@@ -787,14 +787,29 @@ def _positions(rows: list[dict] | None, now: datetime) -> tuple[str, str]:
     return f'<div class="band total"><h3>Total</h3>{total}</div>', _trading_grid(rows, section)
 
 
-def _trades(rows: list[dict] | None) -> str:
-    if rows is None:
+def _trades(board) -> str:
+    if board is None:
         return _blank_summary(("Recent Trades", t("当日約定数"), count_label("BUY", "fills"), count_label("SELL", "fills"), unclassified_count("fills")))
-    rows = _enabled_rows(rows)
     today = datetime.now(portal_zone()).date()
+    if isinstance(board, list):
+        rows = _enabled_rows(board)
+        meta = None
+    else:
+        rows = _enabled_rows(board.get("trades") or [])
+        meta = board.get("trade_meta") if isinstance(board.get("trade_meta"), dict) else None
 
     def section(_label: str, venue_id: str, line_rows: list[dict]) -> str:
-        return _trade_body(trades_view(line_rows, today), venue_id)
+        page = None if meta is None else meta.get(venue_id)
+        if not isinstance(page, dict):
+            return _trade_body(trades_view(line_rows, today), venue_id)
+        view = trades_view(page.get("trades") or line_rows, today)
+        view["count"] = int(page.get("count") or 0)
+        view["today"] = int(page.get("today") or 0)
+        view["buy"] = int(page.get("buy") or 0)
+        view["sell"] = int(page.get("sell") or 0)
+        view["unclassified"] = int(page.get("unclassified") or 0)
+        volume = Decimal(str(page.get("volume") or "0"))
+        return _trade_body(view, venue_id, volume=volume, pager=_trade_pager(meta, venue_id, page))
 
     return _trading_grid(rows, section)
 
@@ -822,10 +837,10 @@ def _trade_cards(view: dict, futures: bool) -> str:
     )
 
 
-def _trade_body(view: dict, venue_id: str) -> str:
+def _trade_body(view: dict, venue_id: str, *, volume: Decimal | None = None, pager: str = "") -> str:
     cards = _trade_cards(view, is_futures(venue_id))
-    amount = sum((row["quote_spent"] + row["quote_received"] for row in view["rows"]), Decimal("0"))
-    volume = f'<p><b class="vol">{volume_phrase(_volume_text(amount, _unit(venue_id)))}</b></p>'
+    amount = volume if volume is not None else sum((row["quote_spent"] + row["quote_received"] for row in view["rows"]), Decimal("0"))
+    volume_html = f'<p><b class="vol">{volume_phrase(_volume_text(amount, _unit(venue_id)))}</b></p>'
     money = _unit(venue_id)
     table = []
     cards_html = []
@@ -851,18 +866,20 @@ def _trade_body(view: dict, venue_id: str) -> str:
         f"<th>{t('約定時刻')}</th><th>{t('戦略')}</th><th>Venue</th><th>{t('銘柄')}</th><th>{t('売買')}</th>"
         f"<th>{received_header(escape(money))}</th><th>{spent_header(escape(money))}</th><th>{t('数量')}</th><th>{t('実現損益')}</th>"
     )
+    nav = pager or _pager()
+    attrs = "data-fold data-pin-scope" if pager else 'data-fold data-pin-scope data-pager data-page-size="20"'
     return f"""
-    <div data-fold data-pin-scope data-pager data-page-size="20">
+    <div {attrs}>
       <div class="local-pin">
         {cards}
-        {volume}
+        {volume_html}
         {_fold_button()}
-        {_pager()}
+        {nav}
       </div>
       <div class="fold-body" hidden>
         {_sheet(headers, "".join(table))}
         <div class="narrow">{"".join(cards_html)}</div>
-        {_pager()}
+        {nav}
       </div>
     </div>
     """
@@ -1173,6 +1190,26 @@ def _schedule(rows: list[dict] | None) -> str:
     )
 
 
+def _audit_board(audits) -> dict | None:
+    if audits is None:
+        return None
+    if isinstance(audits, list):
+        return audits_view(audits)
+    rows = audits.get("audits") if isinstance(audits, dict) else None
+    view = audits_view([] if rows is None else rows)
+    if view is None:
+        return None
+    for key in ("count", "success", "failed"):
+        if key in audits and audits[key] is not None:
+            view[key] = int(audits[key])
+    latest = audits.get("latest_failure")
+    if latest:
+        view["latest_failure"] = moment(latest).astimezone(portal_zone())
+    view["limit"] = int(audits.get("limit") or 100)
+    view["offset"] = int(audits.get("offset") or 0)
+    return view
+
+
 def _audits(view: dict | None) -> tuple[str, str]:
     if view is None:
         return _blank_summary(("Audit Events", "Success", "Failed", "Latest Failure")), ""
@@ -1211,15 +1248,71 @@ def _audits(view: dict | None) -> tuple[str, str]:
             f'<p>{kind}</p><p class="{reason_class}">{reason}</p><p>{copy}</p></article>'
         )
     headers = f'<th>{t("発生時刻")}</th><th>{t("会場")}</th><th>{t("戦略")}</th><th>{t("銘柄")}</th><th>{t("イベント種別")}</th><th>{t("理由")}</th><th>{t("写し")}</th>'
+    pager = _audit_pager(view)
+    wrap = "" if pager else ' data-pager data-page-size="100"'
+    nav = pager or _pager()
     body = (
-        '<div data-pager data-page-size="100">'
-        + _pager()
+        f"<div{wrap}>"
+        + nav
         + _sheet(headers, "".join(table))
         + f'<div class="narrow">{"".join(cards_html)}</div>'
-        + _pager()
+        + nav
         + "</div>"
     )
     return cards, body
+
+
+def _trade_pager(meta: dict, venue_id: str, page: dict) -> str:
+    limit = max(int(page.get("limit") or 20), 1)
+    offset = max(int(page.get("offset") or 0), 0)
+    count = int(page.get("count") or 0)
+    pages = max(1, (count + limit - 1) // limit)
+    current = offset // limit + 1
+    if pages <= 1:
+        return ""
+
+    def href(new_offset: int) -> str:
+        parts = ["view=trades"]
+        for venue, other in meta.items():
+            if not isinstance(other, dict):
+                continue
+            value = new_offset if venue == venue_id else int(other.get("offset") or 0)
+            if value:
+                parts.append(f"o_{venue}={value}")
+        return "/portal/trading?" + "&".join(parts)
+
+    prev_href = "" if current <= 1 else href(max(offset - limit, 0))
+    next_href = "" if current >= pages else href(offset + limit)
+    return _link_pager(current, pages, prev_href, next_href)
+
+
+def _audit_pager(view: dict) -> str:
+    if "limit" not in view or "offset" not in view:
+        return ""
+    limit = max(int(view.get("limit") or 100), 1)
+    offset = max(int(view.get("offset") or 0), 0)
+    count = int(view.get("count") or 0)
+    pages = max(1, (count + limit - 1) // limit)
+    current = offset // limit + 1
+    if pages <= 1:
+        return ""
+    prev_href = "" if current <= 1 else f"/portal/operations?view=audit&page={current - 1}"
+    next_href = "" if current >= pages else f"/portal/operations?view=audit&page={current + 1}"
+    return _link_pager(current, pages, prev_href, next_href)
+
+
+def _link_pager(current: int, pages: int, prev_href: str, next_href: str) -> str:
+    prev = (
+        f'<a href="{escape(prev_href)}">{escape(t("前のページ"))}</a>'
+        if prev_href
+        else f'<a class="disabled">{escape(t("前のページ"))}</a>'
+    )
+    nxt = (
+        f'<a href="{escape(next_href)}">{escape(t("次のページ"))}</a>'
+        if next_href
+        else f'<a class="disabled">{escape(t("次のページ"))}</a>'
+    )
+    return f'<nav class="pager">{prev}<span>{current} / {pages}</span>{nxt}</nav>'
 
 
 def _pager() -> str:

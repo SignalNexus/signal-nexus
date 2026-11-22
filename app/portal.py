@@ -51,7 +51,7 @@ def trading_page(request: Request, view: str = "positions") -> HTMLResponse:
     elif view == "orders":
         orders, fetched_at = _open_orders()
     elif view == "trades":
-        board = _analytics_slice("/api/trades", "trades")
+        board = _trade_pages(request)
     else:
         board = _analytics_slice("/api/positions", "positions")
     return _html(render_trading(view, board, balances, orders, fetched_at))
@@ -82,7 +82,7 @@ def analytics_page(request: Request, view: str = "pnl") -> HTMLResponse:
 def operations_page(request: Request, view: str = "schedule") -> HTMLResponse:
     if not _session_ok(request):
         return _html(login_page(""))
-    audits = _audit_rows() if view == "audit" else None
+    audits = _audit_rows(request) if view == "audit" else None
     return _html(render_operations(view, audits))
 
 
@@ -235,18 +235,58 @@ def _board_response(client: httpx.Client, url: str, headers: dict, *, summary: b
         time.sleep(0.4)
 
 
-def _audit_rows() -> list | None:
+def _audit_rows(request: Request) -> dict | None:
     try:
         base = os.environ.get("ANALYTICS_API_URL", "").strip().rstrip("/")
         secret = os.environ.get("ANALYTICS_API_SECRET", "")
         if not base or not secret:
             raise RuntimeError("analytics api is not configured")
         headers = {"Authorization": f"Bearer {secret}"}
+        raw_page = str(request.query_params.get("page") or "1")
+        page = int(raw_page) if raw_page.isdigit() and int(raw_page) > 0 else 1
+        limit = 100
+        offset = (page - 1) * limit
         with httpx.Client(timeout=8.0) as client:
-            response = client.get(f"{base}/api/audits", headers=headers)
+            response = client.get(
+                f"{base}/api/audits",
+                headers=headers,
+                params={"limit": limit, "offset": offset},
+            )
             response.raise_for_status()
-            rows = response.json().get("audits")
-        return rows if isinstance(rows, list) else None
+            payload = response.json()
+        rows = payload.get("audits")
+        if not isinstance(rows, list):
+            return None
+        payload["page"] = page
+        payload["limit"] = int(payload.get("limit") or limit)
+        return payload
+    except Exception:
+        return None
+
+
+def _trade_pages(request: Request) -> dict | None:
+    try:
+        base = os.environ.get("ANALYTICS_API_URL", "").strip().rstrip("/")
+        secret = os.environ.get("ANALYTICS_API_SECRET", "")
+        if not base or not secret:
+            raise RuntimeError("analytics api is not configured")
+        headers = {"Authorization": f"Bearer {secret}"}
+        params = {"limit": "20"}
+        for key, value in request.query_params.items():
+            if key.startswith("o_") and str(value).isdigit():
+                params[key] = value
+        with httpx.Client(timeout=10.0) as client:
+            response = client.get(f"{base}/api/trades", headers=headers, params=params)
+            response.raise_for_status()
+            payload = response.json()
+        pages = payload.get("pages")
+        trades = payload.get("trades")
+        if not isinstance(pages, dict):
+            pages = {}
+        return {
+            "trades": trades if isinstance(trades, list) else [],
+            "trade_meta": pages,
+        }
     except Exception:
         return None
 

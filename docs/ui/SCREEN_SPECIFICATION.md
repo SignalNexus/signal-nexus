@@ -34,7 +34,7 @@ While a page scrolls, the block named here stays at the top.
 - Strategies, Backtest Comparison, and Audit Log. The switch, the summary, and the table header.
 - Schedule. The switch only.
 
-Trades shows 20 rows per venue on a page. The Audit Log shows 100. The pager sits above and below the list and is hidden when the list fits on one page. A summary counts every row, not only the rows on the page. Strategies and Backtest Comparison are not paged.
+Trades shows 20 rows per venue on a page. The Audit Log shows 100. The pager is server-side; the HTML holds the current page. The pager sits above and below the list and is hidden when the list fits on one page. A summary counts every row, not only the rows on the page. Strategies and Backtest Comparison are not paged.
 
 ## Dashboard
 

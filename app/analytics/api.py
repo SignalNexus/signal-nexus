@@ -5,13 +5,14 @@ import time
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
+from zoneinfo import ZoneInfo
 from decimal import Decimal
 from pathlib import Path
 from threading import Lock, Thread
 
 import httpx
 import psycopg
-from fastapi import FastAPI, Header, HTTPException
+from fastapi import FastAPI, Header, HTTPException, Query, Request
 from pydantic import BaseModel, ConfigDict, field_validator
 
 from app.analytics.report import (
@@ -34,10 +35,18 @@ from app.analytics.schema import (
     insert_audit,
     link_order,
     load_audits,
+    load_audit_page,
+    load_audit_summary,
     load_all_strategy_lots,
+    load_fill_page,
+    load_fill_venues,
     load_fills,
+    load_fills_for_keys,
+    load_fills_for_names,
     load_ingest_succeeded_at,
     load_latest_signal,
+    load_open_fill_keys,
+    load_trade_summary,
 )
 from app.core.config import analytics_bind_host, fastapi_doc_kwargs, require_secret_strength
 from app.core.security import analytics_secret_matches
@@ -541,29 +550,56 @@ def _audit_json(row: tuple) -> dict[str, str]:
 
 
 @app.get("/api/audits")
-def audits(authorization: str | None = Header(default=None)) -> dict:
+def audits(
+    authorization: str | None = Header(default=None),
+    limit: int | None = Query(default=None),
+    offset: int = Query(default=0, ge=0),
+) -> dict:
     _require_secret(authorization)
     try:
         with _connect() as connection:
             create_schema(connection)
-            rows = load_audits(connection)
+            if limit is None:
+                rows = load_audits(connection)
+                return {"audits": [_audit_json(row) for row in rows]}
+            size = min(max(limit, 1), 200)
+            summary = load_audit_summary(connection)
+            rows = load_audit_page(connection, limit=size, offset=offset)
     except Exception:
         raise HTTPException(status_code=500, detail="analytics was not read") from None
+    latest = summary["latest_failure"]
     return {
-        "audits": [_audit_json(row) for row in rows]
+        "audits": [_audit_json(row) for row in rows],
+        "count": summary["count"],
+        "success": summary["success"],
+        "failed": summary["failed"],
+        "latest_failure": None if latest is None else latest.isoformat(),
+        "limit": size,
+        "offset": offset,
     }
 
 
 @app.get("/api/trades")
-def trades(authorization: str | None = Header(default=None)) -> dict:
+def trades(
+    request: Request,
+    authorization: str | None = Header(default=None),
+    limit: int | None = Query(default=None),
+) -> dict:
     _require_secret(authorization)
-    return {"trades": _trade_rows(_load_fill_views())}
+    if limit is None:
+        return {"trades": _trade_rows(_load_fill_views())}
+    size = min(max(limit, 1), 100)
+    offsets = {}
+    for key, value in request.query_params.items():
+        if key.startswith("o_") and str(value).isdigit():
+            offsets[key[2:]] = int(value)
+    return _paged_trades(size, offsets)
 
 
 @app.get("/api/positions")
 def positions(authorization: str | None = Header(default=None)) -> dict:
     _require_secret(authorization)
-    _closed, opens = reconstruct(_load_fill_views())
+    _closed, opens = reconstruct(_load_open_fill_views())
     opens = _held_opens(opens)
     marked = mark_opens(opens, _mark_prices(opens))
     return {"positions": [_position_json(item) for item in marked]}
@@ -598,23 +634,19 @@ def tickers(authorization: str | None = Header(default=None)) -> dict:
 @app.get("/api/board")
 def board(summary: bool = False, authorization: str | None = Header(default=None)) -> dict:
     _require_secret(authorization)
+    if summary:
+        payload = _ensure_board()
+        return _publish_board(_summary_board(payload))
     if _board_refresh_enabled():
         payload = _cached_board()
         if payload is None:
             payload = _load_board_snapshot()
         if payload is None:
-            # Dashboard の summary は空のままにしない。全文は裏の準備を待つ。
-            if summary:
-                payload = _ensure_board()
-            else:
-                raise HTTPException(status_code=503, detail="board is warming")
-        elif not summary and payload.get("board_scope") == "summary":
             raise HTTPException(status_code=503, detail="board is warming")
-    else:
-        payload = _build_board()
-    if summary:
-        payload = _summary_board(payload)
-    return _publish_board(payload)
+        if payload.get("board_scope") == "summary":
+            raise HTTPException(status_code=503, detail="board is warming")
+        return _publish_board(payload)
+    return _publish_board(_build_board())
 
 
 def _build_board() -> dict:
@@ -733,6 +765,56 @@ def _load_fill_views() -> list[FillView]:
     except Exception:
         raise HTTPException(status_code=500, detail="analytics was not read") from None
     return [_fill_view(row) for row in rows]
+
+
+def _load_open_fill_views() -> list[FillView]:
+    try:
+        with _connect() as connection:
+            create_schema(connection)
+            keys = load_open_fill_keys(connection)
+            rows = load_fills_for_keys(connection, keys)
+    except Exception:
+        raise HTTPException(status_code=500, detail="analytics was not read") from None
+    return [_fill_view(row) for row in rows]
+
+
+def _paged_trades(limit: int, offsets: dict[str, int]) -> dict:
+    try:
+        with _connect() as connection:
+            create_schema(connection)
+            venues = load_fill_venues(connection)
+            today = datetime.now(ZoneInfo("Asia/Tokyo")).replace(hour=0, minute=0, second=0, microsecond=0)
+            pages = {}
+            rows = []
+            for venue in venues:
+                offset = max(0, offsets.get(venue, 0))
+                summary = load_trade_summary(connection, venue, today)
+                page = load_fill_page(connection, venue, limit=limit, offset=offset)
+                fills = [_fill_view(row) for row in page]
+                names = list({fill.strategy_name for fill in fills})
+                history = [_fill_view(row) for row in load_fills_for_names(connection, venue, names)]
+                realized = final_fill_realized(history)
+                traded = []
+                for fill in fills:
+                    item = _fill_json(fill)
+                    amount = realized.get(fill.trade_id)
+                    item["realized"] = None if amount is None else _decimal(amount)
+                    traded.append(item)
+                pages[venue] = {
+                    "count": summary["count"],
+                    "today": summary["today"],
+                    "buy": summary["buy"],
+                    "sell": summary["sell"],
+                    "unclassified": summary["unclassified"],
+                    "volume": format(summary["volume"], "f"),
+                    "offset": offset,
+                    "limit": limit,
+                    "trades": traded,
+                }
+                rows.extend(traded)
+    except Exception:
+        raise HTTPException(status_code=500, detail="analytics was not read") from None
+    return {"trades": rows, "pages": pages}
 
 
 def _board_refresh_enabled() -> bool:
