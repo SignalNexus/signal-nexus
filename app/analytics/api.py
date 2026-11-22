@@ -44,7 +44,7 @@ from app.core.security import analytics_secret_matches
 from app.execution.admission import order_block_reason
 from app.execution.arcus import ArcusError, apply_configured_leverage, execute_arcus
 from app.execution.futures import execute_futures
-from app.execution.live import execute_live, order_deferred
+from app.execution.live import defer_venue_work, execute_live, order_deferred
 from app.execution.mexc_open_orders import open_orders_payload
 from app.execution.order_executor import public_order_error
 from app.execution.router import load_strategies
@@ -195,7 +195,11 @@ def arcus_order(
     _refuse_blocked_order(strategy, body.action)
     try:
         with order_deferred():
-            result = execute_arcus(strategy, body.action, body.client_order_id)
+            result = defer_venue_work(
+                strategy,
+                body.action,
+                lambda: execute_arcus(strategy, body.action, body.client_order_id),
+            )
     except ArcusError as exc:
         raise HTTPException(status_code=502, detail=public_order_error(exc)) from None
     deferred = _deferred_response(result)
@@ -248,7 +252,11 @@ def venue_order(
     _refuse_blocked_order(strategy, body.action)
     try:
         with order_deferred():
-            result = port.execute(strategy, body.action, body.client_order_id)
+            result = defer_venue_work(
+                strategy,
+                body.action,
+                lambda: port.execute(strategy, body.action, body.client_order_id),
+            )
     except Exception as exc:
         raise HTTPException(status_code=502, detail=public_order_error(exc)) from None
     deferred = _deferred_response(result)
@@ -293,27 +301,35 @@ def mexc_order(
         raise HTTPException(status_code=404, detail="strategy is unavailable")
     _refuse_blocked_order(strategy, body.action)
     try:
-        if strategy.venue == "mexc_spot":
-            from app.execution.exchange import mexc_client
+        with order_deferred():
+            if strategy.venue == "mexc_spot":
+                from app.execution.exchange import mexc_client
 
-            result = execute_live(
-                mexc_client(),
-                strategy,
-                body.action,
-                body.client_order_id,
-                load_strategies(),
-                body.exit_bar_close_ms,
-            )
-        else:
-            from app.execution.exchange import futures_client
-
-            with order_deferred():
-                result = execute_futures(
-                    futures_client(),
+                result = defer_venue_work(
                     strategy,
                     body.action,
-                    body.client_order_id,
-                    load_strategies(),
+                    lambda: execute_live(
+                        mexc_client(),
+                        strategy,
+                        body.action,
+                        body.client_order_id,
+                        load_strategies(),
+                        body.exit_bar_close_ms,
+                    ),
+                )
+            else:
+                from app.execution.exchange import futures_client
+
+                result = defer_venue_work(
+                    strategy,
+                    body.action,
+                    lambda: execute_futures(
+                        futures_client(),
+                        strategy,
+                        body.action,
+                        body.client_order_id,
+                        load_strategies(),
+                    ),
                 )
     except HTTPException:
         raise

@@ -69,6 +69,7 @@ class LiveResult:
     average: float | None = None
     follow_up: Callable[[], None] | None = None
     realized: Decimal | None = None
+    reports_follow_up: bool = False
 
 
 _order_deferred: ContextVar[bool] = ContextVar("order_deferred", default=False)
@@ -97,7 +98,36 @@ def handoff_follow_up(strategy, action: str, follow: Callable[[], "LiveResult"])
         except Exception as exc:
             report_order_result(strategy, action, LiveResult("order_failed", True, public_order_error(exc)))
 
-    return LiveResult("accepted", True, follow_up=run)
+    return LiveResult("accepted", True, follow_up=run, reports_follow_up=True)
+
+
+def defer_venue_work(strategy, action: str, work: Callable[[], "LiveResult"]) -> "LiveResult":
+    if not _order_deferred.get():
+        return work()
+
+    def run() -> None:
+        try:
+            result = work()
+            follow = result.follow_up
+            if follow is not None:
+                follow()
+            if follow is None or not result.reports_follow_up:
+                report_order_result(
+                    strategy,
+                    action,
+                    LiveResult(
+                        result.status,
+                        result.sent,
+                        result.reason,
+                        resend_skipped=result.resend_skipped,
+                        average=result.average,
+                        realized=result.realized,
+                    ),
+                )
+        except Exception as exc:
+            report_order_result(strategy, action, LiveResult("order_failed", True, public_order_error(exc)))
+
+    return LiveResult("accepted", True, follow_up=run, reports_follow_up=True)
 
 
 def report_order_result(strategy, action: str, result: "LiveResult") -> None:
@@ -220,6 +250,7 @@ def _buy(exchange, strategy: Strategy, exchange_id: str, client_order_id: str, s
                 follow_up=lambda: _finish_buy(
                     exchange, strategy, client_order_id, exchange_id, order_id, amount, price, sleeper
                 ),
+                reports_follow_up=True,
             )
     return _market_buy(exchange, strategy, exchange_id, client_order_id)
 
@@ -408,6 +439,7 @@ def _sell(
                     exit_bar_close_ms,
                     sleeper,
                 ),
+                reports_follow_up=True,
             )
     return _market_sell(
         exchange,
