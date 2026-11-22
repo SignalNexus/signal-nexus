@@ -258,7 +258,8 @@ def _analytics_slice(path: str, key: str) -> dict | None:
         if not base or not secret:
             raise RuntimeError("analytics api is not configured")
         headers = {"Authorization": f"Bearer {secret}"}
-        with httpx.Client(timeout=8.0) as client:
+        # 全約定の再構成は 8 秒を超える。表示は 10 秒で打ち切る。
+        with httpx.Client(timeout=10.0) as client:
             response = client.get(f"{base}{path}", headers=headers)
             response.raise_for_status()
             payload = response.json()
