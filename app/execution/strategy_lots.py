@@ -392,7 +392,8 @@ def _sync_arcus() -> None:
 
 def _sync_stop(connection, venue: str, strategy_id: str, updated: Decimal, closing: bool, *, filled: Decimal, fill_price: Decimal | None, protect: bool) -> None:
     try:
-        with connection.savepoint():
+        connection.execute("SAVEPOINT protective_stop")
+        try:
             if updated <= 0:
                 from app.execution.protective_stop import cancel_armed
 
@@ -402,8 +403,12 @@ def _sync_stop(connection, venue: str, strategy_id: str, updated: Decimal, closi
 
                 if filled > 0 or not stop_is_active(connection, venue, strategy_id):
                     arm_from_fill(connection, venue, strategy_id, fill_price)
-    except Exception:
-        logger.warning("protective stop was not updated")
+        except Exception:
+            connection.execute("ROLLBACK TO SAVEPOINT protective_stop")
+            raise
+        connection.execute("RELEASE SAVEPOINT protective_stop")
+    except Exception as exc:
+        logger.warning("protective stop was not updated: %s", type(exc).__name__)
 
 
 def _taker_fee() -> float:
