@@ -262,7 +262,11 @@ def run_forever(run, sleeper, *, interval: timedelta = INGEST_INTERVAL, cycles: 
 def main() -> None:
     import psycopg
 
+    from app.analytics.schema import ensure_read_indexes
+
     url = os.environ["ANALYTICS_DATABASE_URL"]
+    with psycopg.connect(url) as connection:
+        ensure_read_indexes(connection)
 
     def run() -> None:
         with psycopg.connect(url) as connection:

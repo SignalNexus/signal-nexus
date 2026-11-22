@@ -43,6 +43,7 @@ from app.analytics.schema import (
     load_fills,
     load_fills_for_keys,
     load_fills_for_names,
+    ensure_read_indexes,
     load_ingest_succeeded_at,
     load_latest_signal,
     load_open_fill_keys,
@@ -476,6 +477,8 @@ async def _lifespan(_app):
     load_ports()
     Thread(target=_preload_mexc, daemon=True).start()
     if os.environ.get("ANALYTICS_DATABASE_URL", "").strip():
+        with _connect() as connection:
+            ensure_read_indexes(connection)
         Thread(target=_sync_lots_forever, daemon=True).start()
         Thread(target=_watch_position_gaps_forever, daemon=True).start()
         Thread(target=_import_venue_fills_forever, daemon=True).start()

@@ -187,15 +187,45 @@ def create_schema(connection) -> None:
             ON CONFLICT (venue, strategy_id) DO NOTHING
             """
         )
-    connection.execute(
-        "CREATE INDEX IF NOT EXISTS fills_venue_filled_at_idx ON fills (venue, filled_at DESC, trade_id DESC)"
-    )
-    connection.execute(
-        "CREATE INDEX IF NOT EXISTS fills_venue_strategy_idx ON fills (venue, strategy_name)"
-    )
-    connection.execute(
-        "CREATE INDEX IF NOT EXISTS audits_recorded_at_idx ON audits (recorded_at DESC, id DESC)"
-    )
+
+
+_READ_INDEXES = (
+    (
+        "fills_venue_filled_at_idx",
+        "CREATE INDEX IF NOT EXISTS fills_venue_filled_at_idx ON fills (venue, filled_at DESC, trade_id DESC)",
+    ),
+    (
+        "fills_venue_strategy_idx",
+        "CREATE INDEX IF NOT EXISTS fills_venue_strategy_idx ON fills (venue, strategy_name)",
+    ),
+    (
+        "audits_recorded_at_idx",
+        "CREATE INDEX IF NOT EXISTS audits_recorded_at_idx ON audits (recorded_at DESC, id DESC)",
+    ),
+)
+
+
+def _read_indexes_ready(connection) -> bool:
+    for name, _statement in _READ_INDEXES:
+        row = connection.execute("SELECT to_regclass(%s)", (f"public.{name}",)).fetchone()
+        if row is None or row[0] is None:
+            return False
+    return True
+
+
+def ensure_read_indexes(connection) -> None:
+    # リクエスト経路では作らない。起動したプロセスの1回だけ、欠けているときだけ作る。
+    if _read_indexes_ready(connection):
+        return
+    connection.execute("SELECT pg_advisory_lock(%s)", (81422006,))
+    try:
+        for name, statement in _READ_INDEXES:
+            row = connection.execute("SELECT to_regclass(%s)", (f"public.{name}",)).fetchone()
+            if row is not None and row[0] is not None:
+                continue
+            connection.execute(statement)
+    finally:
+        connection.execute("SELECT pg_advisory_unlock(%s)", (81422006,))
 
 
 _RISEX_SIDES = frozenset({"LONG", "SHORT", "FLAT", "COVER"})
