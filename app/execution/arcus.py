@@ -317,13 +317,26 @@ class ArcusClient:
         crossed = book[0] is not None and book[1] is not None and book[0] >= book[1]
         if touch is None or crossed:
             market = self._market_order(action, strategy_id, client_order_id, name, market_id, spec, side, quantity, reduce_only)
-            filled = self._filled_size(market)
-            market_key = framed_client_order_id(strategy_id, client_order_id, action, "remainder", "arcus")
-            quoted = None
-            if filled > 0 and isinstance(market, dict) and market.get("orderId"):
-                quoted = _quoted_price(self._read(str(market["orderId"])))
-            return _finished(
-                {
+            holder = {
+                "result": {
+                    "limit_order_id": None,
+                    "filled": Decimal("0"),
+                    "remaining": quantity,
+                    "market": market,
+                    "fills": [],
+                    "prices": [],
+                }
+            }
+
+            def follow() -> None:
+                filled = self._filled_size(market)
+                if filled <= 0:
+                    filled = self._filled_size(market)
+                market_key = framed_client_order_id(strategy_id, client_order_id, action, "remainder", "arcus")
+                quoted = None
+                if filled > 0 and isinstance(market, dict) and market.get("orderId"):
+                    quoted = _quoted_price(self._read(str(market["orderId"])))
+                holder["result"] = {
                     "limit_order_id": None,
                     "filled": filled,
                     "remaining": quantity - filled,
@@ -331,7 +344,8 @@ class ArcusClient:
                     "fills": [(market_key, filled)] if filled > 0 else [],
                     "prices": [(filled, quoted)] if filled > 0 and quoted is not None else [],
                 }
-            )
+
+            return {"follow": follow, "holder": holder}
         placed = self._place(market_id, spec, side, "GTT", touch, quantity, reduce_only, limit_id)
         holder = {
             "result": {
@@ -382,6 +396,9 @@ class ArcusClient:
                 if isinstance(market, dict) and market.get("orderId"):
                     market_status = self._read(str(market["orderId"]))
                     market_filled = Decimal(str(market_status.get("filledSize") or "0"))
+                    if market_filled <= 0:
+                        market_status = self._read(str(market["orderId"]))
+                        market_filled = Decimal(str(market_status.get("filledSize") or "0"))
                 filled = limit_filled + market_filled
                 remaining = max(quantity - filled, Decimal("0"))
                 if market_filled > 0:
@@ -733,10 +750,14 @@ def _ensure_loaded_locked() -> None:
     if not configured():
         _loaded = True
         return
-    try:
-        loaded = load_venue("arcus")
-    except Exception:
-        raise ArcusError("position history unavailable") from None
+    loaded = None
+    for _attempt in range(2):
+        try:
+            loaded = load_venue("arcus")
+            break
+        except Exception:
+            if _attempt == 1:
+                raise ArcusError("position history unavailable") from None
     _lots.clear()
     _lots.update(loaded)
     _loaded = True

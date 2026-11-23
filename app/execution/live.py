@@ -176,10 +176,13 @@ def execute_live(
     exit_bar_close_ms: int | None = None,
     sleeper: Callable[[float], None] = time.sleep,
 ) -> LiveResult:
-    try:
-        load_open_buys(exchange, strategies)
-    except Exception:
-        return LiveResult("not_sent", False, "position history unavailable")
+    for _attempt in range(2):
+        try:
+            load_open_buys(exchange, strategies)
+            break
+        except Exception:
+            if _attempt == 1:
+                return LiveResult("not_sent", False, "position history unavailable")
     exchange_id = exchange_client_order_id(
         strategy.strategy_id, client_order_id, action, venue=strategy.venue
     )

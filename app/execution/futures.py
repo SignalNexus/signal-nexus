@@ -12,7 +12,7 @@ from app.execution.positions import (
     _client_id,
     _filled,
     _timestamp,
-    framed_client_order_id,
+    exchange_client_order_id,
     free_usdt,
     strategy_codes,
     strategy_of,
@@ -130,15 +130,18 @@ def execute_futures(
 ) -> LiveResult:
     if action not in ("SHORT", "COVER", "LONG", "FLAT"):
         raise RuntimeError("unsupported action")
-    try:
-        load_futures_lots(exchange, strategies)
-        from app.execution.strategy_lots import configured
+    for _attempt in range(2):
+        try:
+            load_futures_lots(exchange, strategies)
+            from app.execution.strategy_lots import configured
 
-        if configured():
-            refresh_futures_from_store()
-    except Exception:
-        return LiveResult("not_sent", False, "position history unavailable")
-    exchange_id = framed_client_order_id(
+            if configured():
+                refresh_futures_from_store()
+            break
+        except Exception:
+            if _attempt == 1:
+                return LiveResult("not_sent", False, "position history unavailable")
+    exchange_id = exchange_client_order_id(
         strategy.strategy_id, client_order_id, action, venue=strategy.venue
     )
     symbol = swap_symbol(strategy.symbol)

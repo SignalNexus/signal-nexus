@@ -177,6 +177,8 @@ def place_market_order(
     if not order_id:
         raise RuntimeError("order id missing")
     fetched = exchange.fetch_order(order_id, symbol)
+    if _filled_base(fetched) <= 0:
+        fetched = exchange.fetch_order(order_id, symbol)
     status = fetched.get("status")
     if not status:
         raise RuntimeError("order status missing")

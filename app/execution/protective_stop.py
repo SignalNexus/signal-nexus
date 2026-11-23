@@ -520,7 +520,7 @@ def _evaluate_row(connection, row: StopRow, marks, kill: bool, submit, forward) 
             _message(row, "order_failed", action, bound, reason_text(level, mark, "state_unconfirmed", trigger=trigger)),
             forward,
         )
-        return "failed"
+        return _finish_unconfirmed(connection, row)
     return _settle(connection, row, mark, action, bound, result, box, forward, before, trigger, level)
 
 
@@ -534,7 +534,7 @@ def _settle(connection, row, mark, action, strategy, result, box, forward, befor
             forward,
         )
         if cause == "state_unconfirmed":
-            return "failed"
+            return _finish_unconfirmed(connection, row)
         _set_status(connection, row, "armed", unconfirmed=False)
         return "failed"
     if kind != "order_success" and not result.sent:
@@ -552,7 +552,7 @@ def _settle(connection, row, mark, action, strategy, result, box, forward, befor
             _message(row, "order_failed", action, strategy, reason_text(level, mark, "state_unconfirmed", trigger=trigger)),
             forward,
         )
-        return "failed"
+        return _finish_unconfirmed(connection, row)
     average = box.get("average") if kind == "order_success" else result.average
     realized = box.get("realized") if kind == "order_success" else result.realized
     _store_audit(
@@ -661,6 +661,18 @@ def _target(row: StopRow):
         return None, None
     deployment = next((item for item in strategy.deployments if item.venue == row.venue), None)
     return strategy, deployment
+
+
+def _finish_unconfirmed(connection, row: StopRow) -> str:
+    strategy, deployment = _target(row)
+    if strategy is None or deployment is None or not deployment.enabled:
+        cancel_armed(connection, row.venue, row.strategy_id)
+        return "failed"
+    if _lot(connection, row) <= 0:
+        _set_status(connection, row, "closed")
+        return "failed"
+    _set_status(connection, row, "armed", unconfirmed=False)
+    return "failed"
 
 
 def _lot(connection, row: StopRow) -> Decimal:
