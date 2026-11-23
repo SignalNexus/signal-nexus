@@ -69,6 +69,7 @@ app = FastAPI(title="Signal Nexus Analytics", **fastapi_doc_kwargs())
 _board_lock = Lock()
 _board_build_lock = Lock()
 _board_snapshot: dict | None = None
+_trade_snapshot: list | None = None
 _schema_for = ""
 
 
@@ -590,6 +591,9 @@ def trades(
 ) -> dict:
     _require_secret(authorization)
     if limit is None:
+        cached = _cached_trades()
+        if cached is not None:
+            return {"trades": cached}
         return {"trades": _trade_rows(_load_fill_views())}
     size = min(max(limit, 1), 100)
     offsets = {}
@@ -667,6 +671,8 @@ def _assemble_board(sources: tuple[list[FillView], list | None, datetime | None]
     now = datetime.now(timezone.utc)
     opens = _held_opens(opens)
     marked = mark_opens(opens, _mark_prices(opens))
+    trade_rows = _trade_rows(fills)
+    _remember_trades(trade_rows)
     payload = {
         "pnl": _pnl_json(closed, now, forecast=True),
         "pnl_by_venue": {
@@ -687,7 +693,7 @@ def _assemble_board(sources: tuple[list[FillView], list | None, datetime | None]
             "futures": _volume_json(_class_fills(fills, "futures"), now),
         },
         "positions": [_position_json(item) for item in marked],
-        "trades": [] if summary else _trade_rows(fills),
+        "trades": [] if summary else trade_rows,
         "strategies": [_strategy_json(row) for row in attach_volumes(strategy_rows(closed), fills, by="strategy")],
         "tickers": [_ticker_json(row) for row in attach_volumes(ticker_rows(closed), fills, by="ticker")],
         "audits": None if audit_rows is None else [_audit_json(row) for row in audit_rows],
@@ -887,12 +893,24 @@ def _ensure_board() -> dict:
         return payload
 
 
+def _cached_trades() -> list | None:
+    with _board_lock:
+        return None if _trade_snapshot is None else list(_trade_snapshot)
+
+
+def _remember_trades(rows: list) -> None:
+    global _trade_snapshot
+    with _board_lock:
+        _trade_snapshot = list(rows)
+
+
 def _clear_board_cache() -> None:
-    global _board_snapshot, _warm_stamp
+    global _board_snapshot, _trade_snapshot, _warm_stamp
     _warm_stamp = None
     _clear_mark_cache()
     with _board_lock:
         _board_snapshot = None
+        _trade_snapshot = None
     try:
         _snapshot_path().unlink(missing_ok=True)
     except Exception:
@@ -933,14 +951,39 @@ def _ingest_stamp() -> str | None:
 def _refresh_summary_board() -> None:
     global _warm_stamp
     stamp = _ingest_stamp()
-    if _cached_board() is not None and stamp == _warm_stamp:
+    cached = _cached_board()
+    if cached is not None and stamp == _warm_stamp and _marks_complete(cached):
         return
     with _board_build_lock:
-        if _cached_board() is not None and stamp == _warm_stamp:
+        cached = _cached_board()
+        if cached is not None and stamp == _warm_stamp and _marks_complete(cached):
             return
         payload = _build_summary_board()
+        _reuse_marks(payload, cached)
     _remember_board(payload)
-    _warm_stamp = payload.get("ingest_succeeded_at")
+    _warm_stamp = payload.get("ingest_succeeded_at") if _marks_complete(payload) else None
+
+
+def _marks_complete(payload: dict) -> bool:
+    return all(row.get("unrealized") not in (None, "") for row in payload.get("positions") or [])
+
+
+def _reuse_marks(payload: dict, previous: dict | None) -> None:
+    if not previous:
+        return
+    kept = {
+        (row.get("venue"), row.get("strategy_name"), row.get("symbol")): row.get("unrealized")
+        for row in previous.get("positions") or []
+        if row.get("unrealized") not in (None, "")
+    }
+    rows = []
+    for row in payload.get("positions") or []:
+        if row.get("unrealized") in (None, ""):
+            value = kept.get((row.get("venue"), row.get("strategy_name"), row.get("symbol")))
+            if value not in (None, ""):
+                row = {**row, "unrealized": value}
+        rows.append(row)
+    payload["positions"] = rows
 
 
 def _publish_board(payload: dict) -> dict:

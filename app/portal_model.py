@@ -85,10 +85,8 @@ def positions_view(rows: list[dict], now: datetime) -> dict:
             }
         )
     prepared.sort(key=lambda item: (item["unrealized"] is None, item["unrealized"] or Decimal("0"), item["opened_at"]))
-    missing = any(item["unrealized"] is None for item in prepared)
-    total = None if missing else sum((item["unrealized"] or Decimal("0") for item in prepared), Decimal("0"))
-    if not prepared:
-        total = Decimal("0")
+    known = [item["unrealized"] for item in prepared if item["unrealized"] is not None]
+    total = None if prepared and not known else sum(known, Decimal("0"))
     return {"rows": prepared, "count": len(prepared), "total": total}
 
 
