@@ -49,7 +49,6 @@ _CARD_LINES = {
     "qfex": ("QFEX", "Perpetual"),
     "ondo": ("Ondo", "Perpetual"),
     "risex": ("RISEx", "Perpetual"),
-    "txflow": ("TxFlow", "Perpetual"),
 }
 
 

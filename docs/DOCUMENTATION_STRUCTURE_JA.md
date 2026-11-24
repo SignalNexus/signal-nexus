@@ -22,7 +22,7 @@
 | Launch Gate | Public | 固定した開始状態 | 記録した pin、ハッシュ、ホストと Render アカウントの阻止 | 作済みの VM |
 | Release Management | Public | 公開 tag と pin の移動 | リリースの条件、書き出し、推奨 SHA | 顧客のホスト |
 | Venue License | Public | 有料会場のアクセス | manifest、Read、`VENUEADD_READ_TOKEN` | 最初の health に必須の導入 |
-| AddVenue Operations | Public | 最初の成功のあとの 1 行 | 作業例、返金 | txflow の導入 |
+| AddVenue Operations | Public | 最初の成功のあとの 1 行 | 作業例、返金 | 追加会場の導入 |
 | Troubleshooting | Public | ガイド経路の失敗 | `none` での futures read、pin の不一致、再起動しない取得 | コンソールの復旧 |
 | Rollback | Public | その呼び出し元だけ | 最初の deploy の失敗、あとの deploy の失敗 | 別の呼び出し元 |
 | Buildbook | Starter | Community Deployment Guide の詳細版 | コンソールのクリック、チェックリスト、画面例、FAQ、失敗を避けるメモ | ガイドが述べない必須の事実 |

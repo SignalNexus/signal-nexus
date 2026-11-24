@@ -114,7 +114,7 @@ VenueAdd は、公開版に無い一つの会場を、その会場が有効に�
 
 Webhook は会場の実装を知りません。扱うのは `venue_id` だけです。会場ごとの差異、SDK、API クライアント、署名方式、秘密、Venue Package は VM だけが持ちます。新しい VenueAdd を追加しても、Webhook に会場固有コードを追加しません。
 
-`ANALYTICS_API_URL` があるとき、`execute_order` は Venue Package を import する前に転送します。組み込みの集合は、既存の `RESERVED_VENUE_IDS` です。値は `arcus`、`mexc_spot`、`mexc_futures` です。別の定数は増やしません。`arcus` は `/api/arcus/order`、`mexc_spot` と `mexc_futures` は `/api/mexc/order` です。この集合に無い `venue_id` は、すべて同じ転送規則で `/api/venue/order` へ渡します。Webhook はそれらの ID を区別しません。新しい VenueAdd を足しても、転送規則は変わらず、Webhook の改修も要りません。TxFlow、Lighter、QFEX は例であり、例外ではありません。VenueAdd はすべて同じ経路を通ります。会場ごとの Webhook 分岐は追加しません。`ANALYTICS_API_URL` が無いとき、未ロードの会場はこれまでどおり `venue has no order adapter` で止まります。
+`ANALYTICS_API_URL` があるとき、`execute_order` は Venue Package を import する前に転送します。組み込みの集合は、既存の `RESERVED_VENUE_IDS` です。値は `arcus`、`mexc_spot`、`mexc_futures` です。別の定数は増やしません。`arcus` は `/api/arcus/order`、`mexc_spot` と `mexc_futures` は `/api/mexc/order` です。この集合に無い `venue_id` は、すべて同じ転送規則で `/api/venue/order` へ渡します。Webhook はそれらの ID を区別しません。新しい VenueAdd を足しても、転送規則は変わらず、Webhook の改修も要りません。Lighter と QFEX は例であり、例外ではありません。VenueAdd はすべて同じ経路を通ります。会場ごとの Webhook 分岐は追加しません。`ANALYTICS_API_URL` が無いとき、未ロードの会場はこれまでどおり `venue has no order adapter` で止まります。
 
 `SIGNAL_NEXUS_VENUEADD` を import し、`execute`、`mark`、`sync_lots`、`open_orders`、`balance`、`apply_leverage` の六つを呼ぶのは、VM のプロセスです。設定が空なら、MEXC 現物、MEXC 先物、Arcus は今のままです。パッケージが予約 ID、重複した ID、または 1 以外のポート版を返すと、そのプロセスは起動時に止まります。有料会場の接続は、このツリーの外に残します。
 

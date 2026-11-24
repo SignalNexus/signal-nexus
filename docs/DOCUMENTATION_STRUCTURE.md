@@ -22,7 +22,7 @@ English is the canonical text. The Japanese edition is [DOCUMENTATION_STRUCTURE_
 | Launch Gate | Public | Frozen start state | Recorded pin, hashes, host and Render account blockers | A created VM |
 | Release Management | Public | Public tag and pin move | Release gate, export, recommended SHA | A customer host |
 | Venue License | Public | Paid venue access | Manifest, Read, `VENUEADD_READ_TOKEN` | A required install for first health |
-| AddVenue Operations | Public | One manifest row after first success | Worked case, refund | txflow introduction |
+| AddVenue Operations | Public | One manifest row after first success | Worked case, refund | Extra venue introduction |
 | Troubleshooting | Public | Failures on the guide path | Futures read on `none`, pin mismatch, fetch that does not restart | Console recovery |
 | Rollback | Public | That caller only | First-deploy failure, later-deploy failure | Another caller repository |
 | Buildbook | Starter | Long form of the Community Deployment Guide | Console clicks, checklists, screens, FAQ, failure notes | A required fact that the guide does not state |

@@ -7,7 +7,7 @@ from app.portal_data import read_roi_bases
 from app.portal_text import english, portal_zone, show_text
 from app.venues import enabled_venues
 
-_DEX = {"arcus", "lighter", "txflow", "hyperliquid", "paradex", "vertex", "grvt", "qfex", "ondo", "risex"}
+_DEX = {"arcus", "lighter", "hyperliquid", "paradex", "vertex", "grvt", "qfex", "ondo", "risex"}
 _LABELS = {
     "mexc_spot": "MEXC Spot",
     "mexc_futures": "MEXC Futures",
@@ -15,7 +15,6 @@ _LABELS = {
     "arcus": "Arcus",
     "qfex": "QFEX",
     "ondo": "Ondo",
-    "txflow": "TxFlow",
     "risex": "RISEx",
 }
 _COLORS = {
@@ -25,7 +24,6 @@ _COLORS = {
     "arcus": "#9945FF",
     "qfex": "#FBBF24",
     "ondo": "#FFB020",
-    "txflow": "#C49BFF",
 }
 _STRATEGY_COLORS = ("#14F195", "#FF4D6D", "#80ECFF", "#9945FF", "#FBBF24", "#5497D5")
 _SCRIPT = Path(__file__).with_name("portal_pnl.js").read_text(encoding="utf-8")
