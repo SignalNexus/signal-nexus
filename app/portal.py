@@ -5,7 +5,7 @@ import time
 from contextvars import ContextVar
 from datetime import datetime, timezone
 from pathlib import Path
-from threading import Lock
+from threading import Lock, Thread
 
 import httpx
 from fastapi import APIRouter, Form, Request
@@ -25,6 +25,7 @@ MAX_AGE = 30 * 24 * 60 * 60
 _dashboard_summary: ContextVar[bool] = ContextVar("dashboard_summary", default=False)
 _board_cache_lock = Lock()
 _board_cache: dict[bool, dict] = {}
+_SUMMARY_FRESH_SECONDS = 3.0
 
 
 @router.get("/portal")
@@ -117,10 +118,42 @@ def _clear_cached_board() -> None:
 
 def _board() -> dict | None:
     summary = _dashboard_summary.get()
+    cached = _peek_board(summary)
+    if cached is not None and _board_age(cached) <= _SUMMARY_FRESH_SECONDS:
+        return cached
+    if cached is not None:
+        Thread(target=_refresh_board, args=(summary,), daemon=True).start()
+        return cached
+    return _refresh_board(summary)
+
+
+def _peek_board(summary: bool) -> dict | None:
+    with _board_cache_lock:
+        cached = _board_cache.get(summary)
+        return None if cached is None else dict(cached)
+
+
+def _board_age(board: dict) -> float:
+    raw = board.get("board_fetched_at")
+    if not isinstance(raw, str):
+        return _SUMMARY_FRESH_SECONDS + 1
+    try:
+        fetched = datetime.fromisoformat(raw)
+    except ValueError:
+        return _SUMMARY_FRESH_SECONDS + 1
+    if fetched.tzinfo is None:
+        fetched = fetched.replace(tzinfo=timezone.utc)
+    return (datetime.now(timezone.utc) - fetched).total_seconds()
+
+
+def _refresh_board(summary: bool) -> dict | None:
+    token = _dashboard_summary.set(summary)
     try:
         fresh = _dashboard()
     except Exception:
         fresh = None
+    finally:
+        _dashboard_summary.reset(token)
     with _board_cache_lock:
         if fresh is not None:
             fresh["board_fetched_at"] = datetime.now(timezone.utc).isoformat()
@@ -168,10 +201,10 @@ def _dashboard() -> dict:
     if not base or not secret:
         raise RuntimeError("analytics api is not configured")
     headers = {"Authorization": f"Bearer {secret}"}
-    # ダッシュボードは 8 秒で打ち切る。10 秒以上の表示は要件を外れる。
+    # ダッシュボードは 3 秒で打ち切る。直前の集計があれば画面は待たない。
     summary = _dashboard_summary.get()
     path = "/api/board?summary=1" if summary else "/api/board"
-    budget = 8.0 if summary else 10.0
+    budget = 3.0 if summary else 10.0
     with httpx.Client(timeout=budget) as client:
         response = _board_response(client, f"{base}{path}", headers, summary=summary, budget=budget)
         if response.status_code != 404:

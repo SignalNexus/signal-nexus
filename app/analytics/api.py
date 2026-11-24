@@ -4,7 +4,7 @@ import os
 import time
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import asynccontextmanager
-from datetime import datetime, timezone
+from datetime import datetime, time, timedelta, timezone
 from zoneinfo import ZoneInfo
 from decimal import Decimal
 from pathlib import Path
@@ -17,16 +17,20 @@ from pydantic import BaseModel, ConfigDict, field_validator
 
 from app.analytics.report import (
     FillView,
+    attach_notional,
     attach_volumes,
     final_fill_realized,
+    freeze_books,
     held_opens,
     mark_opens,
     month_forecast,
     period_rows,
     reconstruct,
+    replay_books,
     strategy_rows,
     ticker_rows,
     volume_rows,
+    volume_rows_from_daily,
 )
 from app.venues import is_futures, is_spot
 from app.analytics.schema import (
@@ -38,10 +42,14 @@ from app.analytics.schema import (
     load_audit_page,
     load_audit_summary,
     load_all_strategy_lots,
+    load_daily_notional,
     load_fill_page,
+    load_fill_prefix_checksum,
     load_fill_venues,
     load_fills,
     load_fills_for_keys,
+    load_fills_since,
+    load_notional_by,
     load_fills_for_names,
     ensure_read_indexes,
     load_ingest_succeeded_at,
@@ -669,17 +677,62 @@ def _build_board() -> dict:
 
 def _build_summary_board() -> dict:
     # 30 秒ごとの再構築は、約定の全行と監査の全行を残さない。
-    return _assemble_board(_load_summary_sources(), summary=True)
+    # 前日より前の FIFO は固定し、増えた約定だけを足す。
+    sources, prepared, daily, strategy_notional, symbol_notional = _load_summary_sources()
+    return _assemble_board(
+        sources,
+        summary=True,
+        prepared=prepared,
+        daily=daily,
+        strategy_notional=strategy_notional,
+        symbol_notional=symbol_notional,
+    )
 
 
-def _assemble_board(sources: tuple[list[FillView], list | None, datetime | None], *, summary: bool) -> dict:
+def _assemble_board(
+    sources: tuple[list[FillView], list | None, datetime | None],
+    *,
+    summary: bool,
+    prepared: tuple | None = None,
+    daily: list | None = None,
+    strategy_notional: dict | None = None,
+    symbol_notional: dict | None = None,
+) -> dict:
     fills, audit_rows, succeeded_at = sources
-    closed, opens = reconstruct(fills)
+    if prepared is None:
+        closed, opens = reconstruct(fills)
+        trade_rows = _trade_rows(fills)
+        _remember_trades(trade_rows)
+    else:
+        closed, opens = prepared
+        trade_rows = []
     now = datetime.now(timezone.utc)
     opens = _held_opens(opens)
     marked = mark_opens(opens, _mark_prices(opens))
-    trade_rows = _trade_rows(fills)
-    _remember_trades(trade_rows)
+    if daily is None:
+        volume = _volume_json(fills, now)
+        volume_by_venue = {
+            venue: _volume_json([item for item in fills if item.venue == venue], now)
+            for venue in _volume_venues(fills)
+        }
+        volume_by_asset_class = {
+            "spot": _volume_json(_class_fills(fills, "spot"), now),
+            "futures": _volume_json(_class_fills(fills, "futures"), now),
+        }
+        strategies = attach_volumes(strategy_rows(closed), fills, by="strategy")
+        tickers = attach_volumes(ticker_rows(closed), fills, by="ticker")
+    else:
+        volume = _volume_json_daily(daily, now)
+        venues = sorted({venue for _day, venue, _amount in daily})
+        volume_by_venue = {
+            venue: _volume_json_daily([row for row in daily if row[1] == venue], now) for venue in venues
+        }
+        volume_by_asset_class = {
+            "spot": _volume_json_daily([row for row in daily if is_spot(row[1])], now),
+            "futures": _volume_json_daily([row for row in daily if is_futures(row[1])], now),
+        }
+        strategies = attach_notional(strategy_rows(closed), strategy_notional or {}, by="strategy")
+        tickers = attach_notional(ticker_rows(closed), symbol_notional or {}, by="ticker")
     payload = {
         "pnl": _pnl_json(closed, now, forecast=True),
         "pnl_by_venue": {
@@ -690,19 +743,13 @@ def _assemble_board(sources: tuple[list[FillView], list | None, datetime | None]
             "spot": _pnl_json(_class_closed(closed, "spot"), now, forecast=False),
             "futures": _pnl_json(_class_closed(closed, "futures"), now, forecast=False),
         },
-        "volume": _volume_json(fills, now),
-        "volume_by_venue": {
-            venue: _volume_json([item for item in fills if item.venue == venue], now)
-            for venue in _volume_venues(fills)
-        },
-        "volume_by_asset_class": {
-            "spot": _volume_json(_class_fills(fills, "spot"), now),
-            "futures": _volume_json(_class_fills(fills, "futures"), now),
-        },
+        "volume": volume,
+        "volume_by_venue": volume_by_venue,
+        "volume_by_asset_class": volume_by_asset_class,
         "positions": [_position_json(item) for item in marked],
         "trades": [] if summary else trade_rows,
-        "strategies": [_strategy_json(row) for row in attach_volumes(strategy_rows(closed), fills, by="strategy")],
-        "tickers": [_ticker_json(row) for row in attach_volumes(ticker_rows(closed), fills, by="ticker")],
+        "strategies": [_strategy_json(row) for row in strategies],
+        "tickers": [_ticker_json(row) for row in tickers],
         "audits": None if audit_rows is None else [_audit_json(row) for row in audit_rows],
         "ingest_succeeded_at": None if succeeded_at is None else succeeded_at.isoformat(),
     }
@@ -912,8 +959,10 @@ def _remember_trades(rows: list) -> None:
 
 
 def _clear_board_cache() -> None:
-    global _board_snapshot, _trade_snapshot, _warm_stamp
+    global _board_snapshot, _trade_snapshot, _warm_stamp, _fifo_state
     _warm_stamp = None
+    with _fifo_lock:
+        _fifo_state = None
     _clear_mark_cache()
     with _board_lock:
         _board_snapshot = None
@@ -1035,11 +1084,39 @@ def _load_board_sources() -> tuple[list[FillView], list | None, datetime | None]
     return fills, audits, succeeded_at
 
 
-def _load_summary_sources() -> tuple[list[FillView], list | None, datetime | None]:
+_fifo_lock = Lock()
+_fifo_state: tuple | None = None
+
+
+def _fifo_cutoff(now: datetime) -> datetime:
+    # UTC の前日 0 時より前を固定する。昨日と今日の約定は毎回足す。
+    day = now.astimezone(timezone.utc).date() - timedelta(days=1)
+    return datetime.combine(day, time.min, tzinfo=timezone.utc)
+
+
+def _load_summary_sources():
     try:
+        cutoff = _fifo_cutoff(datetime.now(timezone.utc))
         with _connect() as connection:
             _ensure_schema(connection)
-            fills = [_fill_view(row) for row in load_fills(connection)]
+            checksum = load_fill_prefix_checksum(connection, cutoff)
+            frozen = _frozen_books(cutoff, checksum)
+            if frozen is None:
+                fills = [_fill_view(row) for row in load_fills(connection)]
+                closed, books = freeze_books(fills, cutoff)
+                _store_frozen(cutoff, checksum, closed, books)
+                prepared = None
+                daily = None
+                strategy_notional = None
+                symbol_notional = None
+            else:
+                fills = [_fill_view(row) for row in load_fills_since(connection, cutoff)]
+                prepared = replay_books(frozen[0], frozen[1], fills)
+                daily = [
+                    (row[0], row[1], Decimal(row[2])) for row in load_daily_notional(connection)
+                ]
+                strategy_notional = _notional_map(load_notional_by(connection, "strategy_name"), skip_unclassified=True)
+                symbol_notional = _notional_map(load_notional_by(connection, "symbol"), skip_unclassified=False)
             succeeded_at = load_ingest_succeeded_at(connection)
             try:
                 with connection.transaction():
@@ -1051,7 +1128,31 @@ def _load_summary_sources() -> tuple[list[FillView], list | None, datetime | Non
         raise
     except Exception:
         raise HTTPException(status_code=500, detail="analytics was not read") from None
-    return fills, audits, succeeded_at
+    return (fills, audits, succeeded_at), prepared, daily, strategy_notional, symbol_notional
+
+
+def _frozen_books(cutoff: datetime, checksum: tuple) -> tuple | None:
+    with _fifo_lock:
+        state = _fifo_state
+    if state is None or state[0] != cutoff or state[1] != checksum:
+        return None
+    return state[2], state[3]
+
+
+def _store_frozen(cutoff: datetime, checksum: tuple, closed: list, books: dict) -> None:
+    global _fifo_state
+    with _fifo_lock:
+        _fifo_state = (cutoff, checksum, closed, books)
+
+
+def _notional_map(rows: list[tuple], *, skip_unclassified: bool) -> dict[tuple[str, str], Decimal]:
+    totals: dict[tuple[str, str], Decimal] = {}
+    for name, venue, amount in rows:
+        label = name or "未分類"
+        if skip_unclassified and label == "未分類":
+            continue
+        totals[(label, venue)] = Decimal(amount)
+    return totals
 
 
 _mark_lock = Lock()
@@ -1255,6 +1356,11 @@ def _volume_venues(fills: list[FillView]) -> list[str]:
 def _volume_json(fills: list[FillView], now: datetime) -> dict:
     periods = volume_rows(fills, now)
     return {name: [_volume_period_json(row) for row in rows] for name, rows in periods.items()}
+
+
+def _volume_json_daily(rows: list, now: datetime) -> dict:
+    periods = volume_rows_from_daily(rows, now)
+    return {name: [_volume_period_json(row) for row in period_rows] for name, period_rows in periods.items()}
 
 
 def _forecast_json(row: dict) -> dict:

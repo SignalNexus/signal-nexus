@@ -550,6 +550,58 @@ def load_fills(connection) -> list[tuple]:
     ).fetchall()
 
 
+def load_fills_since(connection, cutoff) -> list[tuple]:
+    return connection.execute(
+        f"""
+        SELECT {_FILL_COLUMNS}
+        FROM fills
+        WHERE filled_at >= %(cutoff)s
+        ORDER BY filled_at, trade_id
+        """,
+        {"cutoff": cutoff},
+    ).fetchall()
+
+
+def load_fill_prefix_checksum(connection, cutoff) -> tuple[int, Decimal, Decimal]:
+    row = connection.execute(
+        """
+        SELECT COUNT(*)::bigint,
+               COALESCE(SUM(quote_spent), 0),
+               COALESCE(SUM(quote_received), 0)
+        FROM fills
+        WHERE filled_at < %(cutoff)s
+        """,
+        {"cutoff": cutoff},
+    ).fetchone()
+    return int(row[0]), Decimal(row[1]), Decimal(row[2])
+
+
+def load_daily_notional(connection) -> list[tuple]:
+    return connection.execute(
+        """
+        SELECT (filled_at AT TIME ZONE 'UTC')::date,
+               COALESCE(NULLIF(venue, ''), 'mexc_spot'),
+               COALESCE(SUM(quote_spent + quote_received), 0)
+        FROM fills
+        GROUP BY 1, 2
+        """
+    ).fetchall()
+
+
+def load_notional_by(connection, column: str) -> list[tuple]:
+    if column not in {"strategy_name", "symbol"}:
+        raise ValueError("notional column is not available")
+    return connection.execute(
+        f"""
+        SELECT {column},
+               COALESCE(NULLIF(venue, ''), 'mexc_spot'),
+               COALESCE(SUM(quote_spent + quote_received), 0)
+        FROM fills
+        GROUP BY 1, 2
+        """
+    ).fetchall()
+
+
 def load_fill_venues(connection) -> list[str]:
     rows = connection.execute(
         """

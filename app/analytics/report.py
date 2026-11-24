@@ -152,19 +152,65 @@ def _arcus_long(rows: list[FillView], risex_sides: dict[str, str] | None = None)
 def reconstruct(
     fills: list[FillView], risex_sides: dict[str, str] | None = None
 ) -> tuple[list[ClosedTrade], list[OpenPosition]]:
+    closed, opens, _books = _reconstruct(fills, risex_sides, books=None)
+    return closed, opens
+
+
+def freeze_books(
+    fills: list[FillView], cutoff: datetime
+) -> tuple[list[ClosedTrade], dict[tuple[str, str, str], tuple[bool, list[_Lot]]]]:
+    # 前日より前は、未決済ロットを残して閉じる。増分はそこから続ける。
+    prefix = [fill for fill in fills if fill.filled_at < cutoff]
+    _closed, _opens, books = _reconstruct(prefix, None, books=None)
+    return _closed, books
+
+
+def replay_books(
+    closed_prefix: list[ClosedTrade],
+    books: dict[tuple[str, str, str], tuple[bool, list[_Lot]]],
+    fills: list[FillView],
+) -> tuple[list[ClosedTrade], list[OpenPosition]]:
+    closed, opens, _books = _reconstruct(fills, None, books=books)
+    merged = [*closed_prefix, *closed]
+    merged.sort(key=lambda item: (item.closed_at, item.strategy_name, item.symbol))
+    return merged, opens
+
+
+def _copy_books(
+    books: dict[tuple[str, str, str], tuple[bool, list[_Lot]]] | None,
+) -> dict[tuple[str, str, str], tuple[bool, list[_Lot]]]:
+    if not books:
+        return {}
+    return {
+        key: (short, [_Lot(lot.quantity, lot.quote_spent, lot.opened_at) for lot in lots])
+        for key, (short, lots) in books.items()
+    }
+
+
+def _reconstruct(
+    fills: list[FillView],
+    risex_sides: dict[str, str] | None,
+    books: dict[tuple[str, str, str], tuple[bool, list[_Lot]]] | None,
+) -> tuple[list[ClosedTrade], list[OpenPosition], dict[tuple[str, str, str], tuple[bool, list[_Lot]]]]:
     risex_sides = _risex_sides(fills, risex_sides)
     grouped: dict[tuple[str, str, str], list[FillView]] = defaultdict(list)
     for fill in fills:
         grouped[(fill.strategy_name, fill.symbol, fill.venue)].append(fill)
+    seeds = _copy_books(books)
     closed: list[ClosedTrade] = []
     opens: list[OpenPosition] = []
-    for strategy_name, symbol, venue in sorted(grouped):
-        rows = sorted(grouped[(strategy_name, symbol, venue)], key=lambda item: (item.filled_at, item.trade_id))
+    kept: dict[tuple[str, str, str], tuple[bool, list[_Lot]]] = {}
+    keys = sorted(set(grouped) | set(seeds))
+    for strategy_name, symbol, venue in keys:
+        rows = sorted(grouped.get((strategy_name, symbol, venue), []), key=lambda item: (item.filled_at, item.trade_id))
         if venue in {"arcus", "lighter", "qfex", "ondo", "risex"} and strategy_name == "未分類":
             continue
-        lots: list[_Lot] = []
+        if (strategy_name, symbol, venue) in seeds:
+            short, lots = seeds[(strategy_name, symbol, venue)]
+        else:
+            lots = []
+            short = is_futures(venue) and not _arcus_long(rows, risex_sides)
         pending: _Pending | None = None
-        short = is_futures(venue) and not _arcus_long(rows, risex_sides)
         for fill in rows:
             if short:
                 if fill.side == "sell":
@@ -189,6 +235,7 @@ def reconstruct(
             pending.add(fill, _consume(lots, fill.quantity))
         _flush(closed, pending)
         if lots:
+            kept[(strategy_name, symbol, venue)] = (short, lots)
             opens.append(
                 OpenPosition(
                     strategy_name=strategy_name,
@@ -201,7 +248,7 @@ def reconstruct(
                 )
             )
     closed.sort(key=lambda item: (item.closed_at, item.strategy_name, item.symbol))
-    return closed, opens
+    return closed, opens, kept
 
 
 def final_fill_realized(fills: list[FillView]) -> dict[str, Decimal]:
@@ -462,6 +509,48 @@ def volume_rows(fills: list[FillView], now: datetime) -> dict[str, list[dict]]:
         "months": months,
         "years": [{"period": key, "volume": totals["years"][key]} for key in sorted(totals["years"])],
     }
+
+
+def volume_rows_from_daily(rows: list[tuple], now: datetime) -> dict[str, list[dict]]:
+    today = now.astimezone(timezone.utc).date()
+    totals: dict[str, dict[str, Decimal]] = {
+        "days": defaultdict(lambda: Decimal("0")),
+        "weeks": defaultdict(lambda: Decimal("0")),
+        "months": defaultdict(lambda: Decimal("0")),
+        "years": defaultdict(lambda: Decimal("0")),
+    }
+    start = today.replace(day=1)
+    for day, _venue, amount in rows:
+        if day < start:
+            start = day.replace(day=1)
+        totals["days"][day.isoformat()] += Decimal(amount)
+        calendar = day.isocalendar()
+        totals["weeks"][f"{calendar.year}-W{calendar.week:02d}"] += Decimal(amount)
+        totals["months"][day.strftime("%Y-%m")] += Decimal(amount)
+        totals["years"][str(day.year)] += Decimal(amount)
+    months = []
+    cursor = start
+    while (cursor.year, cursor.month) <= (today.year, today.month):
+        key = cursor.strftime("%Y-%m")
+        months.append({"period": key, "volume": totals["months"].get(key, Decimal("0"))})
+        if cursor.month == 12:
+            cursor = cursor.replace(year=cursor.year + 1, month=1)
+        else:
+            cursor = cursor.replace(month=cursor.month + 1)
+    return {
+        "days": [{"period": key, "volume": totals["days"][key]} for key in sorted(totals["days"])],
+        "weeks": [{"period": key, "volume": totals["weeks"][key]} for key in sorted(totals["weeks"])],
+        "months": months,
+        "years": [{"period": key, "volume": totals["years"][key]} for key in sorted(totals["years"])],
+    }
+
+
+def attach_notional(rows: list[dict], totals: dict[tuple[str, str], Decimal], *, by: str) -> list[dict]:
+    attached = []
+    for row in rows:
+        key = (row["strategy_name"] if by == "strategy" else row["symbol"], row["venue"])
+        attached.append({**row, "volume": totals.get(key, Decimal("0"))})
+    return attached
 
 
 def attach_volumes(rows: list[dict], fills: list[FillView], *, by: str) -> list[dict]:
