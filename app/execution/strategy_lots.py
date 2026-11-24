@@ -60,6 +60,8 @@ def note_fill(
             updated = Decimal("0")
         save_strategy_lot(connection, venue, strategy_id, updated)
         save_applied_fill(connection, venue, order_key, filled)
+        if closing and delta > 0:
+            record_close_gap(connection, venue, strategy_id, delta)
         if venue == "mexc_spot":
             if updated <= 0:
                 delete_spot_meta(connection, strategy_id)
@@ -86,7 +88,9 @@ def load_venue(venue: str) -> dict[str, Decimal]:
 
 
 def close_quantity(venue: str, strategy_id: str, stored: Decimal | None = None) -> Decimal:
-    # A cover uses the fill ledger when it is ahead of the lot. A failed read keeps the lot.
+    # A cover uses the fill ledger when it is ahead of the lot. A close already
+    # written to the lot, and not yet in that ledger, does not count. A failed
+    # read keeps the lot.
     if stored is None:
         try:
             stored = load_venue(venue).get(strategy_id, Decimal("0"))
@@ -100,22 +104,72 @@ def close_quantity(venue: str, strategy_id: str, stored: Decimal | None = None) 
     return reconstructed
 
 
+def fill_open_quantity(venue: str, strategy_id: str) -> Decimal:
+    found = _reconstructed_quantity(venue, strategy_id)
+    if found is None:
+        return Decimal("0")
+    return found
+
+
+def record_close_gap(connection, venue: str, strategy_id: str, delta: Decimal) -> None:
+    if delta <= 0:
+        return
+    from app.analytics.schema import load_close_applied, save_close_applied
+
+    current = load_close_applied(connection, venue, strategy_id)
+    if current is None:
+        current = _ingested_closes(connection, venue, strategy_id)
+    save_close_applied(connection, venue, strategy_id, current + delta)
+
+
+def adjusted_open(reconstructed: Decimal, applied: Decimal | None, ingested: Decimal) -> Decimal:
+    if applied is None:
+        return reconstructed
+    pending = applied - ingested
+    if pending < 0:
+        pending = Decimal("0")
+    opened = reconstructed - pending
+    if opened < 0:
+        return Decimal("0")
+    return opened
+
+
 def _reconstructed_quantity(venue: str, strategy_id: str) -> Decimal | None:
     if not configured():
         return None
     try:
         from app.analytics.report import fill_view_from_row, reconstructed_open_quantity
-        from app.analytics.schema import load_strategy_fills
+        from app.analytics.schema import load_close_applied, load_strategy_fills
 
         with connect() as connection:
             if connection is None:
                 return None
             rows = load_strategy_fills(connection, venue, strategy_id)
+            applied = load_close_applied(connection, venue, strategy_id)
         fills = [fill_view_from_row(row) for row in rows]
-        return reconstructed_open_quantity(fills, venue, strategy_id)
+        opened = reconstructed_open_quantity(fills, venue, strategy_id)
+        return adjusted_open(opened, applied, _closing_quantity(fills, venue))
     except Exception:
         logger.warning("close quantity kept the lot")
         return None
+
+
+def _ingested_closes(connection, venue: str, strategy_id: str) -> Decimal:
+    from app.analytics.report import fill_view_from_row
+    from app.analytics.schema import load_strategy_fills
+
+    rows = load_strategy_fills(connection, venue, strategy_id)
+    fills = [fill_view_from_row(row) for row in rows]
+    return _closing_quantity(fills, venue)
+
+
+def _closing_quantity(fills, venue: str) -> Decimal:
+    from app.analytics.report import _arcus_long, _risex_sides
+    from app.venues import is_futures
+
+    short = bool(is_futures(venue) and not _arcus_long(fills, _risex_sides(fills, None)))
+    side = "buy" if short else "sell"
+    return sum((fill.quantity for fill in fills if fill.side == side), Decimal("0"))
 
 
 def load_spot_state() -> tuple[dict[str, Decimal], dict[str, tuple[str, int]], dict[str, int], bool]:

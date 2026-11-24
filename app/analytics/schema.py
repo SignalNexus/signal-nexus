@@ -169,6 +169,14 @@ STATEMENTS = (
         CHECK (reference_id >= 1)
     )
     """,
+    """
+    CREATE TABLE IF NOT EXISTS strategy_close_gap (
+        venue text NOT NULL CHECK (char_length(venue) > 0),
+        strategy_id text NOT NULL CHECK (char_length(strategy_id) > 0),
+        applied numeric NOT NULL CHECK (applied >= 0),
+        PRIMARY KEY (venue, strategy_id)
+    )
+    """,
 )
 
 
@@ -738,6 +746,30 @@ def save_strategy_lot(connection, venue: str, strategy_id: str, quantity: Decima
         ON CONFLICT (venue, strategy_id) DO UPDATE SET quantity = EXCLUDED.quantity
         """,
         {"venue": venue, "strategy_id": strategy_id, "quantity": quantity},
+    )
+
+
+def load_close_applied(connection, venue: str, strategy_id: str) -> Decimal | None:
+    row = connection.execute(
+        """
+        SELECT applied FROM strategy_close_gap
+        WHERE venue = %(venue)s AND strategy_id = %(strategy_id)s
+        """,
+        {"venue": venue, "strategy_id": strategy_id},
+    ).fetchone()
+    if row is None:
+        return None
+    return _decimal(row[0])
+
+
+def save_close_applied(connection, venue: str, strategy_id: str, applied: Decimal) -> None:
+    connection.execute(
+        """
+        INSERT INTO strategy_close_gap (venue, strategy_id, applied)
+        VALUES (%(venue)s, %(strategy_id)s, %(applied)s)
+        ON CONFLICT (venue, strategy_id) DO UPDATE SET applied = EXCLUDED.applied
+        """,
+        {"venue": venue, "strategy_id": strategy_id, "applied": applied},
     )
 
 
