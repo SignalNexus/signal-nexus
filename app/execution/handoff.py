@@ -40,6 +40,8 @@ def send(method: str, path: str, body: dict | None, *, timeout: float, label: st
             payload = None
         if isinstance(payload, dict):
             reason = str(payload.get("detail") or payload.get("error") or "")
+        if response.status_code == 403 and reason == "profit lock":
+            return {"status": "not_sent", "sent": False, "reason": "profit lock"}
         raise RemoteError(f"{label} executor was not accepted {response.status_code} {reason}".rstrip())
     try:
         payload = response.json()

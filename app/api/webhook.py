@@ -226,6 +226,23 @@ def _run_deployment(
             ),
         )
         return {"venue": deployment.venue, "status": "killed"}
+    from app.execution.admission import order_block_reason
+
+    if order_block_reason(bound, payload.action) == "profit lock":
+        settle(payload.client_order_id, deployment.venue, retry=True)
+        _notify(tasks, received)
+        _notify(
+            tasks,
+            order_not_sent(
+                payload.strategy_id,
+                payload.symbol,
+                payload.action,
+                size_quote,
+                "profit lock",
+                venue=venue,
+            ),
+        )
+        return {"venue": deployment.venue, "status": "not_sent"}
     if execution_mode() != "live":
         settle(payload.client_order_id, deployment.venue, retry=False)
         _notify(tasks, received)
@@ -366,7 +383,7 @@ async def receive_webhook(request: Request, tasks: BackgroundTasks) -> dict[str,
     except RegistryRejection as exc:
         return _reject(tasks, body, exc.reason, exc.reason)
     blocked = order_block_reason(strategy, payload.action)
-    if blocked not in (None, "KILL_SWITCH"):
+    if blocked not in (None, "KILL_SWITCH", "profit lock"):
         return _reject(tasks, body, blocked, blocked)
     targets = targets_for(strategy, payload.action)
     runnable = claim(payload.client_order_id, [deployment.venue for deployment in targets])

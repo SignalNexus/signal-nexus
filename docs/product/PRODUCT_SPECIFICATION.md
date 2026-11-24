@@ -18,7 +18,7 @@ Discord receives audit copies.
 
 Signal Nexus is the product you run on your own infrastructure to operate TradingView alerts. After an alert arrives, you get four things.
 
-- Trading. The portal shows positions, fills, open orders, and balances at the venues you connected. The screen reads the account. It does not send an order.
+- Trading. The portal shows positions, fills, open orders, and balances. Positions are rebuilt from fills kept on the virtual machine. Open orders and balances are read from the venue. The screen does not send an order.
 - Operational record. The alert is kept as a record of the strategy it used, the plan that was made, and, when you send orders, what the venue did. This is the record. The Analytics screen is a view of it.
 - Audit trail. What happened to that alert is kept when the virtual machine is connected. Discord can deliver a copy. A missed delivery does not remove the trail.
 - Review. You read Trading, the operational record, and the audit trail, check what the signal did, and decide the next change in how it is run.
@@ -45,7 +45,7 @@ The portal reads your operation. Nothing on the screen places an order. It has f
 
 ### Trading
 
-- Positions. Open positions on the connected venues.
+- Positions. Open positions rebuilt from fills kept on the virtual machine.
 - Trades. Fills already booked.
 - Orders. Orders still open at the venue.
 - Balances. Balances read from the venue.
@@ -93,15 +93,19 @@ When `DISCORD_WEBHOOK_URL` is set on Render, Discord receives a copy of these au
 - Not sent. The order was left unsent.
 - Sell resend skipped. A repeated sell was not sent again.
 - Planned. An order was planned. In `dry_run`, this is as far as the order goes.
+- Accepted. The order was taken up, and the venue work continues. The result arrives in a later event.
 - Succeeded. The venue accepted the order.
 - Failed. The order did not go through.
 - Duplicate discarded. The same alert was dropped.
+- Position mismatch. The venue still has a position while the fill ledger is flat.
 
 ## Audit trail
 
 An audit trail exists for each alert when the virtual machine is connected. The portal shows it as the Audit Log, under Operations. Discord can deliver a copy when `DISCORD_WEBHOOK_URL` is set. A missed delivery does not remove the trail.
 
-A protective exit is an added function that covers sharp price changes between bars, because a TradingView alert is evaluated only when a bar closes. Signal Nexus keeps one stop price and one take-profit price for each strategy. Those prices are set by applying `loss_pct` and `profit_pct` to that strategy's latest entry fill. Every five seconds, the virtual machine reads a fresh public price and closes that strategy's entire remaining quantity with a market order at the first level the price crosses. It does not replace the alert. It limits an unexpected loss, or secures a profit, until the next bar's alert arrives. The exit does not create a `SIGNAL RECEIVED` record. It reuses the existing audit events and remains visible in the Audit Log. Discord receives the same exit copy when Render delivers it.
+A protective exit is an added function that covers sharp price changes between bars, because a TradingView alert is evaluated only when a bar closes. Signal Nexus keeps one stop price and one take-profit price for each strategy on each venue. `loss_pct` sets the stop from that deployment's latest entry fill, and `profit_pct` sets the take-profit the same way. Either percentage can stand alone. Every five seconds, the virtual machine reads a fresh public price and closes that deployment's remaining quantity with a market order at the first level the price crosses. It does not replace the alert. It limits an unexpected loss, or secures a profit, until the next bar's alert arrives. The exit does not create a `SIGNAL RECEIVED` record. It reuses the existing audit events and remains visible in the Audit Log. Discord receives the same exit copy when Render delivers it.
+
+A new entry is held when realized profit for that base asset and direction reaches the average order size. The average is the mean `size_quote` of every enabled deployment for that base asset and direction, including a small test size. ETH/USDT, ETH/USDG, ETH/USD, and ETH/USDC are one asset. While the hold is on, a new `SHORT`, `LONG`, or `BUY` is left unsent and the audit reason is `profit lock`. A cover, a flat close, a spot sell, and a protective exit still go out. The hold stays after the position is flat. It clears when a later close of that base asset and direction realizes a loss, and the running profit starts again at zero. The check reads the virtual machine's fill ledger. Without that ledger, the entry is not held.
 
 What the Audit Log screen labels are, and which notices appear there, is defined in the Screen Specification.
 

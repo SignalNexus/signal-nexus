@@ -14,4 +14,6 @@ def order_block_reason(strategy: Strategy, action: str) -> str | None:
         return mismatch
     if kill_switch_enabled():
         return "KILL_SWITCH"
-    return None
+    from app.execution.profit_lock import entry_block_reason
+
+    return entry_block_reason(strategy, action)

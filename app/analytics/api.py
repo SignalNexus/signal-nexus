@@ -368,7 +368,7 @@ def _refuse_blocked_order(strategy, action: str) -> None:
     reason = order_block_reason(strategy, action)
     if reason is None:
         return
-    kind = "order_not_sent" if reason == "KILL_SWITCH" else "validation_rejected"
+    kind = "order_not_sent" if reason in ("KILL_SWITCH", "profit lock") else "validation_rejected"
     try:
         _store_audit(
             AuditIn(

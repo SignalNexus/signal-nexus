@@ -115,7 +115,7 @@ Signal Nexus. `POST /webhook` compares the field with the Render environment var
 3. `action` is legal for that row's side and venue.
 4. `client_order_id` has not already been used for that venue.
 5. The response is `{"status":"dry_run"}` while `EXECUTION_MODE` is unset. The order is not sent.
-6. With `EXECUTION_MODE=live`, the order is sent to `venue` for `size_quote` USDT.
+6. With `EXECUTION_MODE=live`, the order is sent to `venue` for `size_quote` USDT. A new entry is left unsent when realized profit for that base asset and direction reaches the average order size. The Product Specification defines that hold. A close is still sent.
 
 A rejected alert returns HTTP 422 and does not send an order. That is a validation error. Fix the payload or the strategy row, then send a new `client_order_id`.
 

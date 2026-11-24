@@ -115,7 +115,7 @@ Signal Nexus では、`POST /webhook` がその欄を、Render の環境変数 `
 3. `action` が、その行の side と venue で許可されている。
 4. その venue で、`client_order_id` がまだ使われていない。
 5. `EXECUTION_MODE` が未設定なら、応答は `{"status":"dry_run"}` です。注文は出ません。
-6. `EXECUTION_MODE=live` のとき、`venue` へ `size_quote` USDT の注文を出します。
+6. `EXECUTION_MODE=live` のとき、`venue` へ `size_quote` USDT の注文を出します。同じ基軸資産・同じ方向の確定利益が発注額の平均以上のあいだ、新しいエントリーは未送信です。この停止は製品仕様にあります。クローズは出します。
 
 拒否されたアラートは HTTP 422 で、注文は出ません。これは検証のエラーです。本文か戦略の行を直し、`client_order_id` を新しい値にして送ります。
 
