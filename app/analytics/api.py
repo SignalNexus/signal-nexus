@@ -4,7 +4,7 @@ import os
 import time
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import asynccontextmanager
-from datetime import datetime, time, timedelta, timezone
+from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 from decimal import Decimal
 from pathlib import Path
@@ -1091,7 +1091,7 @@ _fifo_state: tuple | None = None
 def _fifo_cutoff(now: datetime) -> datetime:
     # UTC の前日 0 時より前を固定する。昨日と今日の約定は毎回足す。
     day = now.astimezone(timezone.utc).date() - timedelta(days=1)
-    return datetime.combine(day, time.min, tzinfo=timezone.utc)
+    return datetime.combine(day, datetime.min.time(), tzinfo=timezone.utc)
 
 
 def _load_summary_sources():
