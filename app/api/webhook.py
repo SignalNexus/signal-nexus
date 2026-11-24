@@ -1,3 +1,4 @@
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 from threading import Thread
 from typing import Literal
@@ -313,6 +314,16 @@ def _run_deployment(
     return {"venue": deployment.venue, "status": result.status}
 
 
+def _run_chosen(payload: WebhookPayload, strategy: Strategy, chosen: list[Deployment]) -> list[dict[str, str]]:
+    if len(chosen) <= 1:
+        return [_run_deployment(None, payload, strategy, deployment) for deployment in chosen]
+    with ThreadPoolExecutor(max_workers=len(chosen)) as pool:
+        running = [
+            pool.submit(_run_deployment, None, payload, strategy, deployment) for deployment in chosen
+        ]
+        return [item.result() for item in running]
+
+
 def _accepted(targets: tuple[Deployment, ...], chosen: list[Deployment]) -> dict[str, object]:
     if len(targets) == 1:
         return {"status": "accepted"}
@@ -372,8 +383,8 @@ async def receive_webhook(request: Request, tasks: BackgroundTasks) -> dict[str,
             ),
         )
         return {"status": "duplicate"}
-    # 結果の監査が残るまで受付完了を返さない。止まっても受信だけが残らない。
-    rows = [_run_deployment(None, payload, strategy, deployment) for deployment in chosen]
+    # 一通の会場は同時に出す。監査が揃うまで受付は返さない。
+    rows = _run_chosen(payload, strategy, chosen)
     if len(targets) == 1:
         if execution_mode() == "live" and not kill_switch_enabled():
             return {"status": "accepted"}
