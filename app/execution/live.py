@@ -73,6 +73,7 @@ class LiveResult:
 
 
 _order_deferred: ContextVar[bool] = ContextVar("order_deferred", default=False)
+_closing_order_id: ContextVar[str] = ContextVar("closing_order_id", default="")
 
 
 @contextmanager
@@ -101,11 +102,14 @@ def handoff_follow_up(strategy, action: str, follow: Callable[[], "LiveResult"])
     return LiveResult("accepted", True, follow_up=run, reports_follow_up=True)
 
 
-def defer_venue_work(strategy, action: str, work: Callable[[], "LiveResult"]) -> "LiveResult":
+def defer_venue_work(
+    strategy, action: str, work: Callable[[], "LiveResult"], client_order_id: str = ""
+) -> "LiveResult":
     if not _order_deferred.get():
         return work()
 
     def run() -> None:
+        token = _closing_order_id.set(client_order_id)
         try:
             result = work()
             follow = result.follow_up
@@ -126,6 +130,8 @@ def defer_venue_work(strategy, action: str, work: Callable[[], "LiveResult"]) ->
                 )
         except Exception as exc:
             report_order_result(strategy, action, LiveResult("order_failed", True, public_order_error(exc)))
+        finally:
+            _closing_order_id.reset(token)
 
     return LiveResult("accepted", True, follow_up=run, reports_follow_up=True)
 
@@ -147,6 +153,9 @@ def report_order_result(strategy, action: str, result: "LiveResult") -> None:
         return
     if result.status == "order_failed":
         send_audit(order_failed(strategy.strategy_id, result.reason, venue=strategy.venue))
+        from app.execution.close_retry import note_if_unfinished
+
+        note_if_unfinished(strategy, action, result, _closing_order_id.get())
         return
     send_audit(
         order_success(

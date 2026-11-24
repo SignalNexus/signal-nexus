@@ -210,6 +210,7 @@ def arcus_order(
                 strategy,
                 body.action,
                 lambda: execute_arcus(strategy, body.action, body.client_order_id),
+                body.client_order_id,
             )
     except ArcusError as exc:
         raise HTTPException(status_code=502, detail=public_order_error(exc)) from None
@@ -267,6 +268,7 @@ def venue_order(
                 strategy,
                 body.action,
                 lambda: port.execute(strategy, body.action, body.client_order_id),
+                body.client_order_id,
             )
     except Exception as exc:
         raise HTTPException(status_code=502, detail=public_order_error(exc)) from None
@@ -327,6 +329,7 @@ def mexc_order(
                         load_strategies(),
                         body.exit_bar_close_ms,
                     ),
+                    body.client_order_id,
                 )
             else:
                 from app.execution.exchange import futures_client
@@ -341,6 +344,7 @@ def mexc_order(
                         body.client_order_id,
                         load_strategies(),
                     ),
+                    body.client_order_id,
                 )
     except HTTPException:
         raise
@@ -487,6 +491,9 @@ async def _lifespan(_app):
             from app.execution.protective_stop import watch_forever
 
             Thread(target=lambda: watch_forever(time.sleep), daemon=True).start()
+            from app.execution.close_retry import watch_forever as watch_closes
+
+            Thread(target=lambda: watch_closes(time.sleep), daemon=True).start()
         if os.environ.get("ANALYTICS_BOARD_REFRESH") == "1":
             _load_board_snapshot()
             Thread(target=_warm_board_forever, daemon=True).start()

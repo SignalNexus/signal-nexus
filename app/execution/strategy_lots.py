@@ -85,6 +85,39 @@ def load_venue(venue: str) -> dict[str, Decimal]:
         return load_strategy_lots(connection, venue)
 
 
+def close_quantity(venue: str, strategy_id: str, stored: Decimal | None = None) -> Decimal:
+    # A cover uses the fill ledger when it is ahead of the lot. A failed read keeps the lot.
+    if stored is None:
+        try:
+            stored = load_venue(venue).get(strategy_id, Decimal("0"))
+        except Exception:
+            stored = Decimal("0")
+    else:
+        stored = Decimal(stored)
+    reconstructed = _reconstructed_quantity(venue, strategy_id)
+    if reconstructed is None or stored > reconstructed:
+        return stored
+    return reconstructed
+
+
+def _reconstructed_quantity(venue: str, strategy_id: str) -> Decimal | None:
+    if not configured():
+        return None
+    try:
+        from app.analytics.report import fill_view_from_row, reconstructed_open_quantity
+        from app.analytics.schema import load_strategy_fills
+
+        with connect() as connection:
+            if connection is None:
+                return None
+            rows = load_strategy_fills(connection, venue, strategy_id)
+        fills = [fill_view_from_row(row) for row in rows]
+        return reconstructed_open_quantity(fills, venue, strategy_id)
+    except Exception:
+        logger.warning("close quantity kept the lot")
+        return None
+
+
 def load_spot_state() -> tuple[dict[str, Decimal], dict[str, tuple[str, int]], dict[str, int], bool]:
     with _use() as connection:
         from app.analytics.schema import (

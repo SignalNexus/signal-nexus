@@ -137,7 +137,9 @@ def execute_arcus(strategy, action: str, client_order_id: str, client: "ArcusCli
     if strategy.symbol not in MARKETS:
         return LiveResult("not_sent", False, "market unavailable")
     venue = arcus_client() if client is None else client
-    held = _lot(strategy.strategy_id)
+    from app.execution.strategy_lots import close_quantity
+
+    held = close_quantity("arcus", strategy.strategy_id, _lot(strategy.strategy_id))
     step = _order_step(venue, strategy.symbol)
     if action in ("COVER", "FLAT"):
         if held <= 0:

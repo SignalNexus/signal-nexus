@@ -367,7 +367,9 @@ def _open(
 def _close(
     exchange, strategy: Strategy, symbol: str, exchange_id: str, client_order_id: str, side: str
 ) -> LiveResult:
-    contracts = _read_lot(strategy.strategy_id)
+    from app.execution.strategy_lots import close_quantity
+
+    contracts = float(close_quantity("mexc_futures", strategy.strategy_id, Decimal(str(_read_lot(strategy.strategy_id)))))
     if contracts <= 0:
         return LiveResult("not_sent", False, "position already flat")
     orderable = _orderable_contracts(exchange, symbol, contracts)
