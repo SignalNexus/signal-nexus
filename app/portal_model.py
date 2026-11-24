@@ -54,9 +54,22 @@ def hold_label(delta: timedelta) -> str:
     return days_clock_label(hours // 24, hours % 24)
 
 
+def _spot_notional(row: dict) -> Decimal:
+    spent = decimal(row.get("quote_spent")) or Decimal("0")
+    unrealized = decimal(row.get("unrealized"))
+    quantity = decimal(row.get("quantity")) or Decimal("0")
+    if unrealized is None or quantity == 0:
+        return abs(spent)
+    if str(row.get("side") or "").lower() == "short":
+        return abs(spent - unrealized)
+    return abs(spent + unrealized)
+
+
 def positions_view(rows: list[dict], now: datetime) -> dict:
     prepared = []
     for row in rows:
+        if (row.get("venue") or "mexc_spot") == "mexc_spot" and _spot_notional(row) < Decimal("5"):
+            continue
         unrealized = decimal(row.get("unrealized"))
         spent = decimal(row.get("quote_spent")) or Decimal("0")
         quantity = decimal(row.get("quantity")) or Decimal("0")

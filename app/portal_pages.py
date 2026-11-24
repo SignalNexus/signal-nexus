@@ -647,6 +647,7 @@ def _risk(board: dict, now: datetime) -> str:
       <p class="eyebrow">Risk Summary</p>
       <div class="band total"><h3>Total</h3>{_risk_cards(positions_view(rows, moment), "USD")}</div>
       {_fold(_venue_grid(board, "risk", "", now=moment))}
+      <p class="hint">{t("MEXC spot は、5 USD 未満の建玉を表示していません。")}</p>
       <p class="hint"><a class="more" href="/portal/trading">{t("Positions を開く")}</a></p>
     </section>
     """
@@ -781,8 +782,8 @@ def _positions(rows: list[dict] | None, now: datetime) -> tuple[str, str]:
     moment = now.astimezone(timezone.utc)
     total = _position_summary(positions_view(rows, moment), "USD")
 
-    def section(_label: str, _venue_id: str, line_rows: list[dict]) -> str:
-        return _position_body(positions_view(line_rows, moment))
+    def section(_label: str, venue_id: str, line_rows: list[dict]) -> str:
+        return _position_body(positions_view(line_rows, moment), venue_id)
 
     return f'<div class="band total"><h3>Total</h3>{total}</div>', _trading_grid(rows, section)
 
@@ -1722,7 +1723,7 @@ def _position_summary(view: dict, unit: str = "USD") -> str:
     )
 
 
-def _position_body(view: dict) -> str:
+def _position_body(view: dict, venue_id: str = "") -> str:
     rows = []
     for row in view["rows"]:
         unit = _unit(row.get("venue"))
@@ -1741,6 +1742,11 @@ def _position_body(view: dict) -> str:
     empty = "" if rows else f'<p class="empty">{t("建玉はありません")}</p>'
     return (
         _position_summary(view, "USD")
+        + (
+            f'<p class="rule">{t("MEXC spot は、5 USD 未満の建玉を表示していません。")}</p>'
+            if venue_id == "mexc_spot"
+            else ""
+        )
         + f'<p class="rule">{t("含み損益の小さい順。価格が無い行は末尾。1 行は戦略と銘柄。")}</p>'
         + f'<div class="list">{"".join(rows)}</div>{empty}'
     )

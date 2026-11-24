@@ -53,6 +53,7 @@ _EN = {
     "現在価格": "Current Price",
     "建玉はありません": "No open positions",
     "含み損益の小さい順。価格が無い行は末尾。1 行は戦略と銘柄。": "Lowest unrealized PnL first. Rows without a price are last. One row is one strategy and symbol.",
+    "MEXC spot は、5 USD 未満の建玉を表示していません。": "MEXC spot hides positions under 5 USD.",
     "当日約定数": "Fills Today",
     "未約定件数": "Open Orders",
     "未約定注文はありません": "No open orders",
