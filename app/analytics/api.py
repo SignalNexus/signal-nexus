@@ -705,6 +705,7 @@ def _assemble_board(
         _remember_trades(trade_rows)
     else:
         closed, opens = prepared
+        _remember_incremental_trades(fills, closed, _fifo_cutoff(now))
         trade_rows = []
     now = datetime.now(timezone.utc)
     opens = _held_opens(opens)
@@ -1302,6 +1303,22 @@ def _decimal(value: Decimal) -> str:
 
 def _trade_rows(fills: list[FillView]) -> list[dict]:
     realized = final_fill_realized(fills)
+    return _rows_with_realized(fills, realized)
+
+
+def _remember_incremental_trades(fills: list[FillView], closed: list, cutoff: datetime) -> None:
+    # 前日より前の行は残し、それ以降だけ増分の決済損益で置き換える。
+    previous = _cached_trades()
+    if not previous:
+        return
+    realized = {trade.final_trade_id: trade.realized for trade in closed if trade.final_trade_id}
+    recent = _rows_with_realized(fills, realized)
+    cutoff_text = cutoff.isoformat()
+    kept = [row for row in previous if str(row.get("filled_at") or "") < cutoff_text]
+    _remember_trades([*kept, *recent])
+
+
+def _rows_with_realized(fills: list[FillView], realized: dict) -> list[dict]:
     rows = []
     for fill in fills:
         row = _fill_json(fill)
