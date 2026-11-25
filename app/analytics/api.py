@@ -699,6 +699,7 @@ def _assemble_board(
     symbol_notional: dict | None = None,
 ) -> dict:
     fills, audit_rows, succeeded_at = sources
+    now = datetime.now(timezone.utc)
     if prepared is None:
         closed, opens = reconstruct(fills)
         trade_rows = _trade_rows(fills)
@@ -707,7 +708,6 @@ def _assemble_board(
         closed, opens = prepared
         _remember_incremental_trades(fills, closed, _fifo_cutoff(now))
         trade_rows = []
-    now = datetime.now(timezone.utc)
     opens = _held_opens(opens)
     marked = mark_opens(opens, _mark_prices(opens))
     if daily is None:
@@ -1054,7 +1054,7 @@ def _warm_board_forever() -> None:
         try:
             _refresh_summary_board()
         except Exception as exc:
-            logger.warning("board was not refreshed: %s", type(exc).__name__)
+            logger.warning("board was not refreshed: %s: %s", type(exc).__name__, exc)
         time.sleep(30)
 
 
