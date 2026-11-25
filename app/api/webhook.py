@@ -10,7 +10,6 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_valida
 from app.analytics.schema import AUDIT_KINDS
 from app.core.config import bar_time_within_window, execution_mode, kill_switch_enabled
 from app.core.security import analytics_secret_matches, webhook_secret_matches
-from app.execution.admission import order_block_reason
 from app.execution.dedup import claim, settle
 from app.execution.dispatch import execute_order
 from app.execution.order_executor import public_order_error
@@ -19,6 +18,7 @@ from app.execution.router import (
     RegistryRejection,
     Strategy,
     load_strategies,
+    rejection_reason,
     route,
     targets_for,
 )
@@ -226,23 +226,6 @@ def _run_deployment(
             ),
         )
         return {"venue": deployment.venue, "status": "killed"}
-    from app.execution.admission import order_block_reason
-
-    if order_block_reason(bound, payload.action) == "profit lock":
-        settle(payload.client_order_id, deployment.venue, retry=True)
-        _notify(tasks, received)
-        _notify(
-            tasks,
-            order_not_sent(
-                payload.strategy_id,
-                payload.symbol,
-                payload.action,
-                size_quote,
-                "profit lock",
-                venue=venue,
-            ),
-        )
-        return {"venue": deployment.venue, "status": "not_sent"}
     if execution_mode() != "live":
         settle(payload.client_order_id, deployment.venue, retry=False)
         _notify(tasks, received)
@@ -261,8 +244,23 @@ def _run_deployment(
             payload.exit_bar_close_ms(),
         )
     except Exception as exc:
+        text = public_order_error(exc)
+        if "timeout" in text.lower():
+            settle(payload.client_order_id, deployment.venue, retry=True)
+            _notify(
+                tasks,
+                order_not_sent(
+                    payload.strategy_id,
+                    payload.symbol,
+                    payload.action,
+                    size_quote,
+                    "order result unknown",
+                    venue=venue,
+                ),
+            )
+            return {"venue": deployment.venue, "status": "not_sent"}
         settle(payload.client_order_id, deployment.venue, retry=False)
-        _notify(tasks, order_failed(payload.strategy_id, public_order_error(exc), venue=venue))
+        _notify(tasks, order_failed(payload.strategy_id, text, venue=venue))
         return {"venue": deployment.venue, "status": "order_failed"}
     if result.follow_up is not None:
         _notify(
@@ -382,8 +380,8 @@ async def receive_webhook(request: Request, tasks: BackgroundTasks) -> dict[str,
         strategy = route(payload.strategy_id, payload.symbol)
     except RegistryRejection as exc:
         return _reject(tasks, body, exc.reason, exc.reason)
-    blocked = order_block_reason(strategy, payload.action)
-    if blocked not in (None, "KILL_SWITCH", "profit lock"):
+    blocked = rejection_reason(strategy, payload.action)
+    if blocked is not None:
         return _reject(tasks, body, blocked, blocked)
     targets = targets_for(strategy, payload.action)
     runnable = claim(payload.client_order_id, [deployment.venue for deployment in targets])

@@ -9,7 +9,7 @@ from threading import Lock
 logger = logging.getLogger(__name__)
 
 RETRY_SECONDS = 60
-RETRY_FOR = timedelta(hours=6)
+RETRY_FOR = timedelta(minutes=5)
 _CLOSING = {"COVER", "FLAT"}
 _RETRYABLE = (
     "timeout",
@@ -19,6 +19,7 @@ _RETRYABLE = (
     "status unknown",
     "status unavailable",
     "position history unavailable",
+    "slippage",
 )
 _lock = Lock()
 
@@ -32,6 +33,7 @@ class PendingClose:
     started_at: datetime
     next_at: datetime
     attempts: int = 0
+    reason: str = ""
 
 
 _pending: dict[tuple[str, str], PendingClose] = {}
@@ -60,6 +62,7 @@ def note_if_unfinished(strategy, action: str, result, client_order_id: str) -> N
         client_order_id,
         now,
         now + timedelta(seconds=RETRY_SECONDS),
+        reason=result.reason or "",
     )
     with _lock:
         _pending[(row.venue, row.strategy_id)] = row
@@ -90,9 +93,14 @@ def retry_due(now: datetime, execute) -> list[str]:
             _schedule(row, now)
             continue
         row.attempts += 1
+        row.reason = result.reason or row.reason
+        if row.attempts >= 5 and "slippage" in row.reason.lower():
+            _drop(row)
+            done.append(row.strategy_id)
+            continue
         from app.execution.strategy_lots import BOOK_DIFFERS
 
-        if result.reason == BOOK_DIFFERS:
+        if result.reason in (BOOK_DIFFERS, "order already working"):
             _schedule(row, now)
             continue
         if result.status != "order_failed" or not unfinished_close(
@@ -113,10 +121,22 @@ def watch_forever(sleeper) -> None:
             from app.execution.router import load_strategies
 
             def execute(row: PendingClose):
+                from app.execution.live import LiveResult
+                from app.execution.order_hold import claim, finish
+
                 strategies = load_strategies()
                 strategy = strategies[row.strategy_id]
                 deployment = next(item for item in strategy.deployments if item.venue == row.venue and item.enabled)
-                return execute_order(strategy.bound(deployment), row.action, row.client_order_id, None)
+                bound = strategy.bound(deployment)
+                if claim(bound.venue, bound.strategy_id, row.action, row.client_order_id) == "held":
+                    return LiveResult("not_sent", False, "order already working")
+                try:
+                    result = execute_order(bound, row.action, row.client_order_id, None)
+                except Exception:
+                    finish(bound.venue, row.client_order_id, LiveResult("order_failed", True, "order result unknown"))
+                    raise
+                finish(bound.venue, row.client_order_id, result)
+                return result
 
             retry_due(datetime.now(timezone.utc), execute)
         except Exception:

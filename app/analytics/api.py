@@ -59,10 +59,9 @@ from app.analytics.schema import (
 )
 from app.core.config import analytics_bind_host, fastapi_doc_kwargs, require_secret_strength
 from app.core.security import analytics_secret_matches
-from app.execution.admission import order_block_reason
 from app.execution.arcus import ArcusError, apply_configured_leverage, execute_arcus
 from app.execution.futures import execute_futures
-from app.execution.live import defer_venue_work, execute_live, order_deferred
+from app.execution.live import execute_live
 from app.execution.mexc_open_orders import open_orders_payload
 from app.execution.order_executor import public_order_error
 from app.execution.router import load_strategies
@@ -212,26 +211,12 @@ def arcus_order(
     if strategy.venue != "arcus":
         raise HTTPException(status_code=404, detail="strategy is unavailable")
     _refuse_blocked_order(strategy, body.action)
-    try:
-        with order_deferred():
-            result = defer_venue_work(
-                strategy,
-                body.action,
-                lambda: execute_arcus(strategy, body.action, body.client_order_id),
-                body.client_order_id,
-            )
-    except ArcusError as exc:
-        raise HTTPException(status_code=502, detail=public_order_error(exc)) from None
-    deferred = _deferred_response(result)
-    if deferred is not None:
-        return deferred
-    return {
-        "status": result.status,
-        "sent": result.sent,
-        "deferred": False,
-        "reason": result.reason,
-        "realized": None if result.realized is None else str(result.realized),
-    }
+    return _accept_then(
+        strategy,
+        body.action,
+        body.client_order_id,
+        lambda: execute_arcus(strategy, body.action, body.client_order_id),
+    )
 
 
 class VenueOrderIn(BaseModel):
@@ -270,26 +255,12 @@ def venue_order(
     if port is None:
         raise HTTPException(status_code=404, detail="strategy is unavailable")
     _refuse_blocked_order(strategy, body.action)
-    try:
-        with order_deferred():
-            result = defer_venue_work(
-                strategy,
-                body.action,
-                lambda: port.execute(strategy, body.action, body.client_order_id),
-                body.client_order_id,
-            )
-    except Exception as exc:
-        raise HTTPException(status_code=502, detail=public_order_error(exc)) from None
-    deferred = _deferred_response(result)
-    if deferred is not None:
-        return deferred
-    return {
-        "status": result.status,
-        "sent": result.sent,
-        "deferred": False,
-        "reason": result.reason,
-        "realized": None if result.realized is None else str(result.realized),
-    }
+    return _accept_then(
+        strategy,
+        body.action,
+        body.client_order_id,
+        lambda: port.execute(strategy, body.action, body.client_order_id),
+    )
 
 
 class MexcOrderIn(BaseModel):
@@ -321,59 +292,41 @@ def mexc_order(
     if strategy.venue not in ("mexc_spot", "mexc_futures"):
         raise HTTPException(status_code=404, detail="strategy is unavailable")
     _refuse_blocked_order(strategy, body.action)
-    try:
-        with order_deferred():
-            if strategy.venue == "mexc_spot":
-                from app.execution.exchange import mexc_client
+    if strategy.venue == "mexc_spot":
+        from app.execution.exchange import mexc_client
 
-                result = defer_venue_work(
-                    strategy,
-                    body.action,
-                    lambda: execute_live(
-                        mexc_client(),
-                        strategy,
-                        body.action,
-                        body.client_order_id,
-                        load_strategies(),
-                        body.exit_bar_close_ms,
-                    ),
-                    body.client_order_id,
-                )
-            else:
-                from app.execution.exchange import futures_client
+        client = mexc_client()
+        return _accept_then(
+            strategy,
+            body.action,
+            body.client_order_id,
+            lambda: execute_live(
+                client,
+                strategy,
+                body.action,
+                body.client_order_id,
+                load_strategies(),
+                body.exit_bar_close_ms,
+            ),
+        )
+    from app.execution.exchange import futures_client
 
-                result = defer_venue_work(
-                    strategy,
-                    body.action,
-                    lambda: execute_futures(
-                        futures_client(),
-                        strategy,
-                        body.action,
-                        body.client_order_id,
-                        load_strategies(),
-                    ),
-                    body.client_order_id,
-                )
-    except HTTPException:
-        raise
-    except Exception as exc:
-        raise HTTPException(status_code=502, detail=public_order_error(exc)) from None
-    deferred = _deferred_response(result)
-    if deferred is not None:
-        return deferred
-    return {
-        "status": result.status,
-        "sent": result.sent,
-        "deferred": False,
-        "reason": result.reason,
-        "resend_skipped": result.resend_skipped,
-        "average": result.average,
-        "realized": None if result.realized is None else str(result.realized),
-    }
+    client = futures_client()
+    return _accept_then(
+        strategy,
+        body.action,
+        body.client_order_id,
+        lambda: execute_futures(client, strategy, body.action, body.client_order_id, load_strategies()),
+    )
 
 
 def _refuse_blocked_order(strategy, action: str) -> None:
-    reason = order_block_reason(strategy, action)
+    from app.core.config import kill_switch_enabled
+    from app.execution.router import rejection_reason
+
+    reason = rejection_reason(strategy, action)
+    if reason is None and kill_switch_enabled():
+        reason = "KILL_SWITCH"
     if reason is None:
         return
     kind = "order_not_sent" if reason in ("KILL_SWITCH", "profit lock") else "validation_rejected"
@@ -390,6 +343,54 @@ def _refuse_blocked_order(strategy, action: str) -> None:
     except Exception:
         logger.warning("order rejection was not stored")
     raise HTTPException(status_code=403, detail=reason)
+
+
+def _accept_then(strategy, action: str, client_order_id: str, work):
+    from app.execution.live import LiveResult, report_order_result
+    from app.execution.order_hold import claim, finish
+    from app.execution.profit_lock import entry_block_reason
+
+    if claim(strategy.venue, strategy.strategy_id, action, client_order_id) == "held":
+        return {
+            "status": "accepted",
+            "sent": True,
+            "deferred": True,
+            "reason": "order already working",
+        }
+
+    def run() -> None:
+        try:
+            blocked = entry_block_reason(strategy, action)
+            if blocked:
+                result = LiveResult("not_sent", False, blocked)
+            else:
+                result = work()
+                follow = result.follow_up
+                if follow is not None:
+                    follow()
+                if follow is not None and result.reports_follow_up:
+                    finish(strategy.venue, client_order_id, result)
+                    return
+            report_order_result(
+                strategy,
+                action,
+                LiveResult(
+                    result.status,
+                    result.sent,
+                    result.reason,
+                    resend_skipped=result.resend_skipped,
+                    average=result.average,
+                    realized=result.realized,
+                ),
+            )
+            finish(strategy.venue, client_order_id, result)
+        except Exception as exc:
+            failed = LiveResult("order_failed", True, public_order_error(exc))
+            report_order_result(strategy, action, failed)
+            finish(strategy.venue, client_order_id, failed)
+
+    Thread(target=run, daemon=True).start()
+    return {"status": "accepted", "sent": True, "deferred": True, "reason": ""}
 
 
 def _deferred_response(result) -> dict[str, object] | None:

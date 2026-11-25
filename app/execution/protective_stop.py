@@ -184,6 +184,8 @@ def cause_for(reason: str) -> str:
         return "state_unconfirmed"
     if "position book differs" in text:
         return "book_differs"
+    if "order already working" in text or "order result unknown" in text:
+        return "state_unconfirmed"
     if "already flat" in text or "bought quantity missing" in text or "already sold" in text:
         return "already_flat"
     if "order step" in text:
@@ -405,6 +407,21 @@ def watch_forever(sleeper, *, cycles: int | None = None) -> None:
 
 
 def submit_close(strategy, action: str, client_order_id: str):
+    from app.execution.live import LiveResult
+    from app.execution.order_hold import claim, finish
+
+    if claim(strategy.venue, strategy.strategy_id, action, client_order_id) == "held":
+        return LiveResult("not_sent", False, "order already working")
+    try:
+        result = _dispatch_close(strategy, action, client_order_id)
+    except Exception:
+        finish(strategy.venue, client_order_id, LiveResult("order_failed", True, "order result unknown"))
+        raise
+    finish(strategy.venue, client_order_id, result)
+    return result
+
+
+def _dispatch_close(strategy, action: str, client_order_id: str):
     from app.execution.live import LiveResult
     from app.execution.router import load_strategies
 

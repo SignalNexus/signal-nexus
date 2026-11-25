@@ -185,6 +185,17 @@ STATEMENTS = (
         PRIMARY KEY (venue, strategy_id)
     )
     """,
+    """
+    CREATE TABLE IF NOT EXISTS order_hold (
+        venue text NOT NULL CHECK (char_length(venue) > 0),
+        client_order_id text NOT NULL CHECK (char_length(client_order_id) > 0),
+        strategy_id text NOT NULL CHECK (char_length(strategy_id) > 0),
+        action text NOT NULL CHECK (char_length(action) > 0),
+        state text NOT NULL CHECK (state IN ('working', 'retry')),
+        updated_at timestamptz NOT NULL,
+        PRIMARY KEY (venue, client_order_id)
+    )
+    """,
 )
 
 
