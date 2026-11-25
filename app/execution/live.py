@@ -1,3 +1,4 @@
+import logging
 import time
 from contextlib import contextmanager
 from contextvars import ContextVar
@@ -25,6 +26,7 @@ from app.execution.positions import (
     free_usdt,
     invalidate,
     load_open_buys,
+    reload_open_buys,
     mark_sold_exit,
     open_holding,
     remember,
@@ -34,6 +36,8 @@ from app.execution.positions import (
 from app.execution.router import Strategy
 from app.notifications.analytics import report_order_link
 from app.notifications.discord import order_failed, order_success, send_audit
+
+logger = logging.getLogger(__name__)
 
 # These ten send STOP for a stop and SELL for a take-profit.
 # The live BTC strategies send SELL for both, so their orders stay market.
@@ -192,6 +196,11 @@ def execute_live(
         except Exception:
             if _attempt == 1:
                 return LiveResult("not_sent", False, "position history unavailable")
+    if action in ("SELL", "STOP") and open_holding(strategy.strategy_id) is None:
+        try:
+            reload_open_buys(exchange, strategies)
+        except Exception:
+            logger.warning("spot buys were not reloaded")
     exchange_id = exchange_client_order_id(
         strategy.strategy_id, client_order_id, action, venue=strategy.venue
     )

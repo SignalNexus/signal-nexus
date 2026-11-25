@@ -247,6 +247,14 @@ def load_open_buys(exchange, strategies: dict) -> None:
         _load_open_buys(exchange, strategies)
 
 
+def reload_open_buys(exchange, strategies: dict) -> None:
+    global _loaded
+    with _load_lock:
+        with _lock:
+            _loaded = False
+        _load_open_buys(exchange, strategies)
+
+
 def _load_open_buys(exchange, strategies: dict) -> None:
     global _loaded
     with _lock:
