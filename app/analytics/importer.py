@@ -472,10 +472,16 @@ def _remember_futures_lot(connection, row: dict) -> None:
         updated = Decimal("0")
     save_strategy_lot(connection, "mexc_futures", row["strategy_name"], updated)
     save_applied_fill(connection, "mexc_futures", client_id, contracts)
-    if mark in ("c", "f") and delta > 0:
+    if delta <= 0:
+        return
+    if mark in ("c", "f"):
         from app.execution.strategy_lots import record_close_gap
 
         record_close_gap(connection, "mexc_futures", row["strategy_name"], delta)
+        return
+    from app.execution.strategy_lots import record_open_gap
+
+    record_open_gap(connection, "mexc_futures", row["strategy_name"], delta)
 
 
 def _futures_order_known(connection, order_id: str) -> bool:

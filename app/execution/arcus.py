@@ -142,7 +142,17 @@ def execute_arcus(strategy, action: str, client_order_id: str, client: "ArcusCli
     held = close_quantity("arcus", strategy.strategy_id, _lot(strategy.strategy_id))
     step = _order_step(venue, strategy.symbol)
     if action in ("COVER", "FLAT"):
+        from app.execution.strategy_lots import close_hold, sized_close
+
+        account = _venue_position(venue, strategy.symbol)
+        reason = close_hold("arcus", strategy.strategy_id, held, account, step)
+        if reason:
+            return LiveResult("not_sent", False, reason)
+        held = sized_close("arcus", strategy.strategy_id, held, account)
+    if action in ("COVER", "FLAT"):
         if held <= 0:
+            if account == 0 and _clear_flat_lot(venue, strategy):
+                return LiveResult("not_sent", False, "position already flat")
             return LiveResult("not_sent", False, "position already flat")
         quantity = held if step is None else snap_floor(held, step)
         if quantity <= 0:

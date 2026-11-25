@@ -364,12 +364,48 @@ def _open(
     return handoff_follow_up(strategy, "SHORT" if side == "sell" else "LONG", complete)
 
 
+def _account_contracts(exchange, symbol: str) -> Decimal | None:
+    direct = getattr(exchange, "contractPrivateGetPositionOpenPositions", None)
+    if not callable(direct):
+        return None
+    contract = f"{symbol.split('/')[0]}_USDT"
+    try:
+        payload = direct({"symbol": contract})
+    except Exception:
+        return None
+    if not isinstance(payload, dict) or payload.get("success") is False:
+        return None
+    rows = payload.get("data")
+    if isinstance(rows, dict):
+        rows = [rows]
+    if not isinstance(rows, list):
+        return None
+    total = Decimal("0")
+    for row in rows:
+        if not isinstance(row, dict):
+            return None
+        try:
+            total += Decimal(str(row.get("holdVol") or "0"))
+        except Exception:
+            return None
+    if total < 0:
+        total = -total
+    return total
+
+
 def _close(
     exchange, strategy: Strategy, symbol: str, exchange_id: str, client_order_id: str, side: str
 ) -> LiveResult:
     from app.execution.strategy_lots import close_quantity
 
-    contracts = float(close_quantity("mexc_futures", strategy.strategy_id, Decimal(str(_read_lot(strategy.strategy_id)))))
+    contracts = close_quantity("mexc_futures", strategy.strategy_id, Decimal(str(_read_lot(strategy.strategy_id))))
+    from app.execution.strategy_lots import close_hold, sized_close
+
+    account = _account_contracts(exchange, symbol)
+    reason = close_hold("mexc_futures", strategy.strategy_id, contracts, account, _contract_step(exchange, symbol))
+    if reason:
+        return LiveResult("not_sent", False, reason)
+    contracts = float(sized_close("mexc_futures", strategy.strategy_id, contracts, account))
     if contracts <= 0:
         return LiveResult("not_sent", False, "position already flat")
     orderable = _orderable_contracts(exchange, symbol, contracts)

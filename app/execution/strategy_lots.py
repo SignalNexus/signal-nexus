@@ -60,8 +60,10 @@ def note_fill(
             updated = Decimal("0")
         save_strategy_lot(connection, venue, strategy_id, updated)
         save_applied_fill(connection, venue, order_key, filled)
-        if closing and delta > 0:
+        if delta > 0 and closing:
             record_close_gap(connection, venue, strategy_id, delta)
+        elif delta > 0:
+            record_open_gap(connection, venue, strategy_id, delta)
         if venue == "mexc_spot":
             if updated <= 0:
                 delete_spot_meta(connection, strategy_id)
@@ -87,10 +89,26 @@ def load_venue(venue: str) -> dict[str, Decimal]:
         return load_strategy_lots(connection, venue)
 
 
+class PositionBook:
+    def __init__(
+        self,
+        opened: Decimal,
+        close_applied: Decimal | None,
+        ingested_closes: Decimal,
+        open_applied: Decimal | None,
+        ingested_opens: Decimal,
+    ) -> None:
+        self.opened = opened
+        self.close_applied = close_applied
+        self.ingested_closes = ingested_closes
+        self.open_applied = open_applied
+        self.ingested_opens = ingested_opens
+
+
 def close_quantity(venue: str, strategy_id: str, stored: Decimal | None = None) -> Decimal:
-    # A cover uses the fill ledger when it is ahead of the lot. A close already
-    # written to the lot, and not yet in that ledger, does not count. A failed
-    # read keeps the lot.
+    # 履歴が先なら履歴を使う。ロットにだけあるクローズは履歴から引く。
+    # ロットが履歴より多くても、まだ履歴に無い新規で説明できる分だけ残す。
+    # 読み取れないときはロットを使う。MEXC先物は枚数に直してから比べる。
     if stored is None:
         try:
             stored = load_venue(venue).get(strategy_id, Decimal("0"))
@@ -98,17 +116,80 @@ def close_quantity(venue: str, strategy_id: str, stored: Decimal | None = None) 
             stored = Decimal("0")
     else:
         stored = Decimal(stored)
-    reconstructed = _reconstructed_quantity(venue, strategy_id)
-    if reconstructed is None or stored > reconstructed:
+    book = _position_book(venue, strategy_id)
+    if book is None:
         return stored
-    return reconstructed
+    quantity = aligned_quantity(
+        stored,
+        book.opened,
+        book.close_applied,
+        book.ingested_closes,
+        book.open_applied,
+        book.ingested_opens,
+    )
+    if quantity < stored and configured():
+        try:
+            set_quantity(venue, strategy_id, quantity)
+        except Exception:
+            logger.warning("aligned lot was not stored")
+    return quantity
 
 
 def fill_open_quantity(venue: str, strategy_id: str) -> Decimal:
-    found = _reconstructed_quantity(venue, strategy_id)
-    if found is None:
+    return close_quantity(venue, strategy_id)
+
+
+def attributable(own: Decimal, others: Decimal, account: Decimal | None) -> Decimal:
+    # 口座残が読めないときは、その戦略の台帳数量のまま出す。
+    if account is None:
+        return own
+    if account < 0:
+        account = Decimal("0")
+    room = account - others
+    if room < 0:
+        room = Decimal("0")
+    if own < room:
+        return own
+    return room
+
+
+BOOK_DIFFERS = "position book differs from the account"
+
+
+def books_differ(own: Decimal, others: Decimal, account: Decimal, step: Decimal | None) -> bool:
+    # この戦略の台帳がゼロなら、口座が開いていてもこの戦略の決済はフラットとして扱う。
+    if own <= 0 or (account == 0 and others == 0):
+        return False
+    gap = own + others - account
+    if gap < 0:
+        gap = -gap
+    tolerance = step if step is not None and step > 0 else Decimal("0")
+    return gap > tolerance
+
+
+def close_hold(venue: str, strategy_id: str, own: Decimal, account: Decimal | None, step: Decimal | None) -> str | None:
+    # 口座が読めない、または他戦略の台帳が読めないときは止めない。
+    if account is None:
+        return None
+    others = _peer_open(venue, strategy_id)
+    if others is None:
+        return None
+    if books_differ(own, others, account, step):
+        return BOOK_DIFFERS
+    return None
+
+
+def sized_close(venue: str, strategy_id: str, own: Decimal, account: Decimal | None) -> Decimal:
+    if account is None:
+        return own
+    if account <= 0:
         return Decimal("0")
-    return found
+    others = _peer_open(venue, strategy_id)
+    if others is None:
+        if own < account:
+            return own
+        return account
+    return attributable(own, others, account)
 
 
 def record_close_gap(connection, venue: str, strategy_id: str, delta: Decimal) -> None:
@@ -118,8 +199,45 @@ def record_close_gap(connection, venue: str, strategy_id: str, delta: Decimal) -
 
     current = load_close_applied(connection, venue, strategy_id)
     if current is None:
-        current = _ingested_closes(connection, venue, strategy_id)
+        current = _measured(connection, venue, strategy_id, opening=False)
+        if current is None:
+            return
     save_close_applied(connection, venue, strategy_id, current + delta)
+
+
+def record_open_gap(connection, venue: str, strategy_id: str, delta: Decimal) -> None:
+    if delta <= 0:
+        return
+    from app.analytics.schema import load_open_applied, save_open_applied
+
+    current = load_open_applied(connection, venue, strategy_id)
+    if current is None:
+        current = _measured(connection, venue, strategy_id, opening=True)
+        if current is None:
+            return
+    save_open_applied(connection, venue, strategy_id, current + delta)
+
+
+def aligned_quantity(
+    stored: Decimal,
+    opened: Decimal,
+    close_applied: Decimal | None,
+    ingested_closes: Decimal,
+    open_applied: Decimal | None,
+    ingested_opens: Decimal,
+) -> Decimal:
+    fill_adjusted = adjusted_open(opened, close_applied, ingested_closes)
+    if stored <= fill_adjusted:
+        return fill_adjusted
+    if open_applied is None:
+        return stored
+    pending = open_applied - ingested_opens
+    if pending < 0:
+        pending = Decimal("0")
+    room = fill_adjusted + pending
+    if room < stored:
+        return room
+    return stored
 
 
 def adjusted_open(reconstructed: Decimal, applied: Decimal | None, ingested: Decimal) -> Decimal:
@@ -134,23 +252,90 @@ def adjusted_open(reconstructed: Decimal, applied: Decimal | None, ingested: Dec
     return opened
 
 
-def _reconstructed_quantity(venue: str, strategy_id: str) -> Decimal | None:
+def _position_book(venue: str, strategy_id: str) -> PositionBook | None:
     if not configured():
         return None
     try:
         from app.analytics.report import fill_view_from_row, reconstructed_open_quantity
-        from app.analytics.schema import load_close_applied, load_strategy_fills
+        from app.analytics.schema import load_close_applied, load_open_applied, load_strategy_fills
 
         with connect() as connection:
             if connection is None:
                 return None
             rows = load_strategy_fills(connection, venue, strategy_id)
-            applied = load_close_applied(connection, venue, strategy_id)
-        fills = [fill_view_from_row(row) for row in rows]
-        opened = reconstructed_open_quantity(fills, venue, strategy_id)
-        return adjusted_open(opened, applied, _closing_quantity(fills, venue))
+            close_applied = load_close_applied(connection, venue, strategy_id)
+            open_applied = load_open_applied(connection, venue, strategy_id)
+            fills = [fill_view_from_row(row) for row in rows]
+            opened = reconstructed_open_quantity(fills, venue, strategy_id)
+            ingested_closes = _closing_quantity(fills, venue)
+            ingested_opens = _opening_quantity(fills, venue)
+            measured = _in_lot_units(venue, fills, opened, ingested_closes, ingested_opens)
+            if measured is None:
+                return None
+            opened, ingested_closes, ingested_opens = measured
+        return PositionBook(opened, close_applied, ingested_closes, open_applied, ingested_opens)
     except Exception:
         logger.warning("close quantity kept the lot")
+        return None
+
+
+def _measured(connection, venue: str, strategy_id: str, *, opening: bool) -> Decimal | None:
+    from app.analytics.report import fill_view_from_row
+    from app.analytics.schema import load_strategy_fills
+
+    rows = load_strategy_fills(connection, venue, strategy_id)
+    fills = [fill_view_from_row(row) for row in rows]
+    quantity = _opening_quantity(fills, venue) if opening else _closing_quantity(fills, venue)
+    measured = _in_lot_units(venue, fills, Decimal("0"), quantity, Decimal("0"))
+    if measured is None:
+        return None
+    return measured[1]
+
+
+def _in_lot_units(
+    venue: str, fills, opened: Decimal, ingested_closes: Decimal, ingested_opens: Decimal
+) -> tuple[Decimal, Decimal, Decimal] | None:
+    divisor = _lot_divisor(venue, fills)
+    if divisor is None:
+        return None
+    return opened / divisor, ingested_closes / divisor, ingested_opens / divisor
+
+
+def _lot_divisor(venue: str, fills) -> Decimal | None:
+    if venue != "mexc_futures":
+        return Decimal("1")
+    symbols = {fill.symbol for fill in fills if getattr(fill, "symbol", None)}
+    if not symbols:
+        return Decimal("1")
+    if len(symbols) != 1:
+        return None
+    from app.execution.futures import CONTRACT_SIZE
+
+    base = next(iter(symbols)).split(":")[0].split("_")[0].split("/")[0]
+    size = CONTRACT_SIZE.get(f"{base}/USDT:USDT")
+    if not size:
+        return None
+    return Decimal(str(size))
+
+
+def _peer_open(venue: str, strategy_id: str) -> Decimal | None:
+    try:
+        from app.execution.router import load_strategies
+
+        book = load_strategies()
+        strategy = book.get(strategy_id)
+        if strategy is None:
+            return Decimal("0")
+        total = Decimal("0")
+        for peer_id, item in book.items():
+            if peer_id == strategy_id or item.symbol != strategy.symbol:
+                continue
+            if not any(deployment.enabled and deployment.venue == venue for deployment in item.deployments):
+                continue
+            total += close_quantity(venue, peer_id)
+        return total
+    except Exception:
+        logger.warning("peer lots were not read")
         return None
 
 
@@ -163,12 +348,20 @@ def _ingested_closes(connection, venue: str, strategy_id: str) -> Decimal:
     return _closing_quantity(fills, venue)
 
 
+def _opening_quantity(fills, venue: str) -> Decimal:
+    return _side_quantity(fills, venue, opening=True)
+
+
 def _closing_quantity(fills, venue: str) -> Decimal:
+    return _side_quantity(fills, venue, opening=False)
+
+
+def _side_quantity(fills, venue: str, *, opening: bool) -> Decimal:
     from app.analytics.report import _arcus_long, _risex_sides
     from app.venues import is_futures
 
     short = bool(is_futures(venue) and not _arcus_long(fills, _risex_sides(fills, None)))
-    side = "buy" if short else "sell"
+    side = "sell" if short == opening else "buy"
     return sum((fill.quantity for fill in fills if fill.side == side), Decimal("0"))
 
 

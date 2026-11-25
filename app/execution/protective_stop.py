@@ -182,6 +182,8 @@ def cause_for(reason: str) -> str:
     text = reason.lower()
     if "status unavailable" in text:
         return "state_unconfirmed"
+    if "position book differs" in text:
+        return "book_differs"
     if "already flat" in text or "bought quantity missing" in text or "already sold" in text:
         return "already_flat"
     if "order step" in text:

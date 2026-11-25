@@ -90,6 +90,11 @@ def retry_due(now: datetime, execute) -> list[str]:
             _schedule(row, now)
             continue
         row.attempts += 1
+        from app.execution.strategy_lots import BOOK_DIFFERS
+
+        if result.reason == BOOK_DIFFERS:
+            _schedule(row, now)
+            continue
         if result.status != "order_failed" or not unfinished_close(
             row.action, result.status, result.sent, result.reason, quantity
         ):
