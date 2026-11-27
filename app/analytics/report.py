@@ -134,7 +134,7 @@ def _arcus_long(rows: list[FillView], risex_sides: dict[str, str] | None = None)
 
     sides = risex_sides or {}
     for fill in rows:
-        if fill.venue not in {"arcus", "lighter", "qfex", "ondo", "risex"}:
+        if fill.venue not in {"arcus", "lighter", "qfex", "ondo", "risex", "popdex"}:
             return False
         client = fill.exchange_client_order_id or ""
         if fill.venue == "risex" and client.isdecimal():
@@ -203,7 +203,7 @@ def _reconstruct(
     keys = sorted(set(grouped) | set(seeds))
     for strategy_name, symbol, venue in keys:
         rows = sorted(grouped.get((strategy_name, symbol, venue), []), key=lambda item: (item.filled_at, item.trade_id))
-        if venue in {"arcus", "lighter", "qfex", "ondo", "risex"} and strategy_name == "未分類":
+        if venue in {"arcus", "lighter", "qfex", "ondo", "risex", "popdex"} and strategy_name == "未分類":
             continue
         if (strategy_name, symbol, venue) in seeds:
             short, lots = seeds[(strategy_name, symbol, venue)]

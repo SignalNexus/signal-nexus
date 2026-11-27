@@ -49,6 +49,7 @@ _CARD_LINES = {
     "qfex": ("QFEX", "Perpetual"),
     "ondo": ("Ondo", "Perpetual"),
     "risex": ("RISEx", "Perpetual"),
+    "popdex": ("PopDEX", "Perpetual"),
 }
 
 
@@ -56,6 +57,8 @@ def _shown_venue(venue: str | None, blank: str = "mexc_spot") -> str:
     key = venue or blank
     if key == "risex":
         return "RISEx"
+    if key == "popdex":
+        return "PopDEX"
     return key
 
 
@@ -904,7 +907,7 @@ def _orders(view: dict | None, fetched_at: datetime | None) -> str:
 def _order_body(view: dict | None, fetched_at: datetime | None, venue_id: str) -> str:
     if view is None:
         return '<p class="empty">Unable to retrieve</p>'
-    if venue_id in {"arcus", "lighter", "qfex", "ondo", "risex"}:
+    if venue_id in {"arcus", "lighter", "qfex", "ondo", "risex", "popdex"}:
         left_name, right_name = count_label("LONG", "orders"), count_label("SHORT", "orders")
         left = sum(1 for row in view["rows"] if row["side"] == "LONG")
         right = sum(1 for row in view["rows"] if row["side"] == "SHORT")
