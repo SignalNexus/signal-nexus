@@ -97,6 +97,10 @@ on:
         required: false
       RISEX_API_URL:
         required: false
+      POPDEX_ACCOUNT:
+        required: false
+      POPDEX_AGENT_PRIVATE_KEY:
+        required: false
       RENDER_DEPLOY_HOOK:
         required: false
       RENDER_API_KEY:
@@ -212,6 +216,8 @@ jobs:
           RISEX_ACCOUNT: ${{ secrets.RISEX_ACCOUNT }}
           RISEX_SIGNER_PRIVATE_KEY: ${{ secrets.RISEX_SIGNER_PRIVATE_KEY }}
           RISEX_API_URL: ${{ secrets.RISEX_API_URL }}
+          POPDEX_ACCOUNT: ${{ secrets.POPDEX_ACCOUNT }}
+          POPDEX_AGENT_PRIVATE_KEY: ${{ secrets.POPDEX_AGENT_PRIVATE_KEY }}
           PYTHONPATH: ${{ github.workspace }}/core
         run: |
           python3 -m deploy.write_env "$RUNNER_TEMP/analytics.env"
