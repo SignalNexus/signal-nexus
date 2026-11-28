@@ -7,7 +7,7 @@ from urllib.request import Request, urlopen
 
 from deploy.envfile import read_env
 
-WAIT_SECONDS = 60
+WAIT_SECONDS = 90
 
 
 def main() -> None:
